@@ -36,4 +36,12 @@ public class ResilientResult<T> {
     public boolean isFailed(){
         return  status.get() == Status.FAILURE;
     }
+
+    public boolean isTimedOut(){
+        return  status.get() == Status.TIMED_OUT;
+    }
+
+    public boolean isSuccessful(){
+        return  status.get() == Status.SUCCESS;
+    }
 }

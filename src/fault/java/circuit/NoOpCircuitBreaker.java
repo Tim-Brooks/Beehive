@@ -8,4 +8,8 @@ public class NoOpCircuitBreaker implements CircuitBreaker {
     public boolean isOpen() {
         return false;
     }
+
+    @Override
+    public void informBreakerOfResult(boolean successful) {
+    }
 }

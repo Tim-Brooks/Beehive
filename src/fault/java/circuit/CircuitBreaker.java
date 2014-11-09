@@ -6,4 +6,6 @@ package fault.java.circuit;
 public interface CircuitBreaker {
 
     public boolean isOpen();
+
+    void informBreakerOfResult(boolean successful);
 }

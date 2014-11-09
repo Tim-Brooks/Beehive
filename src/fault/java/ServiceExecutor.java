@@ -34,6 +34,8 @@ public class ServiceExecutor {
                     resilientResult.deliverResult(result);
                 } catch (Exception e) {
                     resilientResult.deliverError(e);
+                } finally {
+                    circuitBreaker.informBreakerOfResult(resilientResult.isSuccessful());
                 }
                 return null;
             }
