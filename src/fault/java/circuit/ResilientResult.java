@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * Created by timbrooks on 11/5/14.
  */
 public class ResilientResult<T> {
-    public enum Status {SUCCESS, FAILURE, PENDING, TIMED_OUT}
+    public enum Status {SUCCESS, ERROR, PENDING, TIMED_OUT}
 
     public T result;
     public Throwable error;
@@ -20,7 +20,7 @@ public class ResilientResult<T> {
     }
 
     public void deliverError(Throwable error) {
-        if (status.compareAndSet(Status.PENDING, Status.FAILURE)) {
+        if (status.compareAndSet(Status.PENDING, Status.ERROR)) {
             this.error = error;
         }
     }
@@ -33,8 +33,8 @@ public class ResilientResult<T> {
         return status.get() != Status.PENDING;
     }
 
-    public boolean isFailed(){
-        return  status.get() == Status.FAILURE;
+    public boolean isError(){
+        return  status.get() == Status.ERROR;
     }
 
     public boolean isTimedOut(){
