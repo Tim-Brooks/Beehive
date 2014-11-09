@@ -32,4 +32,8 @@ public class ResilientResult<T> {
     public boolean isDone() {
         return status.get() != Status.PENDING;
     }
+
+    public boolean isFailed(){
+        return  status.get() == Status.FAILURE;
+    }
 }

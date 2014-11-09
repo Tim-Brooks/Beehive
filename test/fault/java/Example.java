@@ -19,22 +19,29 @@ public class Example {
         ServiceExecutor serviceExecutor = new ServiceExecutor(5);
         ResilientResult<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
             @Override
-            public String run() {
+            public String run() throws Exception {
                 String result = null;
                 try {
-                    InputStream response = new URL("http://www.google.com").openStream();
+                    InputStream response = new URL("http://localhost:6001/").openStream();
                     BufferedReader reader = new BufferedReader(new InputStreamReader(response));
                     result = reader.readLine();
                 } catch (IOException e) {
                 }
+                if (true) {
+                    // throw new RuntimeException("Hello, terrible error");
+                }
                 return result;
             }
-        }, 1);
+        }, 15);
 
         int i = 0;
         while (!result.isDone()) {
             ++i;
         }
         System.out.println(i + result.result);
+        if (result.isFailed()) {
+            System.out.println(result.error.getMessage());
+        }
+        System.out.println(result.status);
     }
 }
