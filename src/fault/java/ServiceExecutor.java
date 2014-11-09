@@ -42,4 +42,9 @@ public class ServiceExecutor {
         timeoutService.scheduleTimeout(millisTimeout, resilientResult, scheduledFuture);
         return resilientResult;
     }
+
+    public void shutdown() {
+        threadPool.shutdown();
+        timeoutService.shutdown();
+    }
 }

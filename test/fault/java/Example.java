@@ -21,27 +21,25 @@ public class Example {
             @Override
             public String run() throws Exception {
                 String result = null;
-                try {
-                    InputStream response = new URL("http://localhost:6001/").openStream();
-                    BufferedReader reader = new BufferedReader(new InputStreamReader(response));
-                    result = reader.readLine();
-                } catch (IOException e) {
-                }
-                if (true) {
-                    // throw new RuntimeException("Hello, terrible error");
-                }
+                InputStream response = new URL("http://localhost:6001/").openStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(response));
+                result = reader.readLine();
                 return result;
             }
-        }, 15);
+        }, 10);
 
         int i = 0;
+        long start = System.nanoTime();
         while (!result.isDone()) {
             ++i;
         }
+        long end = System.nanoTime();
+        System.out.println((end - start) / 1000);
         System.out.println(i + result.result);
         if (result.isFailed()) {
             System.out.println(result.error.getMessage());
         }
         System.out.println(result.status);
+        serviceExecutor.shutdown();
     }
 }

@@ -27,4 +27,8 @@ public class TimeoutService {
             }
         }, millisTimeout, TimeUnit.MILLISECONDS);
     }
+
+    public void shutdown() {
+        executorService.shutdown();
+    }
 }
