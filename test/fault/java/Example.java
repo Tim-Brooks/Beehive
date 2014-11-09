@@ -29,8 +29,12 @@ public class Example {
                 }
                 return result;
             }
-        }, 10);
+        }, 1);
 
-        System.out.println(result.result);
+        int i = 0;
+        while (!result.isDone()) {
+            ++i;
+        }
+        System.out.println(i + result.result);
     }
 }

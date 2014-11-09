@@ -39,7 +39,7 @@ public class ServiceExecutor {
             }
         }, 0, TimeUnit.MILLISECONDS);
 
-        timeoutService.scheduleTimeout(millisTimeout);
+        timeoutService.scheduleTimeout(millisTimeout, resilientResult, scheduledFuture);
         return resilientResult;
     }
 }
