@@ -11,32 +11,35 @@ import java.util.concurrent.*;
  */
 public class ServiceExecutor {
 
-    private final ExecutorService threadPool;
+    private final ScheduledExecutorService threadPool;
     private final CircuitBreaker circuitBreaker;
+    private final TimeoutService timeoutService;
 
     public ServiceExecutor(int poolSize) {
-        threadPool = Executors.newFixedThreadPool(poolSize);
+        threadPool = Executors.newScheduledThreadPool(poolSize);
         circuitBreaker = new NoOpCircuitBreaker();
+        timeoutService = new TimeoutService();
     }
 
-    public <T> ResilientResult<T> performAction(final ResilientAction<T> action) {
+    public <T> ResilientResult<T> performAction(final ResilientAction<T> action, int millisTimeout) {
         if (circuitBreaker.isOpen()) {
             throw new RuntimeException("Circuit is Open");
         }
-        Future<T> future = threadPool.submit(new Callable<T>() {
+        final ResilientResult<T> resilientResult = new ResilientResult<>();
+        ScheduledFuture<Void> scheduledFuture = threadPool.schedule(new Callable<Void>() {
             @Override
-            public T call() {
-                return action.run();
+            public Void call() {
+                try {
+                    T result = action.run();
+                    resilientResult.deliverResult(result);
+                } catch (Exception e) {
+                    resilientResult.deliverError(e);
+                }
+                return null;
             }
-        });
-        ResilientResult<T> result = new ResilientResult<>();
-        try {
-            result.deliverResult(future.get());
-            result.status = ResilientResult.Status.SUCCESS;
-        } catch (InterruptedException | ExecutionException e) {
-            result.deliverError(e);
-            result.status = ResilientResult.Status.FAILURE;
-        }
-        return result;
+        }, 0, TimeUnit.MILLISECONDS);
+
+        timeoutService.scheduleTimeout(millisTimeout);
+        return resilientResult;
     }
 }

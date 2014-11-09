@@ -29,7 +29,7 @@ public class Example {
                 }
                 return result;
             }
-        });
+        }, 10);
 
         System.out.println(result.result);
     }
