@@ -1,8 +1,6 @@
 package fault.java;
 
-import fault.java.circuit.CircuitBreaker;
-import fault.java.circuit.NoOpCircuitBreaker;
-import fault.java.circuit.ResilientResult;
+import fault.java.circuit.*;
 
 import java.util.concurrent.*;
 
@@ -13,12 +11,14 @@ public class ServiceExecutor {
 
     private final ScheduledExecutorService threadPool;
     private final CircuitBreaker circuitBreaker;
+    private final ActionMetrics actionMetrics;
     private final TimeoutService timeoutService;
 
     public ServiceExecutor(int poolSize) {
-        threadPool = Executors.newScheduledThreadPool(poolSize);
-        circuitBreaker = new NoOpCircuitBreaker();
-        timeoutService = new TimeoutService();
+        this.threadPool = Executors.newScheduledThreadPool(poolSize);
+        this.actionMetrics = new ActionMetrics();
+        this.circuitBreaker = new CircuitBreakerImplementation(actionMetrics, new BreakerConfig());
+        this.timeoutService = new TimeoutService();
     }
 
     public <T> ResilientResult<T> performAction(final ResilientAction<T> action, int millisTimeout) {
@@ -35,6 +35,7 @@ public class ServiceExecutor {
                 } catch (Exception e) {
                     resilientResult.deliverError(e);
                 } finally {
+                    actionMetrics.informActionOfResult(resilientResult);
                     circuitBreaker.informBreakerOfResult(resilientResult.isSuccessful());
                 }
                 return null;
