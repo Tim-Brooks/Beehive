@@ -1,7 +1,10 @@
 package fault.java.circuit;
 
+import fault.java.ActionMetrics;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by timbrooks on 11/5/14.
@@ -9,13 +12,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class CircuitBreakerImplementation implements CircuitBreaker {
 
     private final AtomicBoolean circuitOpen;
-    private final AtomicInteger failedCount;
-    private final int threshold;
+    private final ActionMetrics actionMetrics;
+    private AtomicReference<BreakerConfig> breakerConfig;
 
-    public CircuitBreakerImplementation() {
+    public CircuitBreakerImplementation(ActionMetrics actionMetrics, BreakerConfig breakerConfig) {
+        this.actionMetrics = actionMetrics;
         this.circuitOpen = new AtomicBoolean(false);
-        this.failedCount = new AtomicInteger(0);
-        this.threshold = 20;
+        this.breakerConfig = new AtomicReference<>(breakerConfig);
     }
 
     @Override
@@ -31,11 +34,16 @@ public class CircuitBreakerImplementation implements CircuitBreaker {
             }
         } else {
             if (!circuitOpen.get()) {
-                int failures = failedCount.incrementAndGet();
-                if (threshold < failures) {
+                BreakerConfig config = this.breakerConfig.get();
+                if (config.failureThreshold < actionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis)) {
                     circuitOpen.set(true);
                 }
             }
         }
+    }
+
+    @Override
+    public void setBreakerConfig(BreakerConfig breakerConfig) {
+        this.breakerConfig.set(breakerConfig);
     }
 }

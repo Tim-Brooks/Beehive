@@ -8,4 +8,6 @@ public interface CircuitBreaker {
     public boolean isOpen();
 
     void informBreakerOfResult(boolean successful);
+
+    void setBreakerConfig(BreakerConfig breakerConfig);
 }
