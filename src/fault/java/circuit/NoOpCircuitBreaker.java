@@ -12,4 +12,9 @@ public class NoOpCircuitBreaker implements CircuitBreaker {
     @Override
     public void informBreakerOfResult(boolean successful) {
     }
+
+    @Override
+    public void setBreakerConfig(BreakerConfig breakerConfig) {
+
+    }
 }
