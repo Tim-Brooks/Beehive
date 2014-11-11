@@ -23,8 +23,7 @@ public class TimeoutService {
             @Override
             public void run() {
                 scheduledAction.cancel(true);
-                resilientResult.setTimedOut();
-                if (resilientResult.shouldReportStatus()) {
+                if (resilientResult.setTimedOut()) {
                     actionMetrics.informActionOfResult(resilientResult);
                 }
             }

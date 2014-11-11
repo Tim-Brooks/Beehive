@@ -29,13 +29,14 @@ public class ServiceExecutor {
         ScheduledFuture<Void> scheduledFuture = threadPool.schedule(new Callable<Void>() {
             @Override
             public Void call() {
+                boolean statusSetForFirstTime = false;
                 try {
                     T result = action.run();
-                    resilientResult.deliverResult(result);
+                    statusSetForFirstTime = resilientResult.deliverResult(result);
                 } catch (Exception e) {
-                    resilientResult.deliverError(e);
+                    statusSetForFirstTime = resilientResult.deliverError(e);
                 } finally {
-                    if (resilientResult.shouldReportStatus()) {
+                    if (statusSetForFirstTime) {
                         actionMetrics.informActionOfResult(resilientResult);
                     }
                     circuitBreaker.informBreakerOfResult(resilientResult.isSuccessful());

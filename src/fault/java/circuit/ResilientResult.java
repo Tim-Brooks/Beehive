@@ -12,23 +12,26 @@ public class ResilientResult<T> {
     public T result;
     public Throwable error;
     public AtomicReference<Status> status = new AtomicReference<>(Status.PENDING);
-    private AtomicBoolean reportedStatus = new AtomicBoolean(false);
 
 
-    public void deliverResult(T result) {
-        if (status.compareAndSet(Status.PENDING, Status.SUCCESS)) {
+    public boolean deliverResult(T result) {
+        boolean swapSuccess = status.compareAndSet(Status.PENDING, Status.SUCCESS);
+        if (swapSuccess) {
             this.result = result;
         }
+        return swapSuccess;
     }
 
-    public void deliverError(Throwable error) {
+    public boolean deliverError(Throwable error) {
+        boolean swapSuccess = status.compareAndSet(Status.PENDING, Status.SUCCESS);
         if (status.compareAndSet(Status.PENDING, Status.ERROR)) {
             this.error = error;
         }
+        return swapSuccess;
     }
 
-    public void setTimedOut() {
-        status.compareAndSet(Status.PENDING, Status.TIMED_OUT);
+    public boolean setTimedOut() {
+        return status.compareAndSet(Status.PENDING, Status.TIMED_OUT);
     }
 
     public boolean isDone() {
@@ -45,10 +48,5 @@ public class ResilientResult<T> {
 
     public boolean isSuccessful() {
         return status.get() == Status.SUCCESS;
-    }
-
-    public boolean shouldReportStatus() {
-        return reportedStatus.compareAndSet(false, true);
-
     }
 }
