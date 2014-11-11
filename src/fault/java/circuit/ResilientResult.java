@@ -1,5 +1,6 @@
 package fault.java.circuit;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -11,6 +12,7 @@ public class ResilientResult<T> {
     public T result;
     public Throwable error;
     public AtomicReference<Status> status = new AtomicReference<>(Status.PENDING);
+    private AtomicBoolean reportedStatus = new AtomicBoolean(false);
 
 
     public void deliverResult(T result) {
@@ -33,15 +35,20 @@ public class ResilientResult<T> {
         return status.get() != Status.PENDING;
     }
 
-    public boolean isError(){
-        return  status.get() == Status.ERROR;
+    public boolean isError() {
+        return status.get() == Status.ERROR;
     }
 
-    public boolean isTimedOut(){
-        return  status.get() == Status.TIMED_OUT;
+    public boolean isTimedOut() {
+        return status.get() == Status.TIMED_OUT;
     }
 
-    public boolean isSuccessful(){
-        return  status.get() == Status.SUCCESS;
+    public boolean isSuccessful() {
+        return status.get() == Status.SUCCESS;
+    }
+
+    public boolean shouldReportStatus() {
+        return reportedStatus.compareAndSet(false, true);
+
     }
 }

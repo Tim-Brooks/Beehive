@@ -35,14 +35,16 @@ public class ServiceExecutor {
                 } catch (Exception e) {
                     resilientResult.deliverError(e);
                 } finally {
-                    actionMetrics.informActionOfResult(resilientResult);
+                    if (resilientResult.shouldReportStatus()) {
+                        actionMetrics.informActionOfResult(resilientResult);
+                    }
                     circuitBreaker.informBreakerOfResult(resilientResult.isSuccessful());
                 }
                 return null;
             }
         }, 0, TimeUnit.MILLISECONDS);
 
-        timeoutService.scheduleTimeout(millisTimeout, resilientResult, scheduledFuture);
+        timeoutService.scheduleTimeout(millisTimeout, resilientResult, scheduledFuture, actionMetrics);
         return resilientResult;
     }
 

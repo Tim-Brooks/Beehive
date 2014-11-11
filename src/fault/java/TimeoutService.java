@@ -18,12 +18,15 @@ public class TimeoutService {
         executorService = Executors.newSingleThreadScheduledExecutor();
     }
 
-    public <T> void scheduleTimeout(int millisTimeout, final ResilientResult<T> resilientResult, final ScheduledFuture<Void> scheduledAction) {
+    public <T> void scheduleTimeout(int millisTimeout, final ResilientResult<T> resilientResult, final ScheduledFuture<Void> scheduledAction, final ActionMetrics actionMetrics) {
         executorService.schedule(new Runnable() {
             @Override
             public void run() {
                 scheduledAction.cancel(true);
                 resilientResult.setTimedOut();
+                if (resilientResult.shouldReportStatus()) {
+                    actionMetrics.informActionOfResult(resilientResult);
+                }
             }
         }, millisTimeout, TimeUnit.MILLISECONDS);
     }
