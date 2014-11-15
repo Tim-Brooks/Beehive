@@ -18,7 +18,7 @@ public class SingleWriterServiceExecutor {
     private final CircuitBreaker circuitBreaker;
     private final ActionMetrics actionMetrics;
     private final TimeoutService timeoutService;
-    private final ConcurrentLinkedQueue<ResilientAction<?>> toScheduleQueue;
+    private final ConcurrentLinkedQueue<Runnable> toScheduleQueue;
     private Thread managingThread;
 
     public SingleWriterServiceExecutor(int poolSize) {
@@ -33,24 +33,6 @@ public class SingleWriterServiceExecutor {
             throw new RuntimeException("Circuit is Open");
         }
         final ResilientResult<T> resilientResult = new ResilientResult<>();
-        Callable<Void> callable = new Callable<Void>() {
-            @Override
-            public Void call() {
-                boolean statusSetForFirstTime = false;
-                try {
-                    T result = action.run();
-                    statusSetForFirstTime = resilientResult.deliverResult(result);
-                } catch (Exception e) {
-                    statusSetForFirstTime = resilientResult.deliverError(e);
-                } finally {
-                    if (statusSetForFirstTime) {
-                        actionMetrics.informActionOfResult(resilientResult);
-                    }
-                    circuitBreaker.informBreakerOfResult(resilientResult.isSuccessful());
-                }
-                return null;
-            }
-        };
 
 //        timeoutService.scheduleTimeout(millisTimeout, resilientResult, scheduledFuture, actionMetrics);
         return resilientResult;

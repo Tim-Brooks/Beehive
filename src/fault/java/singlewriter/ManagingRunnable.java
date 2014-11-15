@@ -1,8 +1,6 @@
 package fault.java.singlewriter;
 
-import fault.java.ResilientAction;
-
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.LockSupport;
 
 /**
@@ -10,20 +8,22 @@ import java.util.concurrent.locks.LockSupport;
  */
 public class ManagingRunnable implements Runnable {
 
-    private ConcurrentLinkedQueue<ResilientAction<?>> toScheduleQueue;
+    private ConcurrentLinkedQueue<Runnable> toScheduleQueue;
+    private final ScheduledExecutorService executorService;
     private volatile boolean isRunning;
 
-    public ManagingRunnable(ConcurrentLinkedQueue<ResilientAction<?>> toScheduleQueue) {
+    public ManagingRunnable(ConcurrentLinkedQueue<Runnable> toScheduleQueue) {
         this.toScheduleQueue = toScheduleQueue;
+        executorService = Executors.newScheduledThreadPool(15);
     }
 
     @Override
     public void run() {
         isRunning = true;
         while (isRunning) {
-            ResilientAction<?> poll = toScheduleQueue.poll();
+            Runnable poll = toScheduleQueue.poll();
             if (poll != null) {
-
+                ScheduledFuture<?> future = executorService.schedule(poll, 0, TimeUnit.MILLISECONDS);
             } else {
                 // This will change for sure.
                 LockSupport.parkNanos(1);
