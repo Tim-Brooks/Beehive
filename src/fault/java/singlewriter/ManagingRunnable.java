@@ -8,13 +8,15 @@ import java.util.concurrent.locks.LockSupport;
  */
 public class ManagingRunnable implements Runnable {
 
-    private ConcurrentLinkedQueue<Runnable> toScheduleQueue;
+    private final ConcurrentLinkedQueue<Runnable> toScheduleQueue;
+    private final ConcurrentLinkedQueue<?> toReturnQueue;
     private final ScheduledExecutorService executorService;
     private volatile boolean isRunning;
 
-    public ManagingRunnable(ConcurrentLinkedQueue<Runnable> toScheduleQueue) {
+    public ManagingRunnable(int poolSize, ConcurrentLinkedQueue<Runnable> toScheduleQueue, ConcurrentLinkedQueue<?> toReturnQueue) {
         this.toScheduleQueue = toScheduleQueue;
-        executorService = Executors.newScheduledThreadPool(15);
+        this.toReturnQueue = toReturnQueue;
+        executorService = Executors.newScheduledThreadPool(poolSize);
     }
 
     @Override

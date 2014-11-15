@@ -17,15 +17,18 @@ public class SingleWriterServiceExecutor {
 
     private final CircuitBreaker circuitBreaker;
     private final ActionMetrics actionMetrics;
-    private final TimeoutService timeoutService;
     private final ConcurrentLinkedQueue<Runnable> toScheduleQueue;
+    private final ConcurrentLinkedQueue<ResilientResult<?>> toReturnQueue;
+    private final int poolSize;
     private Thread managingThread;
+    private ManagingRunnable managingRunnable;
 
     public SingleWriterServiceExecutor(int poolSize) {
+        this.poolSize = poolSize;
         this.actionMetrics = new ActionMetrics();
         this.circuitBreaker = new CircuitBreakerImplementation(actionMetrics, new BreakerConfig());
-        this.timeoutService = new TimeoutService();
         this.toScheduleQueue = new ConcurrentLinkedQueue<>();
+        this.toReturnQueue = new ConcurrentLinkedQueue<>();
     }
 
     public <T> ResilientResult<T> performAction(final ResilientAction<T> action, int millisTimeout) {
@@ -33,18 +36,20 @@ public class SingleWriterServiceExecutor {
             throw new RuntimeException("Circuit is Open");
         }
         final ResilientResult<T> resilientResult = new ResilientResult<>();
+        toScheduleQueue.add(new ActionCallable<>(action, resilientResult));
 
-//        timeoutService.scheduleTimeout(millisTimeout, resilientResult, scheduledFuture, actionMetrics);
         return resilientResult;
     }
 
     public void shutdown() {
-        timeoutService.shutdown();
+        managingRunnable.shutdown();
+        managingThread.interrupt();
     }
 
     private void startManagerThread() {
         // TODO: Name thread.
-        managingThread = new Thread(new ManagingRunnable(toScheduleQueue));
+        managingRunnable = new ManagingRunnable(poolSize, toScheduleQueue, toReturnQueue);
+        managingThread = new Thread(managingRunnable);
         managingThread.start();
     }
 }

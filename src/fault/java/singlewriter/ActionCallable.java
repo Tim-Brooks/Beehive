@@ -21,7 +21,6 @@ public class ActionCallable<T> implements Runnable {
 
     @Override
     public void run()  {
-        boolean statusSetForFirstTime = false;
         try {
             T value = action.run();
             result.deliverResult(value);
