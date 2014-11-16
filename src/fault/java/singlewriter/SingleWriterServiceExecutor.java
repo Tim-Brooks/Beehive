@@ -2,13 +2,12 @@ package fault.java.singlewriter;
 
 import fault.java.ActionMetrics;
 import fault.java.ResilientAction;
-import fault.java.TimeoutService;
 import fault.java.circuit.BreakerConfig;
 import fault.java.circuit.CircuitBreaker;
 import fault.java.circuit.CircuitBreakerImplementation;
 import fault.java.circuit.ResilientResult;
 
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
  * Created by timbrooks on 11/13/14.
@@ -36,7 +35,10 @@ public class SingleWriterServiceExecutor {
             throw new RuntimeException("Circuit is Open");
         }
         final ResilientResult<T> resilientResult = new ResilientResult<>();
-        toScheduleQueue.add(new ActionCallable<>(action, millisTimeout, resilientResult, toReturnQueue));
+        long relativeTimeout = millisTimeout + 1 + System.currentTimeMillis();
+        toScheduleQueue.add(new ActionCallable<>(action, relativeTimeout,
+                resilientResult,
+                toReturnQueue));
 
         return resilientResult;
     }
@@ -48,7 +50,8 @@ public class SingleWriterServiceExecutor {
 
     private void startManagerThread() {
         // TODO: Name thread.
-        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, actionMetrics, toScheduleQueue, toReturnQueue);
+        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, actionMetrics, toScheduleQueue,
+                toReturnQueue);
         managingThread = new Thread(managingRunnable);
         managingThread.start();
     }

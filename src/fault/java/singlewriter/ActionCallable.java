@@ -3,7 +3,6 @@ package fault.java.singlewriter;
 import fault.java.ResilientAction;
 import fault.java.circuit.ResilientResult;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /**
@@ -14,12 +13,12 @@ public class ActionCallable<T> implements Runnable {
     private final ResilientAction<T> action;
     private final ResilientResult<T> result;
     private final ConcurrentLinkedQueue<ResilientResult<?>> toReturnQueue;
-    public final long timeout;
+    public final long relativeTimeout;
 
-    public ActionCallable(ResilientAction<T> action, long timeout, ResilientResult<T> result,
+    public ActionCallable(ResilientAction<T> action, long relativeTimeout, ResilientResult<T> result,
                           ConcurrentLinkedQueue<ResilientResult<?>> toReturnQueue) {
         this.action = action;
-        this.timeout = timeout;
+        this.relativeTimeout = relativeTimeout;
         this.result = result;
         this.toReturnQueue = toReturnQueue;
 
