@@ -24,7 +24,7 @@ public class TimeoutService {
             public void run() {
                 scheduledAction.cancel(true);
                 if (resilientResult.setTimedOut()) {
-                    actionMetrics.informActionOfResult(resilientResult);
+                    actionMetrics.logActionResult(resilientResult);
                 }
             }
         }, millisTimeout, TimeUnit.MILLISECONDS);

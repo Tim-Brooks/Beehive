@@ -47,7 +47,7 @@ public class ManagingRunnable implements Runnable {
             }
             ResilientResult<?> result = toReturnQueue.poll();
             if (result != null) {
-                actionMetrics.informActionOfResult(result);
+                actionMetrics.logActionResult(result);
                 circuitBreaker.informBreakerOfResult(result.isSuccessful());
                 didSomething = true;
             }

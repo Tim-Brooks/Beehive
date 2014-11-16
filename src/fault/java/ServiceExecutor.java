@@ -37,7 +37,7 @@ public class ServiceExecutor {
                     statusSetForFirstTime = resilientResult.deliverError(e);
                 } finally {
                     if (statusSetForFirstTime) {
-                        actionMetrics.informActionOfResult(resilientResult);
+                        actionMetrics.logActionResult(resilientResult);
                     }
                     circuitBreaker.informBreakerOfResult(resilientResult.isSuccessful());
                 }

@@ -32,7 +32,7 @@ public class ActionMetrics {
         return totalErrors;
     }
 
-    public <T> void informActionOfResult(ResilientResult<T> resilientResult) {
+    public <T> void logActionResult(ResilientResult<T> resilientResult) {
         if (!resilientResult.isSuccessful()) {
             long currentTimestamp = System.currentTimeMillis();
             if (currentTimestamp < advanceSlotTimeInMillis) {
