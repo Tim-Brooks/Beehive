@@ -17,7 +17,7 @@ public class SingleWriterServiceExecutor {
 
     private final CircuitBreaker circuitBreaker;
     private final ActionMetrics actionMetrics;
-    private final ConcurrentLinkedQueue<Runnable> toScheduleQueue;
+    private final ConcurrentLinkedQueue<ActionCallable<?>> toScheduleQueue;
     private final ConcurrentLinkedQueue<ResilientResult<?>> toReturnQueue;
     private final int poolSize;
     private Thread managingThread;
@@ -36,7 +36,7 @@ public class SingleWriterServiceExecutor {
             throw new RuntimeException("Circuit is Open");
         }
         final ResilientResult<T> resilientResult = new ResilientResult<>();
-        toScheduleQueue.add(new ActionCallable<>(action, resilientResult, toReturnQueue));
+        toScheduleQueue.add(new ActionCallable<>(action, millisTimeout, resilientResult, toReturnQueue));
 
         return resilientResult;
     }
@@ -48,7 +48,7 @@ public class SingleWriterServiceExecutor {
 
     private void startManagerThread() {
         // TODO: Name thread.
-        managingRunnable = new ManagingRunnable(poolSize, toScheduleQueue, toReturnQueue);
+        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, actionMetrics, toScheduleQueue, toReturnQueue);
         managingThread = new Thread(managingRunnable);
         managingThread.start();
     }
