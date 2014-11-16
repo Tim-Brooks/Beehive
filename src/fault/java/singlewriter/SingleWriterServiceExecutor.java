@@ -36,7 +36,7 @@ public class SingleWriterServiceExecutor {
             throw new RuntimeException("Circuit is Open");
         }
         final ResilientResult<T> resilientResult = new ResilientResult<>();
-        toScheduleQueue.add(new ActionCallable<>(action, resilientResult));
+        toScheduleQueue.add(new ActionCallable<>(action, resilientResult, toReturnQueue));
 
         return resilientResult;
     }
