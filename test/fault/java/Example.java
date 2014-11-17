@@ -1,6 +1,7 @@
 package fault.java;
 
-import fault.java.circuit.ResilientTask;
+import fault.java.singlewriter.ResilientPromise;
+import fault.java.singlewriter.SingleWriterServiceExecutor;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -13,30 +14,17 @@ import java.net.URL;
 public class Example {
 
     public static void main(String[] args) {
-        ServiceExecutor serviceExecutor = new ServiceExecutor(5);
-        ResilientTask<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
-            @Override
-            public String run() throws Exception {
-                String result = null;
-                InputStream response = new URL("http://localhost:6001/").openStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(response));
-                result = reader.readLine();
-                return result;
-            }
-        }, 10);
+        SingleWriterServiceExecutor serviceExecutor = new SingleWriterServiceExecutor(5);
 
-        int i = 0;
-        long start = System.nanoTime();
-        while (!result.isDone()) {
-            ++i;
+        for (int i = 0; i < 3; ++i) {
+            new Thread(new ExampleRequest(serviceExecutor)).start();
         }
-        long end = System.nanoTime();
-        System.out.println((end - start) / 1000);
-        System.out.println(i + result.result);
-        if (result.isError()) {
-            System.out.println(result.error.getMessage());
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-        System.out.println(result.status);
         serviceExecutor.shutdown();
     }
+
 }

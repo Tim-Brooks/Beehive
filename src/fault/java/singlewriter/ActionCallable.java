@@ -12,15 +12,16 @@ public class ActionCallable<T> implements Callable<Void> {
 
     public final ResultMessage<T> resultMessage;
     private final ResilientAction<T> action;
-    private final ConcurrentLinkedQueue<ResultMessage<?>> toReturnQueue;
+    private final ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
 
-    public ActionCallable(ResilientAction<T> action, ConcurrentLinkedQueue<ResultMessage<?>> toReturnQueue) {
+    public ActionCallable(ResilientAction<T> action, ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue) {
         this.action = action;
         this.toReturnQueue = toReturnQueue;
         this.resultMessage = new ResultMessage<>();
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Void call() {
         try {
             T value = action.run();
@@ -28,7 +29,7 @@ public class ActionCallable<T> implements Callable<Void> {
         } catch (Exception e) {
             resultMessage.setException(e);
         }
-        toReturnQueue.offer(resultMessage);
+        toReturnQueue.offer((ResultMessage<Object>) resultMessage);
         return null;
     }
 }

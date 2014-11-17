@@ -6,16 +6,12 @@ import fault.java.circuit.BreakerConfig;
 import fault.java.circuit.CircuitBreaker;
 import fault.java.circuit.CircuitBreakerImplementation;
 
-import java.util.concurrent.ConcurrentLinkedQueue;
-
 /**
  * Created by timbrooks on 11/13/14.
  */
 public class SingleWriterServiceExecutor {
 
     private final CircuitBreaker circuitBreaker;
-    private final ConcurrentLinkedQueue<ScheduleMessage<?>> toScheduleQueue;
-    private final ConcurrentLinkedQueue<ResultMessage<?>> toReturnQueue;
     private Thread managingThread;
     private ManagingRunnable managingRunnable;
 
@@ -23,11 +19,8 @@ public class SingleWriterServiceExecutor {
         ActionMetrics actionMetrics = new ActionMetrics();
 
         this.circuitBreaker = new CircuitBreakerImplementation(actionMetrics, new BreakerConfig());
-        this.toScheduleQueue = new ConcurrentLinkedQueue<>();
-        this.toReturnQueue = new ConcurrentLinkedQueue<>();
 
-        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, actionMetrics, toScheduleQueue,
-                toReturnQueue);
+        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, actionMetrics);
         managingThread = new Thread(managingRunnable);
         managingThread.start();
     }
@@ -39,7 +32,8 @@ public class SingleWriterServiceExecutor {
         long relativeTimeout = millisTimeout + 1 + System.currentTimeMillis();
         final ResilientPromise<T> resilientPromise = new ResilientPromise<>();
 
-        toScheduleQueue.add(new ScheduleMessage<>(action, resilientPromise, relativeTimeout));
+        ScheduleMessage<T> e = new ScheduleMessage<>(action, resilientPromise, relativeTimeout);
+        managingRunnable.submit(e);
 
         return resilientPromise;
     }

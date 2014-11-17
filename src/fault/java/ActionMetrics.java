@@ -1,6 +1,5 @@
 package fault.java;
 
-import fault.java.circuit.ResilientTask;
 import fault.java.singlewriter.ResilientPromise;
 
 /**
@@ -19,22 +18,23 @@ public class ActionMetrics {
     }
 
     public int getFailuresForTimePeriod(int milliseconds) {
-        long currentTimestamp = System.currentTimeMillis();
-        int slotsToAdvance = slotNumber + (int) ((advanceSlotTimeInMillis - currentTimestamp) / 1000);
-        this.slotNumber = slotsToAdvance;
-        this.advanceSlotTimeInMillis = advanceSlotTimeInMillis + (1000 * slotsToAdvance) + 1000;
-
-        int slotsBack = milliseconds / 1000;
-        int totalErrors = 0;
-        for (int i = slotNumber - slotsBack; i <= slotNumber; ++i) {
-            totalErrors = totalErrors + errorMetrics[i];
-        }
-
-        return totalErrors;
+//        long currentTimestamp = System.currentTimeMillis();
+//        int slotsToAdvance = slotNumber + (int) ((advanceSlotTimeInMillis - currentTimestamp) / 1000);
+//        this.slotNumber = slotsToAdvance;
+//        this.advanceSlotTimeInMillis = advanceSlotTimeInMillis + (1000 * slotsToAdvance) + 1000;
+//
+//        int slotsBack = milliseconds / 1000;
+//        int totalErrors = 0;
+//        for (int i = slotNumber - slotsBack; i <= slotNumber; ++i) {
+//            totalErrors = totalErrors + errorMetrics[i];
+//        }
+//
+//        return totalErrors;
+        return 0;
     }
 
-    public <T> void logActionResult(ResilientTask<T> resilientTask) {
-        if (!resilientTask.isSuccessful()) {
+    public void logActionResult(ResilientPromise promise) {
+        if (promise.isSuccessful()) {
             long currentTimestamp = System.currentTimeMillis();
             if (currentTimestamp < advanceSlotTimeInMillis) {
                 errorMetrics[slotNumber]++;
