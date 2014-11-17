@@ -14,9 +14,9 @@ import java.net.URL;
 public class Example {
 
     public static void main(String[] args) {
-        SingleWriterServiceExecutor serviceExecutor = new SingleWriterServiceExecutor(5);
+        SingleWriterServiceExecutor serviceExecutor = new SingleWriterServiceExecutor(10);
 
-        for (int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 50; ++i) {
             new Thread(new ExampleRequest(serviceExecutor)).start();
         }
         try {

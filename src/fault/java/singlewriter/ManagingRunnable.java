@@ -66,7 +66,9 @@ public class ManagingRunnable implements Runnable {
             for (Map.Entry<Long, ResultMessage<Object>> entry : toCancel.entrySet()) {
                 handleTimeout(taskMap, entry.getValue());
             }
-            scheduled = scheduled.tailMap(now);
+
+            SortedMap<Long, ResultMessage<Object>> tailView = scheduled.tailMap(now);
+            scheduled = new TreeMap<>(tailView);
 
             if (!didSomething) {
                 LockSupport.parkNanos(1);

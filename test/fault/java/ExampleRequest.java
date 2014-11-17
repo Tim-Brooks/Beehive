@@ -29,17 +29,17 @@ public class ExampleRequest implements Runnable {
                 result = reader.readLine();
                 return result;
             }
-        }, 10);
+        }, 5);
 
-        long start = System.nanoTime();
+        long start = System.currentTimeMillis();
         try {
             result.await();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
 
-        long end = System.nanoTime();
-        System.out.println((end - start) / 1000);
+        long end = System.currentTimeMillis();
+        System.out.println(end - start);
         System.out.println("Result: " + result.result);
         if (result.isError()) {
             System.out.println(result.error.getMessage());
