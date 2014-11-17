@@ -1,6 +1,6 @@
 package fault.java;
 
-import fault.java.circuit.ResilientResult;
+import fault.java.circuit.ResilientTask;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -18,13 +18,13 @@ public class TimeoutService {
         executorService = Executors.newSingleThreadScheduledExecutor();
     }
 
-    public <T> void scheduleTimeout(int millisTimeout, final ResilientResult<T> resilientResult, final ScheduledFuture<Void> scheduledAction, final ActionMetrics actionMetrics) {
+    public <T> void scheduleTimeout(int millisTimeout, final ResilientTask<T> resilientTask, final ScheduledFuture<Void> scheduledAction, final ActionMetrics actionMetrics) {
         executorService.schedule(new Runnable() {
             @Override
             public void run() {
                 scheduledAction.cancel(true);
-                if (resilientResult.setTimedOut()) {
-                    actionMetrics.logActionResult(resilientResult);
+                if (resilientTask.setTimedOut()) {
+                    actionMetrics.logActionResult(resilientTask);
                 }
             }
         }, millisTimeout, TimeUnit.MILLISECONDS);

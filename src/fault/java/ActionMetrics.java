@@ -1,6 +1,7 @@
 package fault.java;
 
-import fault.java.circuit.ResilientResult;
+import fault.java.circuit.ResilientTask;
+import fault.java.singlewriter.ResilientPromise;
 
 /**
  * Created by timbrooks on 11/10/14.
@@ -32,8 +33,8 @@ public class ActionMetrics {
         return totalErrors;
     }
 
-    public <T> void logActionResult(ResilientResult<T> resilientResult) {
-        if (!resilientResult.isSuccessful()) {
+    public <T> void logActionResult(ResilientTask<T> resilientTask) {
+        if (!resilientTask.isSuccessful()) {
             long currentTimestamp = System.currentTimeMillis();
             if (currentTimestamp < advanceSlotTimeInMillis) {
                 errorMetrics[slotNumber]++;

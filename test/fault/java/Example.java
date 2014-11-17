@@ -1,6 +1,6 @@
 package fault.java;
 
-import fault.java.circuit.ResilientResult;
+import fault.java.circuit.ResilientTask;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -14,7 +14,7 @@ public class Example {
 
     public static void main(String[] args) {
         ServiceExecutor serviceExecutor = new ServiceExecutor(5);
-        ResilientResult<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
+        ResilientTask<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
             @Override
             public String run() throws Exception {
                 String result = null;

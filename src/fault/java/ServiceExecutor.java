@@ -21,32 +21,32 @@ public class ServiceExecutor {
         this.timeoutService = new TimeoutService();
     }
 
-    public <T> ResilientResult<T> performAction(final ResilientAction<T> action, int millisTimeout) {
+    public <T> ResilientTask<T> performAction(final ResilientAction<T> action, int millisTimeout) {
         if (circuitBreaker.isOpen()) {
             throw new RuntimeException("Circuit is Open");
         }
-        final ResilientResult<T> resilientResult = new ResilientResult<>();
+        final ResilientTask<T> resilientTask = new ResilientTask<>();
         ScheduledFuture<Void> scheduledFuture = threadPool.schedule(new Callable<Void>() {
             @Override
             public Void call() {
                 boolean statusSetForFirstTime = false;
                 try {
                     T result = action.run();
-                    statusSetForFirstTime = resilientResult.deliverResult(result);
+                    statusSetForFirstTime = resilientTask.deliverResult(result);
                 } catch (Exception e) {
-                    statusSetForFirstTime = resilientResult.deliverError(e);
+                    statusSetForFirstTime = resilientTask.deliverError(e);
                 } finally {
                     if (statusSetForFirstTime) {
-                        actionMetrics.logActionResult(resilientResult);
+                        actionMetrics.logActionResult(resilientTask);
                     }
-                    circuitBreaker.informBreakerOfResult(resilientResult.isSuccessful());
+                    circuitBreaker.informBreakerOfResult(resilientTask.isSuccessful());
                 }
                 return null;
             }
         }, 0, TimeUnit.MILLISECONDS);
 
-        timeoutService.scheduleTimeout(millisTimeout, resilientResult, scheduledFuture, actionMetrics);
-        return resilientResult;
+        timeoutService.scheduleTimeout(millisTimeout, resilientTask, scheduledFuture, actionMetrics);
+        return resilientTask;
     }
 
     public void shutdown() {
