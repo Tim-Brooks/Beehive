@@ -4,10 +4,7 @@ import fault.java.ActionMetrics;
 import fault.java.ResilientTask;
 import fault.java.circuit.CircuitBreaker;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -36,7 +33,7 @@ public class ManagingRunnable implements Runnable {
 
     @Override
     public void run() {
-        SortedMap<Long, ResultMessage<Object>> scheduled = new TreeMap<>();
+        SortedMap<Long, List<ResultMessage<Object>>> scheduled = new TreeMap<>();
         Map<ResultMessage<Object>, ResilientTask<Object>> taskMap = new HashMap<>();
         isRunning = true;
         while (isRunning) {
@@ -51,7 +48,15 @@ public class ManagingRunnable implements Runnable {
                 taskMap.put(resultMessage, resilientTask);
 
                 executorService.submit(resilientTask);
-                scheduled.put(scheduleMessage.relativeTimeout, resultMessage);
+                long relativeTimeout = scheduleMessage.relativeTimeout;
+                if (scheduled.containsKey(relativeTimeout)) {
+                    scheduled.get(relativeTimeout).add(resultMessage);
+                } else {
+                    List<ResultMessage<Object>> messages = new ArrayList<>();
+                    messages.add(resultMessage);
+                    scheduled.put(relativeTimeout, messages);
+
+                }
                 didSomething = true;
             }
 
@@ -62,12 +67,15 @@ public class ManagingRunnable implements Runnable {
             }
 
             long now = System.currentTimeMillis();
-            SortedMap<Long, ResultMessage<Object>> toCancel = scheduled.headMap(now);
-            for (Map.Entry<Long, ResultMessage<Object>> entry : toCancel.entrySet()) {
-                handleTimeout(taskMap, entry.getValue());
+            SortedMap<Long, List<ResultMessage<Object>>> toCancel = scheduled.headMap(now);
+            for (Map.Entry<Long, List<ResultMessage<Object>>> entry : toCancel.entrySet()) {
+                List<ResultMessage<Object>> toTimeout = entry.getValue();
+                for (ResultMessage<Object> messageToTimeout : toTimeout) {
+                    handleTimeout(taskMap, messageToTimeout);
+                }
             }
 
-            SortedMap<Long, ResultMessage<Object>> tailView = scheduled.tailMap(now);
+            SortedMap<Long, List<ResultMessage<Object>>> tailView = scheduled.tailMap(now);
             scheduled = new TreeMap<>(tailView);
 
             if (!didSomething) {
