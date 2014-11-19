@@ -16,6 +16,7 @@ import java.util.concurrent.locks.LockSupport;
  */
 public class ManagingRunnable implements Runnable {
 
+    private final int poolSize;
     private final CircuitBreaker circuitBreaker;
     private final ActionMetrics actionMetrics;
     private final ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
@@ -24,6 +25,7 @@ public class ManagingRunnable implements Runnable {
     private volatile boolean isRunning;
 
     public ManagingRunnable(int poolSize, CircuitBreaker circuitBreaker, ActionMetrics actionMetrics) {
+        this.poolSize = poolSize;
         this.circuitBreaker = circuitBreaker;
         this.actionMetrics = actionMetrics;
         this.toScheduleQueue = new ConcurrentLinkedQueue<>();
@@ -39,41 +41,23 @@ public class ManagingRunnable implements Runnable {
         while (isRunning) {
             boolean didSomething = false;
 
-            ScheduleMessage<Object> scheduleMessage = toScheduleQueue.poll();
-            if (scheduleMessage != null) {
-                ActionCallable<Object> actionCallable = new ActionCallable<>(scheduleMessage.action, toReturnQueue);
-                FutureTask<Void> futureTask = new FutureTask<>(actionCallable);
-                ResilientTask<Object> resilientTask = new ResilientTask<>(futureTask, scheduleMessage.promise);
-                ResultMessage<Object> resultMessage = actionCallable.resultMessage;
-                taskMap.put(resultMessage, resilientTask);
-
-                executorService.submit(resilientTask);
-                long relativeTimeout = scheduleMessage.relativeTimeout;
-                if (scheduled.containsKey(relativeTimeout)) {
-                    scheduled.get(relativeTimeout).add(resultMessage);
+            for (int i = 0; i < poolSize; ++i) {
+                if (handleScheduling(scheduled, taskMap)) {
+                    didSomething = true;
                 } else {
-                    List<ResultMessage<Object>> messages = new ArrayList<>();
-                    messages.add(resultMessage);
-                    scheduled.put(relativeTimeout, messages);
-
-                }
-                didSomething = true;
-            }
-
-            ResultMessage<Object> result = toReturnQueue.poll();
-            if (result != null) {
-                handleResult(taskMap, result);
-                didSomething = true;
-            }
-
-            long now = System.currentTimeMillis();
-            SortedMap<Long, List<ResultMessage<Object>>> toCancel = scheduled.headMap(now);
-            for (Map.Entry<Long, List<ResultMessage<Object>>> entry : toCancel.entrySet()) {
-                List<ResultMessage<Object>> toTimeout = entry.getValue();
-                for (ResultMessage<Object> messageToTimeout : toTimeout) {
-                    handleTimeout(taskMap, messageToTimeout);
+                    break;
                 }
             }
+
+            for (int i = 0; i < poolSize; ++i) {
+                if (handleReturnResult(taskMap)) {
+                    didSomething = true;
+                } else {
+                    break;
+                }
+            }
+
+            long now = triggerTimeouts(scheduled, taskMap);
 
             SortedMap<Long, List<ResultMessage<Object>>> tailView = scheduled.tailMap(now);
             scheduled = new TreeMap<>(tailView);
@@ -91,19 +75,61 @@ public class ManagingRunnable implements Runnable {
         toScheduleQueue.offer((ScheduleMessage<Object>) message);
     }
 
-    private void handleResult(Map<ResultMessage<Object>, ResilientTask<Object>> taskMap, ResultMessage<Object> result) {
-        ResilientTask<Object> resilientTask = taskMap.remove(result);
-        if (resilientTask != null) {
+    private boolean handleScheduling(SortedMap<Long, List<ResultMessage<Object>>> scheduled,
+                                     Map<ResultMessage<Object>, ResilientTask<Object>> taskMap) {
+        ScheduleMessage<Object> scheduleMessage = toScheduleQueue.poll();
+        if (scheduleMessage != null) {
+            ActionCallable<Object> actionCallable = new ActionCallable<>(scheduleMessage.action, toReturnQueue);
+            FutureTask<Void> futureTask = new FutureTask<>(actionCallable);
+            ResilientTask<Object> resilientTask = new ResilientTask<>(futureTask, scheduleMessage.promise);
+            ResultMessage<Object> resultMessage = actionCallable.resultMessage;
+            taskMap.put(resultMessage, resilientTask);
 
-            ResilientPromise<Object> promise = resilientTask.resilientPromise;
-            if (result.result != null) {
-                promise.deliverResult(result.result);
+            executorService.submit(resilientTask);
+            long relativeTimeout = scheduleMessage.relativeTimeout;
+            if (scheduled.containsKey(relativeTimeout)) {
+                scheduled.get(relativeTimeout).add(resultMessage);
             } else {
-                promise.deliverError(result.exception);
+                List<ResultMessage<Object>> messages = new ArrayList<>();
+                messages.add(resultMessage);
+                scheduled.put(relativeTimeout, messages);
+
             }
-            actionMetrics.logActionResult(promise);
-            circuitBreaker.informBreakerOfResult(result.exception == null);
+            return true;
         }
+        return false;
+    }
+
+    private boolean handleReturnResult(Map<ResultMessage<Object>, ResilientTask<Object>> taskMap) {
+        ResultMessage<Object> result = toReturnQueue.poll();
+        if (result != null) {
+            ResilientTask<Object> resilientTask = taskMap.remove(result);
+            if (resilientTask != null) {
+
+                ResilientPromise<Object> promise = resilientTask.resilientPromise;
+                if (result.result != null) {
+                    promise.deliverResult(result.result);
+                } else {
+                    promise.deliverError(result.exception);
+                }
+                actionMetrics.logActionResult(promise);
+                circuitBreaker.informBreakerOfResult(result.exception == null);
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private long triggerTimeouts(SortedMap<Long, List<ResultMessage<Object>>> scheduled, Map<ResultMessage<Object>, ResilientTask<Object>> taskMap) {
+        long now = System.currentTimeMillis();
+        SortedMap<Long, List<ResultMessage<Object>>> toCancel = scheduled.headMap(now);
+        for (Map.Entry<Long, List<ResultMessage<Object>>> entry : toCancel.entrySet()) {
+            List<ResultMessage<Object>> toTimeout = entry.getValue();
+            for (ResultMessage<Object> messageToTimeout : toTimeout) {
+                handleTimeout(taskMap, messageToTimeout);
+            }
+        }
+        return now;
     }
 
     private void handleTimeout(Map<ResultMessage<Object>, ResilientTask<Object>> taskMap, ResultMessage<Object>
