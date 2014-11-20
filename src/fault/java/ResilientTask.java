@@ -1,10 +1,6 @@
 package fault.java;
 
-import fault.java.singlewriter.ResilientPromise;
-
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by timbrooks on 11/5/14.

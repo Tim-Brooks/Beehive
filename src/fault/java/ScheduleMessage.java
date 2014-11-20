@@ -1,6 +1,4 @@
-package fault.java.singlewriter;
-
-import fault.java.ResilientAction;
+package fault.java;
 
 /**
  * Created by timbrooks on 11/16/14.

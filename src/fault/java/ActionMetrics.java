@@ -1,11 +1,9 @@
 package fault.java;
 
-import fault.java.singlewriter.ResilientPromise;
-
 /**
  * Created by timbrooks on 11/10/14.
  */
-public class ActionMetrics {
+public class ActionMetrics implements IActionMetrics {
 
     private final int[] errorMetrics;
     private long advanceSlotTimeInMillis;
@@ -17,6 +15,7 @@ public class ActionMetrics {
         this.advanceSlotTimeInMillis = System.currentTimeMillis() + 1000;
     }
 
+    @Override
     public int getFailuresForTimePeriod(int milliseconds) {
 //        long currentTimestamp = System.currentTimeMillis();
 //        int slotsToAdvance = slotNumber + (int) ((advanceSlotTimeInMillis - currentTimestamp) / 1000);
@@ -33,6 +32,7 @@ public class ActionMetrics {
         return 0;
     }
 
+    @Override
     public void logActionResult(ResilientPromise promise) {
         if (promise.isSuccessful()) {
             long currentTimestamp = System.currentTimeMillis();

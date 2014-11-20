@@ -1,4 +1,4 @@
-package fault.java.singlewriter;
+package fault.java;
 
 /**
  * Created by timbrooks on 11/16/14.

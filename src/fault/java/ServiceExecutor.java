@@ -1,56 +1,46 @@
 package fault.java;
 
-import fault.java.circuit.*;
-
-import java.util.concurrent.*;
+import fault.java.circuit.BreakerConfig;
+import fault.java.circuit.CircuitBreaker;
+import fault.java.circuit.CircuitBreakerImplementation;
 
 /**
- * Created by timbrooks on 11/5/14.
+ * Created by timbrooks on 11/13/14.
  */
 public class ServiceExecutor {
 
-//    private final ScheduledExecutorService threadPool;
-//    private final CircuitBreaker circuitBreaker;
-//    private final ActionMetrics actionMetrics;
-//    private final TimeoutService timeoutService;
-//
-//    public ServiceExecutor(int poolSize) {
-//        this.threadPool = Executors.newScheduledThreadPool(poolSize);
-//        this.actionMetrics = new ActionMetrics();
-//        this.circuitBreaker = new CircuitBreakerImplementation(actionMetrics, new BreakerConfig());
-//        this.timeoutService = new TimeoutService();
-//    }
-//
-//    public <T> ResilientTask<T> performAction(final ResilientAction<T> action, int millisTimeout) {
-//        if (circuitBreaker.isOpen()) {
-//            throw new RuntimeException("Circuit is Open");
-//        }
-//        final ResilientTask<T> resilientTask = new ResilientTask<>();
-//        ScheduledFuture<Void> scheduledFuture = threadPool.schedule(new Callable<Void>() {
-//            @Override
-//            public Void call() {
-//                boolean statusSetForFirstTime = false;
-//                try {
-//                    T result = action.run();
-//                    statusSetForFirstTime = resilientTask.deliverResult(result);
-//                } catch (Exception e) {
-//                    statusSetForFirstTime = resilientTask.deliverError(e);
-//                } finally {
-//                    if (statusSetForFirstTime) {
-//                        actionMetrics.logActionResult(resilientTask);
-//                    }
-//                    circuitBreaker.informBreakerOfResult(resilientTask.isSuccessful());
-//                }
-//                return null;
-//            }
-//        }, 0, TimeUnit.MILLISECONDS);
-//
-//        timeoutService.scheduleTimeout(millisTimeout, resilientTask, scheduledFuture, actionMetrics);
-//        return resilientTask;
-//    }
-//
-//    public void shutdown() {
-//        threadPool.shutdown();
-//        timeoutService.shutdown();
-//    }
+    private final CircuitBreaker circuitBreaker;
+    private Thread managingThread;
+    private ManagingRunnable managingRunnable;
+
+    public ServiceExecutor(int poolSize) {
+        IActionMetrics IActionMetrics = new ActionMetrics();
+
+        BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(20)
+                .timePeriodInMillis(5000).build();
+        this.circuitBreaker = new CircuitBreakerImplementation(IActionMetrics, breakerConfig);
+
+        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, IActionMetrics);
+        managingThread = new Thread(managingRunnable);
+        managingThread.start();
+    }
+
+    public <T> ResilientPromise<T> performAction(final ResilientAction<T> action, int millisTimeout) {
+        if (circuitBreaker.isOpen()) {
+            throw new RuntimeException("Circuit is Open");
+        }
+        long relativeTimeout = millisTimeout + 1 + System.currentTimeMillis();
+        final ResilientPromise<T> resilientPromise = new ResilientPromise<>();
+
+        ScheduleMessage<T> e = new ScheduleMessage<>(action, resilientPromise, relativeTimeout);
+        managingRunnable.submit(e);
+
+        return resilientPromise;
+    }
+
+    public void shutdown() {
+        managingRunnable.shutdown();
+        managingThread.interrupt();
+    }
+
 }

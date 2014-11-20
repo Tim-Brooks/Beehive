@@ -1,6 +1,4 @@
-package fault.java.singlewriter;
-
-import fault.java.ResilientAction;
+package fault.java;
 
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;

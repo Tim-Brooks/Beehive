@@ -1,7 +1,5 @@
-package fault.java.singlewriter;
+package fault.java;
 
-import fault.java.ActionMetrics;
-import fault.java.ResilientTask;
 import fault.java.circuit.CircuitBreaker;
 
 import java.util.*;
@@ -18,16 +16,16 @@ public class ManagingRunnable implements Runnable {
 
     private final int poolSize;
     private final CircuitBreaker circuitBreaker;
-    private final ActionMetrics actionMetrics;
+    private final IActionMetrics IActionMetrics;
     private final ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
     private final ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
     private final ExecutorService executorService;
     private volatile boolean isRunning;
 
-    public ManagingRunnable(int poolSize, CircuitBreaker circuitBreaker, ActionMetrics actionMetrics) {
+    public ManagingRunnable(int poolSize, CircuitBreaker circuitBreaker, IActionMetrics IActionMetrics) {
         this.poolSize = poolSize;
         this.circuitBreaker = circuitBreaker;
-        this.actionMetrics = actionMetrics;
+        this.IActionMetrics = IActionMetrics;
         this.toScheduleQueue = new ConcurrentLinkedQueue<>();
         this.toReturnQueue = new ConcurrentLinkedQueue<>();
         this.executorService = Executors.newFixedThreadPool(poolSize);
@@ -112,7 +110,7 @@ public class ManagingRunnable implements Runnable {
                 } else {
                     promise.deliverError(result.exception);
                 }
-                actionMetrics.logActionResult(promise);
+                IActionMetrics.logActionResult(promise);
                 circuitBreaker.informBreakerOfResult(result.exception == null);
             }
             return true;
@@ -140,7 +138,7 @@ public class ManagingRunnable implements Runnable {
             if (!promise.isDone()) {
                 promise.setTimedOut();
                 task.cancel(true);
-                actionMetrics.logActionResult(promise);
+                IActionMetrics.logActionResult(promise);
                 circuitBreaker.informBreakerOfResult(false);
             }
         }

@@ -1,9 +1,8 @@
 package fault.java.circuit;
 
-import fault.java.ActionMetrics;
+import fault.java.IActionMetrics;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -14,10 +13,10 @@ public class CircuitBreakerImplementation implements CircuitBreaker {
     private final AtomicBoolean circuitOpen;
     // TODO With single writer this will not need to be Atomic
     private AtomicReference<BreakerConfig> breakerConfig;
-    private final ActionMetrics actionMetrics;
+    private final IActionMetrics IActionMetrics;
 
-    public CircuitBreakerImplementation(ActionMetrics actionMetrics, BreakerConfig breakerConfig) {
-        this.actionMetrics = actionMetrics;
+    public CircuitBreakerImplementation(IActionMetrics IActionMetrics, BreakerConfig breakerConfig) {
+        this.IActionMetrics = IActionMetrics;
         this.circuitOpen = new AtomicBoolean(false);
         this.breakerConfig = new AtomicReference<>(breakerConfig);
     }
@@ -36,7 +35,7 @@ public class CircuitBreakerImplementation implements CircuitBreaker {
         } else {
             if (!circuitOpen.get()) {
                 BreakerConfig config = this.breakerConfig.get();
-                int failuresForTimePeriod = actionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis);
+                int failuresForTimePeriod = IActionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis);
                 if (config.failureThreshold < failuresForTimePeriod) {
                     circuitOpen.set(true);
                 }

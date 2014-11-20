@@ -1,4 +1,4 @@
-package fault.java.singlewriter;
+package fault.java;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;

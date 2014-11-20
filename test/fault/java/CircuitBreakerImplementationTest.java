@@ -9,9 +9,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Matchers.intThat;
 import static org.mockito.Mockito.when;
 
 /**
@@ -20,7 +18,7 @@ import static org.mockito.Mockito.when;
 public class CircuitBreakerImplementationTest {
 
     @Mock
-    private ActionMetrics actionMetrics;
+    private IActionMetrics IActionMetrics;
 
     private CircuitBreakerImplementation circuitBreaker;
 
@@ -33,7 +31,7 @@ public class CircuitBreakerImplementationTest {
     public void testCircuitIsClosedByDefault() {
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(20)
                 .timePeriodInMillis(5000).build();
-        circuitBreaker = new CircuitBreakerImplementation(actionMetrics, breakerConfig);
+        circuitBreaker = new CircuitBreakerImplementation(IActionMetrics, breakerConfig);
         assertFalse(circuitBreaker.isOpen());
     }
 
@@ -42,11 +40,11 @@ public class CircuitBreakerImplementationTest {
         int timePeriodInMillis = 1000;
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(5).timePeriodInMillis
                 (timePeriodInMillis).build();
-        circuitBreaker = new CircuitBreakerImplementation(actionMetrics, breakerConfig);
+        circuitBreaker = new CircuitBreakerImplementation(IActionMetrics, breakerConfig);
 
         assertFalse(circuitBreaker.isOpen());
 
-        when(actionMetrics.getFailuresForTimePeriod(timePeriodInMillis)).thenReturn(6);
+        when(IActionMetrics.getFailuresForTimePeriod(timePeriodInMillis)).thenReturn(6);
         circuitBreaker.informBreakerOfResult(false);
 
         assertTrue(circuitBreaker.isOpen());
@@ -57,11 +55,11 @@ public class CircuitBreakerImplementationTest {
         int timePeriodInMillis = 1000;
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(5).timePeriodInMillis
                 (timePeriodInMillis).build();
-        circuitBreaker = new CircuitBreakerImplementation(actionMetrics, breakerConfig);
+        circuitBreaker = new CircuitBreakerImplementation(IActionMetrics, breakerConfig);
 
         assertFalse(circuitBreaker.isOpen());
 
-        when(actionMetrics.getFailuresForTimePeriod(timePeriodInMillis)).thenReturn(6);
+        when(IActionMetrics.getFailuresForTimePeriod(timePeriodInMillis)).thenReturn(6);
         circuitBreaker.informBreakerOfResult(false);
 
         assertTrue(circuitBreaker.isOpen());

@@ -1,8 +1,5 @@
 package fault.java;
 
-import fault.java.singlewriter.ResilientPromise;
-import fault.java.singlewriter.SingleWriterServiceExecutor;
-
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -14,10 +11,10 @@ import java.util.concurrent.*;
  */
 public class ExampleRequest implements Runnable {
 
-    private final SingleWriterServiceExecutor serviceExecutor;
+    private final ServiceExecutor serviceExecutor;
     private final ExecutorService executorService;
 
-    public ExampleRequest(SingleWriterServiceExecutor serviceExecutor, ExecutorService executorService) {
+    public ExampleRequest(ServiceExecutor serviceExecutor, ExecutorService executorService) {
         this.serviceExecutor = serviceExecutor;
         this.executorService = executorService;
     }
