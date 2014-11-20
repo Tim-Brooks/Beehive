@@ -1,4 +1,6 @@
-package fault.java;
+package fault.java.metrics;
+
+import fault.java.ResilientPromise;
 
 /**
  * Created by timbrooks on 11/20/14.

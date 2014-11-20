@@ -1,6 +1,9 @@
 package fault.java;
 
 import fault.java.circuit.CircuitBreaker;
+import fault.java.messages.ResultMessage;
+import fault.java.messages.ScheduleMessage;
+import fault.java.metrics.IActionMetrics;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -16,7 +19,7 @@ public class ManagingRunnable implements Runnable {
 
     private final int poolSize;
     private final CircuitBreaker circuitBreaker;
-    private final IActionMetrics IActionMetrics;
+    private final fault.java.metrics.IActionMetrics IActionMetrics;
     private final ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
     private final ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
     private final ExecutorService executorService;

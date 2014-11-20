@@ -1,5 +1,7 @@
 package fault.java;
 
+import fault.java.messages.ResultMessage;
+
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 

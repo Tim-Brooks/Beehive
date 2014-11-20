@@ -1,6 +1,6 @@
 package fault.java.circuit;
 
-import fault.java.IActionMetrics;
+import fault.java.metrics.IActionMetrics;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;

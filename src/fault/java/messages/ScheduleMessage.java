@@ -1,4 +1,7 @@
-package fault.java;
+package fault.java.messages;
+
+import fault.java.ResilientAction;
+import fault.java.ResilientPromise;
 
 /**
  * Created by timbrooks on 11/16/14.

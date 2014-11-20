@@ -1,4 +1,4 @@
-package fault.java;
+package fault.java.messages;
 
 /**
  * Created by timbrooks on 11/16/14.

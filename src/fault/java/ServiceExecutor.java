@@ -3,6 +3,9 @@ package fault.java;
 import fault.java.circuit.BreakerConfig;
 import fault.java.circuit.CircuitBreaker;
 import fault.java.circuit.CircuitBreakerImplementation;
+import fault.java.messages.ScheduleMessage;
+import fault.java.metrics.ActionMetrics;
+import fault.java.metrics.IActionMetrics;
 
 /**
  * Created by timbrooks on 11/13/14.

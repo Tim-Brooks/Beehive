@@ -18,7 +18,7 @@ import static org.mockito.Mockito.when;
 public class CircuitBreakerImplementationTest {
 
     @Mock
-    private IActionMetrics IActionMetrics;
+    private fault.java.metrics.IActionMetrics IActionMetrics;
 
     private CircuitBreakerImplementation circuitBreaker;
 
