@@ -12,8 +12,9 @@ import java.util.concurrent.atomic.AtomicReference;
 public class CircuitBreakerImplementation implements CircuitBreaker {
 
     private final AtomicBoolean circuitOpen;
-    private final ActionMetrics actionMetrics;
+    // TODO With single writer this will not need to be Atomic
     private AtomicReference<BreakerConfig> breakerConfig;
+    private final ActionMetrics actionMetrics;
 
     public CircuitBreakerImplementation(ActionMetrics actionMetrics, BreakerConfig breakerConfig) {
         this.actionMetrics = actionMetrics;
@@ -35,7 +36,8 @@ public class CircuitBreakerImplementation implements CircuitBreaker {
         } else {
             if (!circuitOpen.get()) {
                 BreakerConfig config = this.breakerConfig.get();
-                if (config.failureThreshold < actionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis)) {
+                int failuresForTimePeriod = actionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis);
+                if (config.failureThreshold < failuresForTimePeriod) {
                     circuitOpen.set(true);
                 }
             }

@@ -18,7 +18,9 @@ public class SingleWriterServiceExecutor {
     public SingleWriterServiceExecutor(int poolSize) {
         ActionMetrics actionMetrics = new ActionMetrics();
 
-        this.circuitBreaker = new CircuitBreakerImplementation(actionMetrics, new BreakerConfig());
+        BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(20)
+                .timePeriodInMillis(5000).build();
+        this.circuitBreaker = new CircuitBreakerImplementation(actionMetrics, breakerConfig);
 
         managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, actionMetrics);
         managingThread = new Thread(managingRunnable);
