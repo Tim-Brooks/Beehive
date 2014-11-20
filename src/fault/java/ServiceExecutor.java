@@ -17,13 +17,17 @@ public class ServiceExecutor {
     private ManagingRunnable managingRunnable;
 
     public ServiceExecutor(int poolSize) {
-        IActionMetrics IActionMetrics = new ActionMetrics();
+        this(poolSize, new ActionMetrics());
+    }
 
-        BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(20)
-                .timePeriodInMillis(5000).build();
-        this.circuitBreaker = new DefaultCircuitBreaker(IActionMetrics, breakerConfig);
+    public ServiceExecutor(int poolSize, IActionMetrics actionMetrics) {
+        this(poolSize, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig.BreakerConfigBuilder().failureThreshold(20)
+                .timePeriodInMillis(5000).build()));
+    }
 
-        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, IActionMetrics);
+    public ServiceExecutor(int poolSize, IActionMetrics actionMetrics, ICircuitBreaker circuitBreaker) {
+        this.circuitBreaker = circuitBreaker;
+        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, actionMetrics);
         managingThread = new Thread(managingRunnable, "Action Managing Thread");
         managingThread.start();
     }
