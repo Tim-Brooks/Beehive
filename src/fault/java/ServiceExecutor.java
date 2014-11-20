@@ -24,7 +24,7 @@ public class ServiceExecutor {
         this.ICircuitBreaker = new DefaultCircuitBreaker(IActionMetrics, breakerConfig);
 
         managingRunnable = new ManagingRunnable(poolSize, ICircuitBreaker, IActionMetrics);
-        managingThread = new Thread(managingRunnable);
+        managingThread = new Thread(managingRunnable, "Action Managing Thread");
         managingThread.start();
     }
 
