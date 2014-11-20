@@ -12,7 +12,7 @@ import fault.java.metrics.IActionMetrics;
  */
 public class ServiceExecutor {
 
-    private final ICircuitBreaker ICircuitBreaker;
+    private final ICircuitBreaker circuitBreaker;
     private Thread managingThread;
     private ManagingRunnable managingRunnable;
 
@@ -21,15 +21,15 @@ public class ServiceExecutor {
 
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(20)
                 .timePeriodInMillis(5000).build();
-        this.ICircuitBreaker = new DefaultCircuitBreaker(IActionMetrics, breakerConfig);
+        this.circuitBreaker = new DefaultCircuitBreaker(IActionMetrics, breakerConfig);
 
-        managingRunnable = new ManagingRunnable(poolSize, ICircuitBreaker, IActionMetrics);
+        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, IActionMetrics);
         managingThread = new Thread(managingRunnable, "Action Managing Thread");
         managingThread.start();
     }
 
     public <T> ResilientPromise<T> performAction(final ResilientAction<T> action, int millisTimeout) {
-        if (ICircuitBreaker.isOpen()) {
+        if (circuitBreaker.isOpen()) {
             throw new RuntimeException("Circuit is Open");
         }
         long relativeTimeout = millisTimeout + 1 + System.currentTimeMillis();

@@ -19,18 +19,18 @@ public class ManagingRunnable implements Runnable {
 
     private final int poolSize;
     private final int maxSpin;
-    private final ICircuitBreaker ICircuitBreaker;
-    private final IActionMetrics IActionMetrics;
+    private final ICircuitBreaker circuitBreaker;
+    private final IActionMetrics actionMetrics;
     private final ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
     private final ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
     private final ExecutorService executorService;
     private volatile boolean isRunning;
 
-    public ManagingRunnable(int poolSize, ICircuitBreaker ICircuitBreaker, IActionMetrics IActionMetrics) {
+    public ManagingRunnable(int poolSize, ICircuitBreaker circuitBreaker, IActionMetrics actionMetrics) {
         this.poolSize = poolSize;
         this.maxSpin = 100;
-        this.ICircuitBreaker = ICircuitBreaker;
-        this.IActionMetrics = IActionMetrics;
+        this.circuitBreaker = circuitBreaker;
+        this.actionMetrics = actionMetrics;
         this.toScheduleQueue = new ConcurrentLinkedQueue<>();
         this.toReturnQueue = new ConcurrentLinkedQueue<>();
         this.executorService = Executors.newFixedThreadPool(poolSize);
@@ -123,8 +123,8 @@ public class ManagingRunnable implements Runnable {
                 } else {
                     promise.deliverError(result.exception);
                 }
-                IActionMetrics.logActionResult(promise);
-                ICircuitBreaker.informBreakerOfResult(result.exception == null);
+                actionMetrics.logActionResult(promise);
+                circuitBreaker.informBreakerOfResult(result.exception == null);
             }
             return true;
         }
@@ -151,8 +151,8 @@ public class ManagingRunnable implements Runnable {
             if (!promise.isDone()) {
                 promise.setTimedOut();
                 task.cancel(true);
-                IActionMetrics.logActionResult(promise);
-                ICircuitBreaker.informBreakerOfResult(false);
+                actionMetrics.logActionResult(promise);
+                circuitBreaker.informBreakerOfResult(false);
             }
         }
     }

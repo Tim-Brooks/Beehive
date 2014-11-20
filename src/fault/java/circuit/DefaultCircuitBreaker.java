@@ -2,7 +2,6 @@ package fault.java.circuit;
 
 import fault.java.metrics.IActionMetrics;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -12,10 +11,10 @@ public class DefaultCircuitBreaker implements ICircuitBreaker {
 
     private boolean circuitOpen;
     private AtomicReference<BreakerConfig> breakerConfig;
-    private final IActionMetrics IActionMetrics;
+    private final IActionMetrics actionMetrics;
 
-    public DefaultCircuitBreaker(IActionMetrics IActionMetrics, BreakerConfig breakerConfig) {
-        this.IActionMetrics = IActionMetrics;
+    public DefaultCircuitBreaker(IActionMetrics actionMetrics, BreakerConfig breakerConfig) {
+        this.actionMetrics = actionMetrics;
         this.circuitOpen = false;
         this.breakerConfig = new AtomicReference<>(breakerConfig);
     }
@@ -34,7 +33,7 @@ public class DefaultCircuitBreaker implements ICircuitBreaker {
         } else {
             if (!circuitOpen) {
                 BreakerConfig config = this.breakerConfig.get();
-                int failuresForTimePeriod = IActionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis);
+                int failuresForTimePeriod = actionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis);
                 if (config.failureThreshold < failuresForTimePeriod) {
                     circuitOpen = true;
                 }
