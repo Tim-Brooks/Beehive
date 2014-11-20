@@ -159,5 +159,6 @@ public class ManagingRunnable implements Runnable {
 
     public void shutdown() {
         isRunning = false;
+        executorService.shutdown();
     }
 }
