@@ -8,14 +8,14 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Created by timbrooks on 11/5/14.
  */
-public class CircuitBreakerImplementation implements CircuitBreaker {
+public class DefaultCircuitBreaker implements ICircuitBreaker {
 
     private final AtomicBoolean circuitOpen;
     // TODO With single writer this will not need to be Atomic
     private AtomicReference<BreakerConfig> breakerConfig;
     private final IActionMetrics IActionMetrics;
 
-    public CircuitBreakerImplementation(IActionMetrics IActionMetrics, BreakerConfig breakerConfig) {
+    public DefaultCircuitBreaker(IActionMetrics IActionMetrics, BreakerConfig breakerConfig) {
         this.IActionMetrics = IActionMetrics;
         this.circuitOpen = new AtomicBoolean(false);
         this.breakerConfig = new AtomicReference<>(breakerConfig);

@@ -1,8 +1,8 @@
 package fault.java;
 
 import fault.java.circuit.BreakerConfig;
-import fault.java.circuit.CircuitBreaker;
-import fault.java.circuit.CircuitBreakerImplementation;
+import fault.java.circuit.ICircuitBreaker;
+import fault.java.circuit.DefaultCircuitBreaker;
 import fault.java.messages.ScheduleMessage;
 import fault.java.metrics.ActionMetrics;
 import fault.java.metrics.IActionMetrics;
@@ -12,7 +12,7 @@ import fault.java.metrics.IActionMetrics;
  */
 public class ServiceExecutor {
 
-    private final CircuitBreaker circuitBreaker;
+    private final ICircuitBreaker ICircuitBreaker;
     private Thread managingThread;
     private ManagingRunnable managingRunnable;
 
@@ -21,15 +21,15 @@ public class ServiceExecutor {
 
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(20)
                 .timePeriodInMillis(5000).build();
-        this.circuitBreaker = new CircuitBreakerImplementation(IActionMetrics, breakerConfig);
+        this.ICircuitBreaker = new DefaultCircuitBreaker(IActionMetrics, breakerConfig);
 
-        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, IActionMetrics);
+        managingRunnable = new ManagingRunnable(poolSize, ICircuitBreaker, IActionMetrics);
         managingThread = new Thread(managingRunnable);
         managingThread.start();
     }
 
     public <T> ResilientPromise<T> performAction(final ResilientAction<T> action, int millisTimeout) {
-        if (circuitBreaker.isOpen()) {
+        if (ICircuitBreaker.isOpen()) {
             throw new RuntimeException("Circuit is Open");
         }
         long relativeTimeout = millisTimeout + 1 + System.currentTimeMillis();
