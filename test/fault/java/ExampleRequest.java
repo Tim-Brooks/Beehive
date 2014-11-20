@@ -30,7 +30,7 @@ public class ExampleRequest implements Runnable {
                 result = reader.readLine();
                 return result;
             }
-        }, 805);
+        }, 5);
 
 //        Future<Object> result = executorService.submit(new Callable<Object>() {
 //            @Override
@@ -52,7 +52,7 @@ public class ExampleRequest implements Runnable {
         }
 
         long end = System.currentTimeMillis();
-//        System.out.println(end - start);
+        System.out.println(end - start);
 //        System.out.println("Result: " + result.result);
 //        if (result.isError()) {
 //            System.out.println(result.error.getMessage());

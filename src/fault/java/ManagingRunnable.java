@@ -18,6 +18,7 @@ import java.util.concurrent.locks.LockSupport;
 public class ManagingRunnable implements Runnable {
 
     private final int poolSize;
+    private final int maxSpin;
     private final ICircuitBreaker ICircuitBreaker;
     private final IActionMetrics IActionMetrics;
     private final ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
@@ -27,6 +28,7 @@ public class ManagingRunnable implements Runnable {
 
     public ManagingRunnable(int poolSize, ICircuitBreaker ICircuitBreaker, IActionMetrics IActionMetrics) {
         this.poolSize = poolSize;
+        this.maxSpin = 100;
         this.ICircuitBreaker = ICircuitBreaker;
         this.IActionMetrics = IActionMetrics;
         this.toScheduleQueue = new ConcurrentLinkedQueue<>();
@@ -39,6 +41,7 @@ public class ManagingRunnable implements Runnable {
         SortedMap<Long, List<ResultMessage<Object>>> scheduled = new TreeMap<>();
         Map<ResultMessage<Object>, ResilientTask<Object>> taskMap = new HashMap<>();
         isRunning = true;
+        int spinCount = 1;
         while (isRunning) {
             boolean didSomething = false;
 
@@ -64,7 +67,14 @@ public class ManagingRunnable implements Runnable {
             scheduled = new TreeMap<>(tailView);
 
             if (!didSomething) {
-                LockSupport.parkNanos(1);
+                if (0 == --spinCount) {
+                    spinCount = 1000;
+                    LockSupport.parkNanos(1);
+                } else if (50 > --spinCount) {
+                    Thread.yield();
+                }
+            } else {
+                spinCount = maxSpin;
             }
 
         }
