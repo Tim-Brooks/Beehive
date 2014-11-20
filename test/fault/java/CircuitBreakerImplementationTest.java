@@ -52,4 +52,23 @@ public class CircuitBreakerImplementationTest {
         assertTrue(circuitBreaker.isOpen());
     }
 
+    @Test
+    public void testOpenCircuitClosesAfterSuccess() {
+        int timePeriodInMillis = 1000;
+        BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(5).timePeriodInMillis
+                (timePeriodInMillis).build();
+        circuitBreaker = new CircuitBreakerImplementation(actionMetrics, breakerConfig);
+
+        assertFalse(circuitBreaker.isOpen());
+
+        when(actionMetrics.getFailuresForTimePeriod(timePeriodInMillis)).thenReturn(6);
+        circuitBreaker.informBreakerOfResult(false);
+
+        assertTrue(circuitBreaker.isOpen());
+
+        circuitBreaker.informBreakerOfResult(true);
+
+        assertFalse(circuitBreaker.isOpen());
+    }
+
 }

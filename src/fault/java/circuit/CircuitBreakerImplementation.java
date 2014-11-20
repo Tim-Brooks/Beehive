@@ -31,7 +31,7 @@ public class CircuitBreakerImplementation implements CircuitBreaker {
     public void informBreakerOfResult(boolean successful) {
         if (successful) {
             if (circuitOpen.get()) {
-                circuitOpen.set(true);
+                circuitOpen.set(false);
             }
         } else {
             if (!circuitOpen.get()) {
