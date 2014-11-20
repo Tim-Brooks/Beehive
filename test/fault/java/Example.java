@@ -10,7 +10,7 @@ public class Example {
     public static void main(String[] args) {
         ServiceExecutor serviceExecutor = new ServiceExecutor(10);
 
-        for (int i = 0; i < 50; ++i) {
+        for (int i = 0; i < 150; ++i) {
             try {
                 Thread.sleep(30);
             } catch (InterruptedException e) {

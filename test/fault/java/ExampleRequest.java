@@ -23,14 +23,13 @@ public class ExampleRequest implements Runnable {
         ResilientPromise<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
             @Override
             public String run() throws Exception {
-                Thread.sleep(10000);
                 String result = null;
                 InputStream response = new URL("http://localhost:6001/").openStream();
                 BufferedReader reader = new BufferedReader(new InputStreamReader(response));
                 result = reader.readLine();
                 return result;
             }
-        }, 5);
+        }, 2);
 
 //        Future<Object> result = executorService.submit(new Callable<Object>() {
 //            @Override
@@ -53,7 +52,7 @@ public class ExampleRequest implements Runnable {
 
         long end = System.currentTimeMillis();
         System.out.println(end - start);
-//        System.out.println("Result: " + result.result);
+        System.out.println("Result: " + result.result);
 //        if (result.isError()) {
 //            System.out.println(result.error.getMessage());
 //        }
