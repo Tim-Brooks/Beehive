@@ -65,4 +65,11 @@ public class ServiceExecutorTest {
         assertEquals(resilientAction, scheduleMessage.action);
         assertEquals(resilientPromise, scheduleMessage.promise);
     }
+
+    @Test
+    public void testShutdownCallsShutdownOnRunnable() {
+        serviceExecutor.shutdown();
+
+        verify(managingRunnable).shutdown();
+    }
 }
