@@ -13,7 +13,7 @@ public class ExchangingQueue<T> {
     private final int mask;
     private AtomicInteger head = new AtomicInteger(0);
     private AtomicInteger tail = new AtomicInteger(0);
-    private Thread waiter = null;
+    private volatile Thread waiter = null;
 
     @SuppressWarnings("unchecked")
     public ExchangingQueue(final int capacity) {
@@ -56,7 +56,7 @@ public class ExchangingQueue<T> {
     }
 
     public T blockingPoll() {
-        for (; ; ) {
+        for (;;) {
             T element = poll();
             if (element != null) {
                 return element;
