@@ -3,9 +3,7 @@ package fault.java.concurrent;
 import org.junit.Before;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 /**
  * Created by timbrooks on 11/21/14.
@@ -23,7 +21,7 @@ public class ExchangingQueueTest {
     public void testPollReturnsNullWhenQueueEmpty() {
         assertNull(exchangingQueue.poll());
 
-        exchangingQueue.offer(1);
+        assertTrue(exchangingQueue.offer(1));
 
         assertNotNull(exchangingQueue.poll());
         assertNull(exchangingQueue.poll());
@@ -36,5 +34,22 @@ public class ExchangingQueueTest {
         exchangingQueue.offer(3);
 
         assertEquals(Integer.valueOf(1), exchangingQueue.poll());
+    }
+
+    @Test
+    public void testOfferReturnsFalseIfNoSpace() {
+        exchangingQueue = new ExchangingQueue<>(1);
+
+        assertTrue(exchangingQueue.offer(1));
+        assertFalse(exchangingQueue.offer(2));
+    }
+
+    @Test
+    public void testOfferWillWrapAroundArray() {
+        exchangingQueue = new ExchangingQueue<>(1);
+
+        assertTrue(exchangingQueue.offer(1));
+        assertEquals(Integer.valueOf(1), exchangingQueue.poll());
+        assertTrue(exchangingQueue.offer(2));
     }
 }
