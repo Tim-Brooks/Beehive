@@ -17,7 +17,7 @@ public class ActionCallable<T> implements Callable<Void> {
     public ActionCallable(ResilientAction<T> action, ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue) {
         this.action = action;
         this.toReturnQueue = toReturnQueue;
-        this.resultMessage = new ResultMessage<>();
+        this.resultMessage = new ResultMessage<>(ResultMessage.Type.ASYNC);
     }
 
     @Override

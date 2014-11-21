@@ -54,7 +54,7 @@ public class ManagingRunnable implements Runnable {
             }
 
             for (int i = 0; i < poolSize; ++i) {
-                if (handleReturnResult(taskMap)) {
+                if (handleReturnResult(scheduled, taskMap)) {
                     didSomething = true;
                 } else {
                     break;
@@ -86,6 +86,29 @@ public class ManagingRunnable implements Runnable {
         toScheduleQueue.offer((ScheduleMessage<Object>) message);
     }
 
+    public <T> ResilientPromise<T> execute(ResilientAction<T> action) {
+        ResilientPromise<T> resilientPromise = new ResilientPromise<>();
+        try {
+            action.run();
+        } catch (ActionTimeoutException e) {
+            ResultMessage<Object> result = new ResultMessage<>(ResultMessage.Type.SYNC);
+            result.setException(e);
+            toReturnQueue.add(result);
+            resilientPromise.setTimedOut();
+        } catch (Exception e) {
+            ResultMessage<Object> result = new ResultMessage<>(ResultMessage.Type.SYNC);
+            result.setException(e);
+            toReturnQueue.add(result);
+            resilientPromise.deliverError(e);
+        }
+        return resilientPromise;
+    }
+
+    public void shutdown() {
+        isRunning = false;
+        executorService.shutdown();
+    }
+
     private boolean handleScheduling(SortedMap<Long, List<ResultMessage<Object>>> scheduled,
                                      Map<ResultMessage<Object>, ResilientTask<Object>> taskMap) {
         ScheduleMessage<Object> scheduleMessage = toScheduleQueue.poll();
@@ -97,53 +120,88 @@ public class ManagingRunnable implements Runnable {
             taskMap.put(resultMessage, resilientTask);
 
             executorService.submit(resilientTask);
-            long absoluteTimeout = scheduleMessage.absoluteTimeout;
-            if (scheduled.containsKey(absoluteTimeout)) {
-                scheduled.get(absoluteTimeout).add(resultMessage);
-            } else {
-                List<ResultMessage<Object>> messages = new ArrayList<>();
-                messages.add(resultMessage);
-                scheduled.put(absoluteTimeout, messages);
-
-            }
+            scheduleTimeout(scheduled, scheduleMessage.absoluteTimeout, resultMessage);
             return true;
         }
         return false;
     }
 
-    private boolean handleReturnResult(Map<ResultMessage<Object>, ResilientTask<Object>> taskMap) {
+    private boolean handleReturnResult(SortedMap<Long, List<ResultMessage<Object>>> scheduled,
+                                       Map<ResultMessage<Object>, ResilientTask<Object>> taskMap) {
         ResultMessage<Object> result = toReturnQueue.poll();
         if (result != null) {
-            ResilientTask<Object> resilientTask = taskMap.remove(result);
-            if (resilientTask != null) {
-
-                ResilientPromise<Object> promise = resilientTask.resilientPromise;
-                if (result.result != null) {
-                    promise.deliverResult(result.result);
-                } else {
-                    promise.deliverError(result.exception);
-                }
-                actionMetrics.logActionResult(promise);
-                circuitBreaker.informBreakerOfResult(result.exception == null);
+            if (ResultMessage.Type.ASYNC.equals(result.type)) {
+                handleAsyncResult(taskMap, result);
+                return true;
+            } else {
+                handleSyncResult(scheduled, result);
             }
-            return true;
         }
         return false;
     }
 
-    private long triggerTimeouts(SortedMap<Long, List<ResultMessage<Object>>> scheduled, Map<ResultMessage<Object>, ResilientTask<Object>> taskMap) {
+    private void handleSyncResult(SortedMap<Long, List<ResultMessage<Object>>> scheduled, ResultMessage<Object>
+            result) {
+        if (result.exception instanceof ActionTimeoutException) {
+            scheduleTimeout(scheduled, System.currentTimeMillis() - 1, result);
+        } else {
+            // TODO Need to inform ActionMetrics of error. But cannot take promise.
+        }
+
+    }
+
+    private void handleAsyncResult(Map<ResultMessage<Object>, ResilientTask<Object>> taskMap,
+                                   ResultMessage<Object> result) {
+        ResilientTask<Object> resilientTask = taskMap.remove(result);
+        if (resilientTask != null) {
+
+            ResilientPromise<Object> promise = resilientTask.resilientPromise;
+            if (result.result != null) {
+                promise.deliverResult(result.result);
+            } else {
+                promise.deliverError(result.exception);
+
+            }
+            actionMetrics.logActionResult(promise);
+            circuitBreaker.informBreakerOfResult(result.exception == null);
+        }
+    }
+
+    private void scheduleTimeout(SortedMap<Long, List<ResultMessage<Object>>> scheduled, long absoluteTimeout,
+                                 ResultMessage<Object> resultMessage) {
+        if (scheduled.containsKey(absoluteTimeout)) {
+            scheduled.get(absoluteTimeout).add(resultMessage);
+        } else {
+            List<ResultMessage<Object>> messages = new ArrayList<>();
+            messages.add(resultMessage);
+            scheduled.put(absoluteTimeout, messages);
+
+        }
+    }
+
+    private long triggerTimeouts(SortedMap<Long, List<ResultMessage<Object>>> scheduled, Map<ResultMessage<Object>,
+            ResilientTask<Object>> taskMap) {
         long now = System.currentTimeMillis();
         SortedMap<Long, List<ResultMessage<Object>>> toCancel = scheduled.headMap(now);
         for (Map.Entry<Long, List<ResultMessage<Object>>> entry : toCancel.entrySet()) {
             List<ResultMessage<Object>> toTimeout = entry.getValue();
             for (ResultMessage<Object> messageToTimeout : toTimeout) {
-                handleTimeout(taskMap, messageToTimeout);
+                if (ResultMessage.Type.ASYNC.equals(messageToTimeout.type)) {
+                    handleAsyncTimeout(taskMap, messageToTimeout);
+                } else {
+                    handleSyncTimeout();
+                }
             }
         }
         return now;
     }
 
-    private void handleTimeout(Map<ResultMessage<Object>, ResilientTask<Object>> taskMap, ResultMessage<Object>
+    private void handleSyncTimeout() {
+        //TODO: actionMetrics.logActionResult(promise);
+        circuitBreaker.informBreakerOfResult(false);
+    }
+
+    private void handleAsyncTimeout(Map<ResultMessage<Object>, ResilientTask<Object>> taskMap, ResultMessage<Object>
             resultMessage) {
         ResilientTask<Object> task = taskMap.remove(resultMessage);
         if (task != null) {
@@ -155,10 +213,5 @@ public class ManagingRunnable implements Runnable {
                 circuitBreaker.informBreakerOfResult(false);
             }
         }
-    }
-
-    public void shutdown() {
-        isRunning = false;
-        executorService.shutdown();
     }
 }

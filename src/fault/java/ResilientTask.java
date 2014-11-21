@@ -6,7 +6,6 @@ import java.util.concurrent.*;
  * Created by timbrooks on 11/5/14.
  */
 public class ResilientTask<T> implements RunnableFuture<Void> {
-
     public final ResilientPromise<T> resilientPromise;
     private final FutureTask<Void> task;
 
@@ -18,7 +17,6 @@ public class ResilientTask<T> implements RunnableFuture<Void> {
     @Override
     public void run() {
         task.run();
-
     }
 
     @Override

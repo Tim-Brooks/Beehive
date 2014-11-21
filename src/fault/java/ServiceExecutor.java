@@ -36,7 +36,7 @@ public class ServiceExecutor {
         managingThread.start();
     }
 
-    public <T> ResilientPromise<T> performAction(final ResilientAction<T> action, int millisTimeout) {
+    public <T> ResilientPromise<T> performAction(ResilientAction<T> action, int millisTimeout) {
         if (circuitBreaker.isOpen()) {
             throw new RuntimeException("Circuit is Open");
         }
@@ -47,6 +47,14 @@ public class ServiceExecutor {
         managingRunnable.submit(e);
 
         return resilientPromise;
+    }
+
+    public <T> ResilientPromise<T> performSyncAction(ResilientAction<T> action) {
+        if (circuitBreaker.isOpen()) {
+            throw new RuntimeException("Circuit is Open");
+        }
+
+        return managingRunnable.execute(action);
     }
 
     public void shutdown() {
