@@ -97,13 +97,13 @@ public class ManagingRunnable implements Runnable {
             taskMap.put(resultMessage, resilientTask);
 
             executorService.submit(resilientTask);
-            long relativeTimeout = scheduleMessage.relativeTimeout;
-            if (scheduled.containsKey(relativeTimeout)) {
-                scheduled.get(relativeTimeout).add(resultMessage);
+            long absoluteTimeout = scheduleMessage.absoluteTimeout;
+            if (scheduled.containsKey(absoluteTimeout)) {
+                scheduled.get(absoluteTimeout).add(resultMessage);
             } else {
                 List<ResultMessage<Object>> messages = new ArrayList<>();
                 messages.add(resultMessage);
-                scheduled.put(relativeTimeout, messages);
+                scheduled.put(absoluteTimeout, messages);
 
             }
             return true;

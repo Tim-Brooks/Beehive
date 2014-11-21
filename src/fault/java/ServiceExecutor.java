@@ -13,8 +13,8 @@ import fault.java.metrics.IActionMetrics;
 public class ServiceExecutor {
 
     private final ICircuitBreaker circuitBreaker;
-    private Thread managingThread;
-    private ManagingRunnable managingRunnable;
+    private final ManagingRunnable managingRunnable;
+    private final Thread managingThread;
 
     public ServiceExecutor(int poolSize) {
         this(poolSize, new ActionMetrics());
@@ -26,8 +26,12 @@ public class ServiceExecutor {
     }
 
     public ServiceExecutor(int poolSize, IActionMetrics actionMetrics, ICircuitBreaker circuitBreaker) {
+        this(actionMetrics, circuitBreaker, new ManagingRunnable(poolSize, circuitBreaker, actionMetrics));
+    }
+    public ServiceExecutor(IActionMetrics actionMetrics, ICircuitBreaker circuitBreaker,
+                           ManagingRunnable managingRunnable) {
         this.circuitBreaker = circuitBreaker;
-        managingRunnable = new ManagingRunnable(poolSize, circuitBreaker, actionMetrics);
+        this.managingRunnable = managingRunnable;
         managingThread = new Thread(managingRunnable, "Action Managing Thread");
         managingThread.start();
     }
@@ -36,10 +40,10 @@ public class ServiceExecutor {
         if (circuitBreaker.isOpen()) {
             throw new RuntimeException("Circuit is Open");
         }
-        long relativeTimeout = millisTimeout + 1 + System.currentTimeMillis();
+        long absoluteTimeout = millisTimeout + 1 + System.currentTimeMillis();
         final ResilientPromise<T> resilientPromise = new ResilientPromise<>();
 
-        ScheduleMessage<T> e = new ScheduleMessage<>(action, resilientPromise, relativeTimeout);
+        ScheduleMessage<T> e = new ScheduleMessage<>(action, resilientPromise, absoluteTimeout);
         managingRunnable.submit(e);
 
         return resilientPromise;
