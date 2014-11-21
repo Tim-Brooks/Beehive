@@ -3,6 +3,11 @@ package fault.java.concurrent;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+import java.util.concurrent.locks.LockSupport;
+
 import static org.junit.Assert.*;
 
 /**
@@ -51,5 +56,49 @@ public class ExchangingQueueTest {
         assertTrue(exchangingQueue.offer(1));
         assertEquals(Integer.valueOf(1), exchangingQueue.poll());
         assertTrue(exchangingQueue.offer(2));
+    }
+
+    @Test
+    public void testQueueEndToEnd() {
+        final List<Integer> events = new ArrayList<>();
+        final ExchangingQueue<Integer> exchangingQueue = new ExchangingQueue<>(100);
+
+        Random random = new Random();
+        int count = random.nextInt(1000) + 1500;
+
+        for (int i = 0; i < count; ++i) {
+            events.add(i);
+        }
+
+        Thread producer = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                for (Integer event : events) {
+                    for (; ; ) {
+                        if (!exchangingQueue.offer(event)) {
+                            LockSupport.parkNanos(1);
+                        } else {
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+        producer.start();
+
+        int receivedCount = 0;
+        List<Integer> received = new ArrayList<>();
+        while (count != receivedCount) {
+            Integer poll = exchangingQueue.poll();
+            if (poll != null) {
+                received.add(poll);
+                ++receivedCount;
+            }
+        }
+
+        for (int i = 0; i < received.size(); ++i) {
+            assertEquals(events.get(i), received.get(i));
+        }
+
     }
 }

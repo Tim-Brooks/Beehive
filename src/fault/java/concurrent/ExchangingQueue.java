@@ -18,8 +18,8 @@ public class ExchangingQueue<T> {
     @SuppressWarnings("unchecked")
     public ExchangingQueue(final int capacity) {
         this.capacity = 1 << (32 - Integer.numberOfLeadingZeros(capacity - 1));
-        this.mask = this.capacity;
-        this.queue = (T[]) new Object[capacity];
+        this.mask = this.capacity - 1;
+        this.queue = (T[]) new Object[this.capacity];
     }
 
     public boolean offer(final T element) {
@@ -62,7 +62,7 @@ public class ExchangingQueue<T> {
                 return element;
             }
             waiter = Thread.currentThread();
-            LockSupport.park();
+            LockSupport.parkNanos(100);
             waiter = null;
         }
     }
