@@ -67,7 +67,7 @@ public class ExchangingQueueTest {
         int count = random.nextInt(1000) + 1500;
 
         for (int i = 0; i < count; ++i) {
-            events.add(i);
+            events.add(random.nextInt());
         }
 
         Thread producer = new Thread(new Runnable() {
@@ -88,12 +88,12 @@ public class ExchangingQueueTest {
 
         int receivedCount = 0;
         List<Integer> received = new ArrayList<>();
+
         while (count != receivedCount) {
-            Integer poll = exchangingQueue.poll();
-            if (poll != null) {
-                received.add(poll);
-                ++receivedCount;
-            }
+            Integer poll = null;
+            poll = exchangingQueue.blockingPoll();
+            received.add(poll);
+            ++receivedCount;
         }
 
         for (int i = 0; i < received.size(); ++i) {

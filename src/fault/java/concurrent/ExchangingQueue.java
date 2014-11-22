@@ -32,7 +32,7 @@ public class ExchangingQueue<T> {
         if (head.get() <= wrapPoint) {
             return false;
         }
-        queue[currentTail % mask] = element;
+        queue[currentTail & mask] = element;
         tail.lazySet(currentTail + 1);
         if (waiter != null) {
             LockSupport.unpark(waiter);
@@ -47,7 +47,7 @@ public class ExchangingQueue<T> {
             return null;
         }
 
-        int index = currentHead % mask;
+        int index = currentHead & mask;
         final T element = queue[index];
         queue[index] = null;
         head.lazySet(currentHead + 1);
@@ -62,7 +62,7 @@ public class ExchangingQueue<T> {
                 return element;
             }
             waiter = Thread.currentThread();
-            LockSupport.parkNanos(100);
+            LockSupport.park();
             waiter = null;
         }
     }
