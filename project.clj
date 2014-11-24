@@ -5,4 +5,5 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [org.mockito/mockito-core "1.10.8"]
-                 [junit/junit "4.11"]])
+                 [junit/junit "4.11"]
+                 [criterium "0.4.3"]])
