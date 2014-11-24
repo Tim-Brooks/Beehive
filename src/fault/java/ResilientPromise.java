@@ -1,8 +1,6 @@
 package fault.java;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by timbrooks on 11/16/14.
@@ -57,5 +55,4 @@ public class ResilientPromise<T> {
         return status == Status.TIMED_OUT;
     }
 
-    public enum Status {SUCCESS, ERROR, PENDING, TIMED_OUT}
 }
