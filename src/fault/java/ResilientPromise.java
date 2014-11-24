@@ -8,7 +8,7 @@ import java.util.concurrent.CountDownLatch;
 public class ResilientPromise<T> {
     public T result;
     public Throwable error;
-    private Status status = Status.PENDING;
+    public Status status = Status.PENDING;
     // TODO The CountDownLatch on POSIX is leading to very high await latency. Should look at blocking in FutureTask
     // TODO which does not have the same issue. There is probably some spin and park strategy work in that case.
     private CountDownLatch latch = new CountDownLatch(1);

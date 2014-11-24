@@ -1,6 +1,6 @@
 package fault.java.metrics;
 
-import fault.java.ResilientPromise;
+import fault.java.Status;
 
 /**
  * Created by timbrooks on 11/10/14.
@@ -35,8 +35,8 @@ public class ActionMetrics implements IActionMetrics {
     }
 
     @Override
-    public void renameActionResult(ResilientPromise promise) {
-        if (promise.isSuccessful()) {
+    public void renameActionResult(Status status) {
+        if (status == Status.SUCCESS) {
             long currentTimestamp = System.currentTimeMillis();
             if (currentTimestamp < advanceSlotTimeInMillis) {
                 errorMetrics[slotNumber]++;

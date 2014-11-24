@@ -145,7 +145,7 @@ public class ManagingRunnable implements Runnable {
         if (result.exception instanceof ActionTimeoutException) {
             scheduleTimeout(scheduled, System.currentTimeMillis() - 1, result);
         } else {
-            // TODO Need to inform ActionMetrics of error. But cannot take promise.
+            actionMetrics.renameActionResult(Status.ERROR);
         }
 
     }
@@ -162,7 +162,7 @@ public class ManagingRunnable implements Runnable {
                 promise.deliverError(result.exception);
 
             }
-            actionMetrics.renameActionResult(promise);
+            actionMetrics.renameActionResult(promise.status);
             circuitBreaker.informBreakerOfResult(result.exception == null);
         }
     }
@@ -197,7 +197,7 @@ public class ManagingRunnable implements Runnable {
     }
 
     private void handleSyncTimeout() {
-        //TODO: actionMetrics.renameActionResult(promise);
+        actionMetrics.renameActionResult(Status.TIMED_OUT);
         circuitBreaker.informBreakerOfResult(false);
     }
 
@@ -209,7 +209,7 @@ public class ManagingRunnable implements Runnable {
             if (!promise.isDone()) {
                 promise.setTimedOut();
                 task.cancel(true);
-                actionMetrics.renameActionResult(promise);
+                actionMetrics.renameActionResult(promise.status);
                 circuitBreaker.informBreakerOfResult(false);
             }
         }

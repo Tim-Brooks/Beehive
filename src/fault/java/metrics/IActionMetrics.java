@@ -1,6 +1,6 @@
 package fault.java.metrics;
 
-import fault.java.ResilientPromise;
+import fault.java.Status;
 
 /**
  * Created by timbrooks on 11/20/14.
@@ -8,5 +8,5 @@ import fault.java.ResilientPromise;
 public interface IActionMetrics {
     int getFailuresForTimePeriod(int milliseconds);
 
-    void renameActionResult(ResilientPromise promise);
+    void renameActionResult(Status status);
 }
