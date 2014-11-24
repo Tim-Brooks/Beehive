@@ -1,6 +1,7 @@
 package fault.java.metrics;
 
 import fault.java.Status;
+import fault.java.utils.TimeProvider;
 
 /**
  * Created by timbrooks on 11/10/14.
@@ -10,23 +11,31 @@ public class ActionMetrics implements IActionMetrics {
     private final int[] errorMetrics;
     private final int[] successMetrics;
     private final int[] timeoutMetrics;
+    private final TimeProvider timeProvider;
     private long advanceSlotTimeInMillis;
     private int slotNumber;
     private int totalSlots;
 
     public ActionMetrics() {
+        this(new TimeProvider());
+    }
+
+    public ActionMetrics(TimeProvider timeProvider) {
+        this.timeProvider = timeProvider;
         this.totalSlots = 1000;
         this.errorMetrics = new int[totalSlots];
         this.successMetrics = new int[totalSlots];
         this.timeoutMetrics = new int[totalSlots];
         this.slotNumber = 0;
-        this.advanceSlotTimeInMillis = System.currentTimeMillis() + 1000;
+        this.advanceSlotTimeInMillis = timeProvider.currentTimeMillis() + 1000L;
     }
 
     @Override
     public int getFailuresForTimePeriod(int milliseconds) {
-        long currentTimestamp = System.currentTimeMillis();
-        advanceToCurrentSlot(currentTimestamp);
+        long currentTimestamp = timeProvider.currentTimeMillis();
+        if (currentTimestamp >= advanceSlotTimeInMillis) {
+            advanceToCurrentSlot(currentTimestamp);
+        }
 
         int slotsBack = milliseconds / 1000;
         int totalErrors = 0;
@@ -43,7 +52,7 @@ public class ActionMetrics implements IActionMetrics {
 
     @Override
     public void reportActionResult(Status status) {
-        long currentTimestamp = System.currentTimeMillis();
+        long currentTimestamp = timeProvider.currentTimeMillis();
         int[] metrics = this.errorMetrics;
         switch (status) {
             case SUCCESS:
@@ -56,15 +65,16 @@ public class ActionMetrics implements IActionMetrics {
                 metrics = this.timeoutMetrics;
                 break;
         }
-        if (currentTimestamp < advanceSlotTimeInMillis) {
-            metrics[slotNumber]++;
-        } else {
+        if (currentTimestamp >= advanceSlotTimeInMillis) {
             advanceToCurrentSlot(currentTimestamp);
         }
+
+        ++metrics[slotNumber];
     }
 
     private void advanceToCurrentSlot(long currentTimestamp) {
-        int slotsToAdvance =  1 + (int) ((advanceSlotTimeInMillis - currentTimestamp) / 1000);
+        long l = (currentTimestamp - advanceSlotTimeInMillis) / 1000;
+        int slotsToAdvance =  1 + (int) l;
         int newSlotNumber = slotsToAdvance + slotNumber;
         if (newSlotNumber >= totalSlots) {
             newSlotNumber = newSlotNumber - totalSlots;
