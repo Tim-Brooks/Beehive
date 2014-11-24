@@ -88,17 +88,19 @@ public class ManagingRunnable implements Runnable {
 
     public <T> ResilientPromise<T> execute(ResilientAction<T> action) {
         ResilientPromise<T> resilientPromise = new ResilientPromise<>();
+        ResultMessage<Object> resultMessage = new ResultMessage<>(ResultMessage.Type.SYNC);
         try {
-            action.run();
+            T result = action.run();
+            resultMessage.setResult(result);
+            toReturnQueue.add(resultMessage);
+            resilientPromise.deliverResult(result);
         } catch (ActionTimeoutException e) {
-            ResultMessage<Object> result = new ResultMessage<>(ResultMessage.Type.SYNC);
-            result.setException(e);
-            toReturnQueue.add(result);
+            resultMessage.setException(e);
+            toReturnQueue.add(resultMessage);
             resilientPromise.setTimedOut();
         } catch (Exception e) {
-            ResultMessage<Object> result = new ResultMessage<>(ResultMessage.Type.SYNC);
-            result.setException(e);
-            toReturnQueue.add(result);
+            resultMessage.setException(e);
+            toReturnQueue.add(resultMessage);
             resilientPromise.deliverError(e);
         }
         return resilientPromise;
@@ -142,7 +144,9 @@ public class ManagingRunnable implements Runnable {
 
     private void handleSyncResult(SortedMap<Long, List<ResultMessage<Object>>> scheduled, ResultMessage<Object>
             result) {
-        if (result.exception instanceof ActionTimeoutException) {
+        if (result.result != null) {
+            actionMetrics.reportActionResult(Status.SUCCESS);
+        } else if (result.exception instanceof ActionTimeoutException) {
             scheduleTimeout(scheduled, System.currentTimeMillis() - 1, result);
         } else {
             actionMetrics.reportActionResult(Status.ERROR);
