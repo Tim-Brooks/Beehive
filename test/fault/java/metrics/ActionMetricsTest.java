@@ -26,7 +26,7 @@ public class ActionMetricsTest {
     public void setUp() {
         MockitoAnnotations.initMocks(this);
         when(timeProvider.currentTimeMillis()).thenReturn(0L);
-        this.actionMetrics = new ActionMetrics(timeProvider);
+        this.actionMetrics = new ActionMetrics(1000, timeProvider);
     }
 
     @Test

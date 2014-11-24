@@ -17,7 +17,7 @@ public class ServiceExecutor {
     private final Thread managingThread;
 
     public ServiceExecutor(int poolSize) {
-        this(poolSize, new ActionMetrics());
+        this(poolSize, new ActionMetrics(3600));
     }
 
     public ServiceExecutor(int poolSize, IActionMetrics actionMetrics) {

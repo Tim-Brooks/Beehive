@@ -20,13 +20,13 @@ public class ActionMetrics implements IActionMetrics {
     private final AtomicLong advanceSlotTimeInMillis;
     private final AtomicInteger slotNumber;
 
-    public ActionMetrics() {
-        this(new TimeProvider());
+    public ActionMetrics(int secondsToTrack) {
+        this(secondsToTrack, new TimeProvider());
     }
 
-    public ActionMetrics(TimeProvider timeProvider) {
+    public ActionMetrics(int secondsToTrack, TimeProvider timeProvider) {
         this.timeProvider = timeProvider;
-        this.totalSlots = 1000;
+        this.totalSlots = secondsToTrack;
         this.errorMetrics = new AtomicIntegerArray(totalSlots);
         this.successMetrics = new AtomicIntegerArray(totalSlots);
         this.timeoutMetrics = new AtomicIntegerArray(totalSlots);
