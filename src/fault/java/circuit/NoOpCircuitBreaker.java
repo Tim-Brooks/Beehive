@@ -3,7 +3,7 @@ package fault.java.circuit;
 /**
  * Created by timbrooks on 11/5/14.
  */
-public class NoOpICircuitBreaker implements ICircuitBreaker {
+public class NoOpCircuitBreaker implements ICircuitBreaker {
     @Override
     public boolean isOpen() {
         return false;
