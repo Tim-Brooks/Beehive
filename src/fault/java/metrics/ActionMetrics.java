@@ -35,7 +35,7 @@ public class ActionMetrics implements IActionMetrics {
     }
 
     @Override
-    public void renameActionResult(Status status) {
+    public void reportActionResult(Status status) {
         if (status == Status.SUCCESS) {
             long currentTimestamp = System.currentTimeMillis();
             if (currentTimestamp < advanceSlotTimeInMillis) {

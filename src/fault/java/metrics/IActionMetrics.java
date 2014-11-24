@@ -8,5 +8,5 @@ import fault.java.Status;
 public interface IActionMetrics {
     int getFailuresForTimePeriod(int milliseconds);
 
-    void renameActionResult(Status status);
+    void reportActionResult(Status status);
 }
