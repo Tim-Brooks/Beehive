@@ -162,7 +162,7 @@ public class ManagingRunnable implements Runnable {
                 promise.deliverError(result.exception);
 
             }
-            actionMetrics.logActionResult(promise);
+            actionMetrics.renameActionResult(promise);
             circuitBreaker.informBreakerOfResult(result.exception == null);
         }
     }
@@ -197,7 +197,7 @@ public class ManagingRunnable implements Runnable {
     }
 
     private void handleSyncTimeout() {
-        //TODO: actionMetrics.logActionResult(promise);
+        //TODO: actionMetrics.renameActionResult(promise);
         circuitBreaker.informBreakerOfResult(false);
     }
 
@@ -209,7 +209,7 @@ public class ManagingRunnable implements Runnable {
             if (!promise.isDone()) {
                 promise.setTimedOut();
                 task.cancel(true);
-                actionMetrics.logActionResult(promise);
+                actionMetrics.renameActionResult(promise);
                 circuitBreaker.informBreakerOfResult(false);
             }
         }

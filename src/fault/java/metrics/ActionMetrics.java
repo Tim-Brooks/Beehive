@@ -35,7 +35,7 @@ public class ActionMetrics implements IActionMetrics {
     }
 
     @Override
-    public void logActionResult(ResilientPromise promise) {
+    public void renameActionResult(ResilientPromise promise) {
         if (promise.isSuccessful()) {
             long currentTimestamp = System.currentTimeMillis();
             if (currentTimestamp < advanceSlotTimeInMillis) {

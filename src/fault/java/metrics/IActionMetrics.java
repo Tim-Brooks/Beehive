@@ -8,5 +8,5 @@ import fault.java.ResilientPromise;
 public interface IActionMetrics {
     int getFailuresForTimePeriod(int milliseconds);
 
-    void logActionResult(ResilientPromise promise);
+    void renameActionResult(ResilientPromise promise);
 }
