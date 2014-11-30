@@ -54,21 +54,17 @@ public class ActionMetrics implements IActionMetrics {
 
     @Override
     public int getSuccessesForTimePeriod(int milliseconds) {
-        advanceToCurrentSlot();
+        return getEventCountForTimePeriod(milliseconds, successMetrics);
+    }
 
-        int slotsBack = milliseconds / 1000;
-        int totalSuccesses = 0;
-        int slotNumber = this.slotNumber.get();
+    @Override
+    public int getErrorsForTimePeriod(int milliseconds) {
+        return getEventCountForTimePeriod(milliseconds, errorMetrics);
+    }
 
-        for (int i = slotNumber - slotsBack; i <= slotNumber; ++i) {
-            if (i < 0) {
-                totalSuccesses = totalSuccesses + successMetrics.get(totalSlots + i);
-            } else {
-                totalSuccesses = totalSuccesses + successMetrics.get(i);
-            }
-        }
-
-        return totalSuccesses;
+    @Override
+    public int getTimeoutsForTimePeriod(int milliseconds) {
+        return getEventCountForTimePeriod(milliseconds, timeoutMetrics);
     }
 
     @Override
@@ -92,6 +88,23 @@ public class ActionMetrics implements IActionMetrics {
         }
 
         metrics.lazySet(slotNumber, metrics.get(slotNumber) + 1);
+    }
+
+    private int getEventCountForTimePeriod(int milliseconds, AtomicIntegerArray metricsArray) {
+        advanceToCurrentSlot();
+
+        int slotsBack = milliseconds / 1000;
+        int totalEvents = 0;
+        int slotNumber = this.slotNumber.get();
+
+        for (int i = slotNumber - slotsBack; i <= slotNumber; ++i) {
+            if (i < 0) {
+                totalEvents = totalEvents + metricsArray.get(totalSlots + i);
+            } else {
+                totalEvents = totalEvents + metricsArray.get(i);
+            }
+        }
+        return totalEvents;
     }
 
     private void advanceToCurrentSlot() {

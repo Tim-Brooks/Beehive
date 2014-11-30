@@ -11,4 +11,8 @@ public interface IActionMetrics {
     void reportActionResult(Status status);
 
     int getSuccessesForTimePeriod(int milliseconds);
+
+    int getErrorsForTimePeriod(int milliseconds);
+
+    int getTimeoutsForTimePeriod(int milliseconds);
 }

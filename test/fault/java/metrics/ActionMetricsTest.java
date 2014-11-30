@@ -69,4 +69,42 @@ public class ActionMetricsTest {
         when(timeProvider.currentTimeMillis()).thenReturn(1999L);
         assertEquals(successCount, actionMetrics.getSuccessesForTimePeriod(1000));
     }
+
+    @Test
+    public void testMixedResultsCorrectReporting() {
+        int errorCount = 0;
+        int successCount = 0;
+        int timeoutCount = 0;
+
+        Random random = new Random();
+
+        for (int  i = 0; i < 100; ++i) {
+            if (random.nextBoolean()) {
+                when(timeProvider.currentTimeMillis()).thenReturn(500L);
+                actionMetrics.reportActionResult(Status.ERROR);
+                ++errorCount;
+            }
+            if (random.nextBoolean()) {
+                when(timeProvider.currentTimeMillis()).thenReturn(500L);
+                actionMetrics.reportActionResult(Status.SUCCESS);
+                ++successCount;
+            }
+            if (random.nextBoolean()) {
+                when(timeProvider.currentTimeMillis()).thenReturn(500L);
+                actionMetrics.reportActionResult(Status.TIMED_OUT);
+                ++timeoutCount;
+
+            }
+        }
+        when(timeProvider.currentTimeMillis()).thenReturn(1999L, 1999L, 1999L);
+        assertEquals(successCount, actionMetrics.getSuccessesForTimePeriod(1000));
+        assertEquals(errorCount, actionMetrics.getErrorsForTimePeriod(1000));
+        assertEquals(timeoutCount, actionMetrics.getTimeoutsForTimePeriod(1000));
+
+    }
+
+    @Test
+    public void testMetricsOnlyReportForTimePeriod() {
+
+    }
 }
