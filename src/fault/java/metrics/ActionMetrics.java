@@ -73,7 +73,10 @@ public class ActionMetrics implements IActionMetrics {
 
     @Override
     public void reportActionResult(Status status) {
-        AtomicIntegerArray metrics = this.errorMetrics;
+        advanceToCurrentSlot();
+        int slotNumber = this.slotNumber.get();
+
+        AtomicIntegerArray metrics;
         switch (status) {
             case SUCCESS:
                 metrics = this.successMetrics;
@@ -84,10 +87,10 @@ public class ActionMetrics implements IActionMetrics {
             case TIMED_OUT:
                 metrics = this.timeoutMetrics;
                 break;
+            default:
+                return;
         }
-        advanceToCurrentSlot();
 
-        int slotNumber = this.slotNumber.get();
         metrics.lazySet(slotNumber, metrics.get(slotNumber) + 1);
     }
 
