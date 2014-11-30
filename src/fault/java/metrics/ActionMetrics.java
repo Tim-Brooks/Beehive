@@ -36,10 +36,7 @@ public class ActionMetrics implements IActionMetrics {
 
     @Override
     public int getFailuresForTimePeriod(int milliseconds) {
-        long currentTimestamp = timeProvider.currentTimeMillis();
-        if (currentTimestamp >= advanceSlotTimeInMillis.get()) {
-            advanceToCurrentSlot(currentTimestamp);
-        }
+        advanceToCurrentSlot();
 
         int slotsBack = milliseconds / 1000;
         int totalErrors = 0;
@@ -56,8 +53,26 @@ public class ActionMetrics implements IActionMetrics {
     }
 
     @Override
+    public int getSuccessesForTimePeriod(int milliseconds) {
+        advanceToCurrentSlot();
+
+        int slotsBack = milliseconds / 1000;
+        int totalSuccesses = 0;
+        int slotNumber = this.slotNumber.get();
+
+        for (int i = slotNumber - slotsBack; i <= slotNumber; ++i) {
+            if (i < 0) {
+                totalSuccesses = totalSuccesses + successMetrics.get(totalSlots + i);
+            } else {
+                totalSuccesses = totalSuccesses + successMetrics.get(i);
+            }
+        }
+
+        return totalSuccesses;
+    }
+
+    @Override
     public void reportActionResult(Status status) {
-        long currentTimestamp = timeProvider.currentTimeMillis();
         AtomicIntegerArray metrics = this.errorMetrics;
         switch (status) {
             case SUCCESS:
@@ -70,15 +85,18 @@ public class ActionMetrics implements IActionMetrics {
                 metrics = this.timeoutMetrics;
                 break;
         }
-        if (currentTimestamp >= advanceSlotTimeInMillis.get()) {
-            advanceToCurrentSlot(currentTimestamp);
-        }
+        advanceToCurrentSlot();
 
         int slotNumber = this.slotNumber.get();
         metrics.lazySet(slotNumber, metrics.get(slotNumber) + 1);
     }
 
-    private void advanceToCurrentSlot(long currentTimestamp) {
+    private void advanceToCurrentSlot() {
+        long currentTimestamp = timeProvider.currentTimeMillis();
+        if (currentTimestamp < advanceSlotTimeInMillis.get()) {
+            return;
+        }
+
         long advanceSlotTimeInMillis = this.advanceSlotTimeInMillis.get();
         long l = (currentTimestamp - advanceSlotTimeInMillis) / 1000;
         int slotsToAdvance = 1 + (int) l;
