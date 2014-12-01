@@ -16,9 +16,10 @@ public class ActionMetrics implements IActionMetrics {
     private final AtomicIntegerArray successMetrics;
     private final AtomicIntegerArray timeoutMetrics;
     private final TimeProvider timeProvider;
-    private final int totalSlots;
     private final AtomicLong advanceSlotTimeInMillis;
     private final AtomicInteger slotNumber;
+    private final int totalSlots;
+    private final int writerTailSlot = 0;
 
     public ActionMetrics(int secondsToTrack) {
         this(secondsToTrack, new TimeProvider());
@@ -36,11 +37,10 @@ public class ActionMetrics implements IActionMetrics {
 
     @Override
     public int getFailuresForTimePeriod(int milliseconds) {
-        advanceToCurrentSlot();
+        int slotNumber = getUpdatedSlotNumber(this.slotNumber.get());
 
         int slotsBack = milliseconds / 1000;
         int totalErrors = 0;
-        int slotNumber = this.slotNumber.get();
         for (int i = slotNumber - slotsBack; i <= slotNumber; ++i) {
             if (i < 0) {
                 totalErrors = totalErrors + errorMetrics.get(totalSlots + i) + timeoutMetrics.get(totalSlots + i);
@@ -69,8 +69,9 @@ public class ActionMetrics implements IActionMetrics {
 
     @Override
     public void reportActionResult(Status status) {
-        advanceToCurrentSlot();
-        int slotNumber = this.slotNumber.get();
+        int currentSlotNumber = slotNumber.get();
+        int updatedSlotNumber = getUpdatedSlotNumber(currentSlotNumber);
+        advanceToCurrentSlot(currentSlotNumber, updatedSlotNumber);
 
         AtomicIntegerArray metrics;
         switch (status) {
@@ -87,15 +88,13 @@ public class ActionMetrics implements IActionMetrics {
                 return;
         }
 
-        metrics.lazySet(slotNumber, metrics.get(slotNumber) + 1);
+        metrics.lazySet(updatedSlotNumber, metrics.get(updatedSlotNumber) + 1);
     }
 
     private int getEventCountForTimePeriod(int milliseconds, AtomicIntegerArray metricsArray) {
-        advanceToCurrentSlot();
-
+        int slotNumber = getUpdatedSlotNumber(this.slotNumber.get());
         int slotsBack = milliseconds / 1000;
         int totalEvents = 0;
-        int slotNumber = this.slotNumber.get();
 
         for (int i = slotNumber - slotsBack; i <= slotNumber; ++i) {
             if (i < 0) {
@@ -107,21 +106,39 @@ public class ActionMetrics implements IActionMetrics {
         return totalEvents;
     }
 
-    private void advanceToCurrentSlot() {
+    private void advanceToCurrentSlot(int currentSlotNumber, int updatedSlotNumber) {
+        if (updatedSlotNumber != currentSlotNumber) {
+            for (int i = currentSlotNumber + 1; i <= updatedSlotNumber; ++i) {
+                if (i < totalSlots) {
+                    errorMetrics.lazySet(i, 0);
+                    successMetrics.lazySet(i, 0);
+                    timeoutMetrics.lazySet(i, 0);
+                } else {
+                    int adjustedSlot = i - totalSlots;
+                    errorMetrics.lazySet(adjustedSlot, 0);
+                    successMetrics.lazySet(adjustedSlot, 0);
+                    timeoutMetrics.lazySet(adjustedSlot, 0);
+                }
+            }
+            this.slotNumber.lazySet(updatedSlotNumber);
+            this.advanceSlotTimeInMillis.lazySet(advanceSlotTimeInMillis.get() + (1000 * updatedSlotNumber));
+        }
+    }
+
+    private int getUpdatedSlotNumber(int currentSlotNumber) {
         long currentTimestamp = timeProvider.currentTimeMillis();
         if (currentTimestamp < advanceSlotTimeInMillis.get()) {
-            return;
+            return currentSlotNumber;
         }
 
         long advanceSlotTimeInMillis = this.advanceSlotTimeInMillis.get();
         long l = (currentTimestamp - advanceSlotTimeInMillis) / 1000;
         int slotsToAdvance = 1 + (int) l;
-        int newSlotNumber = slotsToAdvance + slotNumber.get();
+        int newSlotNumber = slotsToAdvance + currentSlotNumber;
         if (newSlotNumber >= totalSlots) {
             newSlotNumber = newSlotNumber - totalSlots;
         }
-        this.slotNumber.lazySet(newSlotNumber);
-        this.advanceSlotTimeInMillis.lazySet(advanceSlotTimeInMillis + (1000 * slotsToAdvance));
+        return newSlotNumber;
     }
 
 }

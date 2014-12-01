@@ -3,13 +3,13 @@ package fault.java.utils;
 /**
  * Created by timbrooks on 11/23/14.
  */
-public final class TimeProvider {
+public class TimeProvider {
 
-    public final long currentTimeMillis() {
+    public long currentTimeMillis() {
         return System.currentTimeMillis();
     }
 
-    public final long nanoTime() {
+    public long nanoTime() {
         return System.nanoTime();
     }
 }

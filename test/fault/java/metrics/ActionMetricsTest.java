@@ -120,4 +120,23 @@ public class ActionMetricsTest {
         assertEquals(3, actionMetrics.getTimeoutsForTimePeriod(2000));
         assertEquals(2, actionMetrics.getTimeoutsForTimePeriod(1000));
     }
+
+    @Test
+    public void testWrappingOfBuffer() {
+        for(int i = 1; i < 1000; ++i) {
+            long timestamp = 1000L * i;
+            when(timeProvider.currentTimeMillis()).thenReturn(timestamp, timestamp, timestamp);
+            actionMetrics.reportActionResult(Status.ERROR);
+            actionMetrics.reportActionResult(Status.SUCCESS);
+            actionMetrics.reportActionResult(Status.TIMED_OUT);
+        }
+
+        when(timeProvider.currentTimeMillis()).thenReturn(1005000L);
+        actionMetrics.reportActionResult(Status.ERROR);
+        actionMetrics.reportActionResult(Status.SUCCESS);
+        actionMetrics.reportActionResult(Status.TIMED_OUT);
+
+        assertEquals(2, actionMetrics.getSuccessesForTimePeriod(6000));
+
+    }
 }
