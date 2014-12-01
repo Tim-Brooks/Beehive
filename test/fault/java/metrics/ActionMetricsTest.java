@@ -119,6 +119,5 @@ public class ActionMetricsTest {
         assertEquals(2, actionMetrics.getErrorsForTimePeriod(1000));
         assertEquals(3, actionMetrics.getTimeoutsForTimePeriod(2000));
         assertEquals(2, actionMetrics.getTimeoutsForTimePeriod(1000));
-
     }
 }
