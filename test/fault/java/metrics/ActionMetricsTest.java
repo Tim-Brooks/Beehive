@@ -10,7 +10,6 @@ import org.mockito.MockitoAnnotations;
 import java.util.Random;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 
 /**
@@ -78,7 +77,7 @@ public class ActionMetricsTest {
 
         Random random = new Random();
 
-        for (int  i = 0; i < 100; ++i) {
+        for (int i = 0; i < 100; ++i) {
             if (random.nextBoolean()) {
                 when(timeProvider.currentTimeMillis()).thenReturn(500L);
                 actionMetrics.reportActionResult(Status.ERROR);
@@ -105,6 +104,21 @@ public class ActionMetricsTest {
 
     @Test
     public void testMetricsOnlyReportForTimePeriod() {
+        for (int i = 1; i < 4; ++i) {
+            long timestamp = 500L * i;
+            when(timeProvider.currentTimeMillis()).thenReturn(timestamp, timestamp, timestamp);
+            actionMetrics.reportActionResult(Status.ERROR);
+            actionMetrics.reportActionResult(Status.SUCCESS);
+            actionMetrics.reportActionResult(Status.TIMED_OUT);
+        }
+
+        when(timeProvider.currentTimeMillis()).thenReturn(2000L, 2000L, 2000L);
+        assertEquals(3, actionMetrics.getSuccessesForTimePeriod(2000));
+        assertEquals(2, actionMetrics.getSuccessesForTimePeriod(1000));
+        assertEquals(3, actionMetrics.getErrorsForTimePeriod(2000));
+        assertEquals(2, actionMetrics.getErrorsForTimePeriod(1000));
+        assertEquals(3, actionMetrics.getTimeoutsForTimePeriod(2000));
+        assertEquals(2, actionMetrics.getTimeoutsForTimePeriod(1000));
 
     }
 }
