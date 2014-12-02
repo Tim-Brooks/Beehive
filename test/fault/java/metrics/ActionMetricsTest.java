@@ -112,7 +112,7 @@ public class ActionMetricsTest {
             actionMetrics.reportActionResult(Status.TIMED_OUT);
         }
 
-        when(timeProvider.currentTimeMillis()).thenReturn(2000L, 2000L, 2000L);
+        when(timeProvider.currentTimeMillis()).thenReturn(2000L, 2000L, 2000L, 2000L, 2000L, 2000L);
         assertEquals(3, actionMetrics.getSuccessesForTimePeriod(2000));
         assertEquals(2, actionMetrics.getSuccessesForTimePeriod(1000));
         assertEquals(3, actionMetrics.getErrorsForTimePeriod(2000));
@@ -123,7 +123,7 @@ public class ActionMetricsTest {
 
     @Test
     public void testWrappingOfBuffer() {
-        for(int i = 1; i < 1000; ++i) {
+        for (int i = 1; i < 1000; ++i) {
             long timestamp = 1000L * i;
             when(timeProvider.currentTimeMillis()).thenReturn(timestamp, timestamp, timestamp);
             actionMetrics.reportActionResult(Status.ERROR);

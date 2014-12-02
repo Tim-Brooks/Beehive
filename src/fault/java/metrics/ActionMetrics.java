@@ -19,7 +19,6 @@ public class ActionMetrics implements IActionMetrics {
     private final AtomicLong advanceSlotTimeInMillis;
     private final AtomicInteger slotNumber;
     private final int totalSlots;
-    private final int writerTailSlot = 0;
 
     public ActionMetrics(int secondsToTrack) {
         this(secondsToTrack, new TimeProvider());
@@ -37,11 +36,19 @@ public class ActionMetrics implements IActionMetrics {
 
     @Override
     public int getFailuresForTimePeriod(int milliseconds) {
-        int slotNumber = getUpdatedSlotNumber(this.slotNumber.get());
-
         int slotsBack = milliseconds / 1000;
+        if (slotsBack > totalSlots) {
+            throw new RuntimeException("That amount of time is not tracked.");
+        }
+
+        int slotsToAdvance = slotsToAdvance();
+        if (slotsToAdvance > slotsBack) {
+            return 0;
+        }
+
         int totalErrors = 0;
-        for (int i = slotNumber - slotsBack; i <= slotNumber; ++i) {
+        int currentSlot = slotNumber.get();
+        for (int i = currentSlot - (slotsBack - slotsToAdvance); i <= currentSlot; ++i) {
             if (i < 0) {
                 totalErrors = totalErrors + errorMetrics.get(totalSlots + i) + timeoutMetrics.get(totalSlots + i);
             } else {
@@ -70,8 +77,8 @@ public class ActionMetrics implements IActionMetrics {
     @Override
     public void reportActionResult(Status status) {
         int currentSlotNumber = slotNumber.get();
-        int updatedSlotNumber = getUpdatedSlotNumber(currentSlotNumber);
-        advanceToCurrentSlot(currentSlotNumber, updatedSlotNumber);
+        int slotsToAdvance = slotsToAdvance();
+        int slotNumber = advanceToCurrentSlot(currentSlotNumber, slotsToAdvance);
 
         AtomicIntegerArray metrics;
         switch (status) {
@@ -88,27 +95,37 @@ public class ActionMetrics implements IActionMetrics {
                 return;
         }
 
-        metrics.lazySet(updatedSlotNumber, metrics.get(updatedSlotNumber) + 1);
+        metrics.lazySet(slotNumber, metrics.get(slotNumber) + 1);
     }
 
     private int getEventCountForTimePeriod(int milliseconds, AtomicIntegerArray metricsArray) {
-        int slotNumber = getUpdatedSlotNumber(this.slotNumber.get());
         int slotsBack = milliseconds / 1000;
-        int totalEvents = 0;
+        if (slotsBack > totalSlots) {
+            throw new RuntimeException("That amount of time is not tracked.");
+        }
 
-        for (int i = slotNumber - slotsBack; i <= slotNumber; ++i) {
+        int slotsToAdvance = slotsToAdvance();
+        if (slotsToAdvance > slotsBack) {
+            return 0;
+        }
+
+        int totalEvents = 0;
+        int currentSlot = slotNumber.get();
+        for (int i = currentSlot - (slotsBack - slotsToAdvance); i <= currentSlot; ++i) {
             if (i < 0) {
                 totalEvents = totalEvents + metricsArray.get(totalSlots + i);
             } else {
                 totalEvents = totalEvents + metricsArray.get(i);
             }
         }
+
         return totalEvents;
     }
 
-    private void advanceToCurrentSlot(int currentSlotNumber, int updatedSlotNumber) {
-        if (updatedSlotNumber != currentSlotNumber) {
-            for (int i = currentSlotNumber + 1; i <= updatedSlotNumber; ++i) {
+    private int advanceToCurrentSlot(int currentSlotNumber, int slotsToAdvance) {
+        if (slotsToAdvance != 0) {
+            int newSlot = slotsToAdvance + currentSlotNumber;
+            for (int i = currentSlotNumber + 1; i <= newSlot; ++i) {
                 if (i < totalSlots) {
                     errorMetrics.lazySet(i, 0);
                     successMetrics.lazySet(i, 0);
@@ -120,25 +137,26 @@ public class ActionMetrics implements IActionMetrics {
                     timeoutMetrics.lazySet(adjustedSlot, 0);
                 }
             }
-            this.slotNumber.lazySet(updatedSlotNumber);
-            this.advanceSlotTimeInMillis.lazySet(advanceSlotTimeInMillis.get() + (1000 * updatedSlotNumber));
+            int adjustedNewSlot = newSlot < totalSlots ? newSlot : newSlot - totalSlots;
+            this.slotNumber.lazySet(adjustedNewSlot);
+            this.advanceSlotTimeInMillis.lazySet(advanceSlotTimeInMillis.get() + (1000 * slotsToAdvance));
+            return adjustedNewSlot;
         }
+        return currentSlotNumber;
     }
 
-    private int getUpdatedSlotNumber(int currentSlotNumber) {
+    private int slotsToAdvance() {
         long currentTimestamp = timeProvider.currentTimeMillis();
         if (currentTimestamp < advanceSlotTimeInMillis.get()) {
-            return currentSlotNumber;
+            return 0;
         }
 
         long advanceSlotTimeInMillis = this.advanceSlotTimeInMillis.get();
-        long l = (currentTimestamp - advanceSlotTimeInMillis) / 1000;
-        int slotsToAdvance = 1 + (int) l;
-        int newSlotNumber = slotsToAdvance + currentSlotNumber;
-        if (newSlotNumber >= totalSlots) {
-            newSlotNumber = newSlotNumber - totalSlots;
-        }
-        return newSlotNumber;
+        int slotsToAdvance = 1 + (int) ((currentTimestamp - advanceSlotTimeInMillis) / 1000);
+//        int newSlotNumber = slotsToAdvance + currentSlotNumber;
+//        if (newSlotNumber >= totalSlots) {
+//            newSlotNumber = newSlotNumber - totalSlots;
+//        }
+        return slotsToAdvance;
     }
-
 }
