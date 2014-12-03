@@ -27,6 +27,10 @@ public class ActionThreadPool implements Executor {
             }
         });
 
+        for (int i = 0; i < threadCount; ++i) {
+            pool.add(new ThreadManager());
+        }
+
     }
 
     @Override
@@ -44,7 +48,26 @@ public class ActionThreadPool implements Executor {
 
     private class ThreadManager {
         private final ExchangingQueue<Runnable> queue = new ExchangingQueue<>(10);
+        private final Thread thread;
+        // Volatile? Or Interrupt?
         private int scheduledCount = 0;
+
+        public ThreadManager() {
+            thread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (; ; ) {
+                        Runnable runnable = queue.blockingPoll();
+                        runnable.run();
+                        // Need to explore this strategy more.
+                        if (thread.isInterrupted()) {
+                            return;
+                        }
+                    }
+                }
+            });
+            thread.run();
+        }
 
         private boolean submit(Runnable task) {
             boolean offered = queue.offer(task);
@@ -60,6 +83,10 @@ public class ActionThreadPool implements Executor {
 
         private int getScheduledCount() {
             return scheduledCount;
+        }
+
+        private void shutdown() {
+            thread.interrupt();
         }
     }
 }
