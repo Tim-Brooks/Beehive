@@ -49,7 +49,6 @@ public class ActionThreadPool implements Executor {
     private class ThreadManager {
         private final ExchangingQueue<Runnable> queue = new ExchangingQueue<>(10);
         private final Thread thread;
-        // Volatile? Or Interrupt?
         private int scheduledCount = 0;
 
         public ThreadManager() {
