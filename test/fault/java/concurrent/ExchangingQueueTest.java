@@ -59,7 +59,7 @@ public class ExchangingQueueTest {
     }
 
     @Test
-    public void testQueueEndToEnd() {
+    public void testQueueEndToEnd() throws Exception {
         final List<Integer> events = new ArrayList<>();
         final ExchangingQueue<Integer> exchangingQueue = new ExchangingQueue<>(100);
 

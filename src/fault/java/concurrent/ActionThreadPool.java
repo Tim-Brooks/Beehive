@@ -4,6 +4,8 @@ import java.util.Comparator;
 import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * Created by timbrooks on 12/2/14.
@@ -13,6 +15,9 @@ public class ActionThreadPool implements Executor {
     private final NavigableSet<ThreadManager> pool;
 
     public ActionThreadPool(int threadCount) {
+        if (threadCount < 1) {
+            throw new IllegalArgumentException("Cannot have fewer than 1 thread");
+        }
         pool = new TreeSet<>(new Comparator<ThreadManager>() {
             @Override
             public int compare(ThreadManager o1, ThreadManager o2) {
@@ -36,14 +41,23 @@ public class ActionThreadPool implements Executor {
     @Override
     public void execute(Runnable action) {
         ThreadManager nextThread = pool.pollFirst();
-        nextThread.submit(action);
+        boolean submitted = nextThread.submit(action);
         pool.add(nextThread);
+        if (!submitted) {
+            throw new RejectedExecutionException();
+        }
     }
 
     public void signalTaskComplete(ThreadManager threadManager) {
         threadManager.decrementScheduledCount();
         pool.remove(threadManager);
         pool.add(threadManager);
+    }
+
+    public void shutdown() {
+        for (ThreadManager manager : pool) {
+            manager.shutdown();
+        }
     }
 
     private class ThreadManager {
@@ -56,7 +70,12 @@ public class ActionThreadPool implements Executor {
                 @Override
                 public void run() {
                     for (; ; ) {
-                        Runnable runnable = queue.blockingPoll();
+                        Runnable runnable = null;
+                        try {
+                            runnable = queue.blockingPoll();
+                        } catch (InterruptedException e) {
+                            return;
+                        }
                         runnable.run();
                         // Need to explore this strategy more.
                         if (thread.isInterrupted()) {
@@ -65,7 +84,7 @@ public class ActionThreadPool implements Executor {
                     }
                 }
             });
-            thread.run();
+            thread.start();
         }
 
         private boolean submit(Runnable task) {
@@ -86,6 +105,7 @@ public class ActionThreadPool implements Executor {
 
         private void shutdown() {
             thread.interrupt();
+            LockSupport.unpark(thread);
         }
     }
 }

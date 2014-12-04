@@ -55,7 +55,7 @@ public class ExchangingQueue<T> {
 
     }
 
-    public T blockingPoll() {
+    public T blockingPoll() throws InterruptedException {
         for (;;) {
             T element = poll();
             if (element != null) {
@@ -64,6 +64,9 @@ public class ExchangingQueue<T> {
             waiter = Thread.currentThread();
             LockSupport.park();
             waiter = null;
+            if (Thread.currentThread().isInterrupted()) {
+                throw new InterruptedException();
+            }
         }
     }
 
