@@ -5,6 +5,7 @@ import java.util.NavigableSet;
 import java.util.TreeSet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.LockSupport;
 
 /**
@@ -13,8 +14,11 @@ import java.util.concurrent.locks.LockSupport;
 public class ActionThreadPool implements Executor {
 
     private final NavigableSet<ThreadManager> pool;
+    private final ThreadLocalRandom random = ThreadLocalRandom.current();
+    private final String actionName;
 
-    public ActionThreadPool(int threadCount) {
+    public ActionThreadPool(String actionName, int threadCount) {
+        this.actionName = actionName;
         if (threadCount < 1) {
             throw new IllegalArgumentException("Cannot have fewer than 1 thread");
         }
@@ -27,13 +31,17 @@ public class ActionThreadPool implements Executor {
                     return 1;
                 } else if (scheduledCount2 > scheduledCount1) {
                     return -1;
+                } else if (random.nextBoolean()) {
+                    return 1;
+                } else {
+                    return -1;
                 }
-                return 0;
+
             }
         });
 
         for (int i = 0; i < threadCount; ++i) {
-            pool.add(new ThreadManager());
+            pool.add(new ThreadManager(actionName + "-" + i));
         }
 
     }
@@ -65,7 +73,7 @@ public class ActionThreadPool implements Executor {
         private final Thread thread;
         private int scheduledCount = 0;
 
-        public ThreadManager() {
+        public ThreadManager(String threadName) {
             thread = new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -83,7 +91,7 @@ public class ActionThreadPool implements Executor {
                         }
                     }
                 }
-            });
+            }, threadName);
             thread.start();
         }
 
