@@ -38,7 +38,7 @@ public class ActionThreadPoolTest {
     }
 
     @Test
-    public void testPoolPrioritizesFreeThreads() {
+    public void testPoolPrioritizesFreeThreadsAndExecutes() {
         threadPool.shutdown();
         threadPool = new ActionThreadPool("Test Action", 2);
 
