@@ -17,11 +17,6 @@ public class ActionThreadPoolTest {
 
     private ActionThreadPool threadPool;
 
-    @Before
-    public void setUp() {
-        threadPool = new ActionThreadPool("Test Action", 1);
-    }
-
     @After
     public void tearDown() {
         threadPool.shutdown();
@@ -39,7 +34,6 @@ public class ActionThreadPoolTest {
 
     @Test
     public void testPoolPrioritizesFreeThreadsAndExecutes() {
-        threadPool.shutdown();
         threadPool = new ActionThreadPool("Test Action", 2);
 
         final List<String> resultList = new CopyOnWriteArrayList<>();
@@ -70,6 +64,27 @@ public class ActionThreadPoolTest {
 
         assertEquals(10, threadZeroCount);
         assertEquals(10, threadOneCount);
+
+    }
+
+    @Test
+    public void signallyATaskCompleteFreesUpAThread() {
+        threadPool = new ActionThreadPool("Test Action", 2);
+
+        final List<String> resultList = new CopyOnWriteArrayList<>();
+        Runnable action = new Runnable() {
+            @Override
+            public void run() {
+                resultList.add(Thread.currentThread().getName());
+            }
+        };
+
+        threadPool.execute(action);
+        threadPool.execute(action);
+        threadPool.execute(action);
+
+        while(resultList.size() != 3) {
+        }
 
     }
 }
