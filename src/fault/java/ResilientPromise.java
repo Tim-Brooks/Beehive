@@ -29,6 +29,11 @@ public class ResilientPromise<T> {
         latch.await();
     }
 
+    public T awaitResult() throws InterruptedException {
+        latch.await();
+        return result;
+    }
+
     public T getResult() {
         return result;
     }
