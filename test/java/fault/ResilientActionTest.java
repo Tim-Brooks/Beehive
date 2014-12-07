@@ -88,9 +88,33 @@ public class ResilientActionTest {
             }
         }
 
-        for (ResilientPromise promise : promises) {
-            promise.awaitResult();
+        int successesRealized = 0;
+        int errorsRealized = 0;
+        int timeoutsRealized = 0;
+        for (ResilientPromise<String> promise : promises) {
+            promise.await();
+            if (promise.status == Status.SUCCESS) {
+                assertEquals("Success-" + successesRealized, promise.result);
+                assertNull(promise.error);
+                ++successesRealized;
+            } else if (promise.status == Status.ERROR) {
+                Throwable error = promise.error;
+                assertTrue(error instanceof IOException);
+                assertEquals("IO Issue-" + errorsRealized, error.getMessage());
+                assertNull(promise.result);
+                ++errorsRealized;
+            } else if (promise.status == Status.TIMED_OUT) {
+                assertNull(promise.result);
+                assertNull(promise.error);
+                ++timeoutsRealized;
+            } else {
+                fail();
+            }
         }
+        assertEquals(successCount, successesRealized);
+        assertEquals(errorCount, errorsRealized);
+        assertEquals(timeoutCount, timeoutsRealized);
+
         testMetricsResult(successCount, errorCount, timeoutCount);
     }
 
