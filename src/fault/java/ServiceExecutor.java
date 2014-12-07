@@ -12,10 +12,11 @@ import fault.java.metrics.IActionMetrics;
  */
 public class ServiceExecutor {
 
+    private final IActionMetrics actionMetrics;
+
     private final ICircuitBreaker circuitBreaker;
     private final ManagingRunnable managingRunnable;
     private final Thread managingThread;
-
     public ServiceExecutor(int poolSize) {
         this(poolSize, new ActionMetrics(3600));
     }
@@ -28,14 +29,15 @@ public class ServiceExecutor {
     public ServiceExecutor(int poolSize, IActionMetrics actionMetrics, ICircuitBreaker circuitBreaker) {
         this(actionMetrics, circuitBreaker, new ManagingRunnable(poolSize, circuitBreaker, actionMetrics));
     }
+
     public ServiceExecutor(IActionMetrics actionMetrics, ICircuitBreaker circuitBreaker,
                            ManagingRunnable managingRunnable) {
+        this.actionMetrics = actionMetrics;
         this.circuitBreaker = circuitBreaker;
         this.managingRunnable = managingRunnable;
         managingThread = new Thread(managingRunnable, "Action Managing Thread");
         managingThread.start();
     }
-
     public <T> ResilientPromise<T> performAction(ResilientAction<T> action, int millisTimeout) {
         if (circuitBreaker.isOpen()) {
             throw new RuntimeException("Circuit is Open");
@@ -55,6 +57,10 @@ public class ServiceExecutor {
         }
 
         return managingRunnable.execute(action);
+    }
+
+    public IActionMetrics getActionMetrics() {
+        return actionMetrics;
     }
 
     public void shutdown() {
