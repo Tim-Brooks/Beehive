@@ -7,6 +7,8 @@ public interface ICircuitBreaker {
 
     public boolean isOpen();
 
+    boolean allowAction();
+
     void informBreakerOfResult(boolean successful);
 
     void setBreakerConfig(BreakerConfig breakerConfig);

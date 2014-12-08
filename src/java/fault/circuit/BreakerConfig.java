@@ -7,15 +7,18 @@ public class BreakerConfig {
 
     public final int timePeriodInMillis;
     public final int failureThreshold;
+    public final long timeToPauseMillis;
 
-    public BreakerConfig(int failureThreshold, int timePeriodInMillis) {
+    public BreakerConfig(int failureThreshold, int timePeriodInMillis, long timeToPauseMillis) {
         this.failureThreshold = failureThreshold;
         this.timePeriodInMillis = timePeriodInMillis;
+        this.timeToPauseMillis = timeToPauseMillis;
     }
 
     public static class BreakerConfigBuilder {
         public int timePeriodInMillis;
         public int failureThreshold;
+        public long timeToPauseMillis;
 
         public BreakerConfigBuilder timePeriodInMillis(int timePeriodInMillis) {
             this.timePeriodInMillis = timePeriodInMillis;
@@ -27,8 +30,13 @@ public class BreakerConfig {
             return this;
         }
 
+        public BreakerConfigBuilder timeToPauseMillis(long timeToPauseMillis) {
+            this.timeToPauseMillis = timeToPauseMillis;
+            return this;
+        }
+
         public BreakerConfig build() {
-            return new BreakerConfig(failureThreshold, timePeriodInMillis);
+            return new BreakerConfig(failureThreshold, timePeriodInMillis, timeToPauseMillis);
         }
 
     }

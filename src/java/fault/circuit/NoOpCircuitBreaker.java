@@ -10,6 +10,11 @@ public class NoOpCircuitBreaker implements ICircuitBreaker {
     }
 
     @Override
+    public boolean allowAction() {
+        return true;
+    }
+
+    @Override
     public void informBreakerOfResult(boolean successful) {
     }
 
