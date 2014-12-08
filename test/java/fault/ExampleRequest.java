@@ -1,14 +1,11 @@
 package fault;
 
-import fault.ResilientAction;
-import fault.ResilientPromise;
-import fault.ServiceExecutor;
-
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.concurrent.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * Created by timbrooks on 11/16/14.
@@ -16,24 +13,25 @@ import java.util.concurrent.*;
 public class ExampleRequest implements Runnable {
 
     private final ServiceExecutor serviceExecutor;
-    private final ExecutorService executorService;
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
-    public ExampleRequest(ServiceExecutor serviceExecutor, ExecutorService executorService) {
+    public ExampleRequest(ServiceExecutor serviceExecutor) {
         this.serviceExecutor = serviceExecutor;
-        this.executorService = executorService;
     }
 
     public void run() {
-        ResilientPromise<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
-            @Override
-            public String run() throws Exception {
-                String result = null;
-                InputStream response = new URL("http://localhost:6001/").openStream();
-                BufferedReader reader = new BufferedReader(new InputStreamReader(response));
-                result = reader.readLine();
-                return result;
-            }
-        }, 2);
+        for (; ; ) {
+            ResilientPromise<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
+                @Override
+                public String run() throws Exception {
+                    Thread.sleep(15);
+//                    String result = null;
+//                    InputStream response = new URL("http://localhost:6001/").openStream();
+//                    BufferedReader reader = new BufferedReader(new InputStreamReader(response));
+//                    result = reader.readLine();
+                    return "Success";
+                }
+            }, 50);
 
 //        Future<Object> result = executorService.submit(new Callable<Object>() {
 //            @Override
@@ -46,20 +44,22 @@ public class ExampleRequest implements Runnable {
 //            }
 //        });
 
-        long start = System.currentTimeMillis();
-        try {
-            result.await();
+            long start = System.currentTimeMillis();
+            try {
+                result.await();
 //            result.get(10L, TimeUnit.MILLISECONDS);
-        } catch (Exception e) {
+            } catch (Exception e) {
 //            e.printStackTrace();
-        }
+            }
 
-        long end = System.currentTimeMillis();
-        System.out.println(end - start);
-        System.out.println("Result: " + result.result);
+            if (result.status != Status.SUCCESS) {
+                System.out.println(System.currentTimeMillis() - start);
+                System.out.println(result.error);
+            }
 //        if (result.isError()) {
 //            System.out.println(result.error.getMessage());
 //        }
 //        System.out.println("Is Done " + result.isDone());
+        }
     }
 }

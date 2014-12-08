@@ -1,6 +1,10 @@
 package fault;
 
-import java.util.concurrent.Executors;
+import fault.circuit.NoOpCircuitBreaker;
+import fault.metrics.ActionMetrics;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Created by timbrooks on 11/6/14.
@@ -8,20 +12,27 @@ import java.util.concurrent.Executors;
 public class Example {
 
     public static void main(String[] args) {
-        ServiceExecutor serviceExecutor = new ServiceExecutor(10);
+        ActionMetrics actionMetrics = new ActionMetrics(3600);
+        ServiceExecutor serviceExecutor = new ServiceExecutor(50, actionMetrics, new NoOpCircuitBreaker());
+        List<Thread> threads = new ArrayList<>();
 
-        for (int i = 0; i < 150; ++i) {
+        for (int i = 0; i < 15; ++i) {
             try {
                 Thread.sleep(30);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            new Thread(new ExampleRequest(serviceExecutor, Executors.newFixedThreadPool(20))).start();
+            Thread thread = new Thread(new ExampleRequest(serviceExecutor));
+            threads.add(thread);
+            thread.start();
         }
         try {
-            Thread.sleep(8000);
+            Thread.sleep(120000);
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+        for (Thread t : threads) {
+            t.interrupt();
         }
         serviceExecutor.shutdown();
     }
