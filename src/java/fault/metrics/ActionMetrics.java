@@ -152,11 +152,6 @@ public class ActionMetrics implements IActionMetrics {
         }
 
         long advanceSlotTimeInMillis = this.advanceSlotTimeInMillis.get();
-        int slotsToAdvance = 1 + (int) ((currentTimestamp - advanceSlotTimeInMillis) / 1000);
-//        int newSlotNumber = slotsToAdvance + currentSlotNumber;
-//        if (newSlotNumber >= totalSlots) {
-//            newSlotNumber = newSlotNumber - totalSlots;
-//        }
-        return slotsToAdvance;
+        return 1 + (int) ((currentTimestamp - advanceSlotTimeInMillis) / 1000);
     }
 }
