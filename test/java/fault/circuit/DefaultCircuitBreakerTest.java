@@ -91,4 +91,14 @@ public class DefaultCircuitBreakerTest {
         assertTrue(circuitBreaker.isOpen());
     }
 
+    @Test
+    public void testActionAllowedIfCircuitClosed() {
+        BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(20)
+                .timePeriodInMillis(5000).build();
+        circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
+        assertFalse(circuitBreaker.isOpen());
+        assertTrue(circuitBreaker.allowAction());
+
+    }
+
 }
