@@ -1,5 +1,5 @@
 (ns fault.core
-  (:import (fault.java ServiceExecutor ResilientAction)))
+  (:import (fault ServiceExecutor ResilientAction)))
 
 
 (defn service-executor [num-of-threads]
