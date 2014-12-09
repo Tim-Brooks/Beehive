@@ -1,6 +1,7 @@
 package fault.circuit;
 
 import fault.metrics.IActionMetrics;
+import fault.utils.TimeProvider;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
@@ -11,12 +12,18 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public class DefaultCircuitBreaker implements ICircuitBreaker {
 
+    private final TimeProvider timeProvider;
+    private final IActionMetrics actionMetrics;
     private AtomicBoolean circuitOpen;
     private AtomicReference<BreakerConfig> breakerConfig;
     private AtomicLong lastTestedTime;
-    private final IActionMetrics actionMetrics;
 
     public DefaultCircuitBreaker(IActionMetrics actionMetrics, BreakerConfig breakerConfig) {
+        this(actionMetrics, breakerConfig, new TimeProvider());
+    }
+
+    public DefaultCircuitBreaker(IActionMetrics actionMetrics, BreakerConfig breakerConfig, TimeProvider timeProvider) {
+        this.timeProvider = timeProvider;
         this.actionMetrics = actionMetrics;
         this.circuitOpen = new AtomicBoolean(false);
         this.lastTestedTime = new AtomicLong(0);
@@ -32,7 +39,7 @@ public class DefaultCircuitBreaker implements ICircuitBreaker {
     public boolean allowAction() {
         if (isOpen()) {
             long timeToPauseMillis = breakerConfig.get().timeToPauseMillis;
-            long currentTime = System.currentTimeMillis();
+            long currentTime = timeProvider.currentTimeMillis();
             // This potentially allows a couple of tests through. Should think about this decision
             if (currentTime < timeToPauseMillis + lastTestedTime.get()) {
                 return false;
@@ -53,7 +60,7 @@ public class DefaultCircuitBreaker implements ICircuitBreaker {
                 BreakerConfig config = this.breakerConfig.get();
                 int failuresForTimePeriod = actionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis);
                 if (config.failureThreshold < failuresForTimePeriod) {
-                    lastTestedTime.set(System.currentTimeMillis());
+                    lastTestedTime.set(timeProvider.currentTimeMillis());
                     circuitOpen.compareAndSet(false, true);
                 }
             }

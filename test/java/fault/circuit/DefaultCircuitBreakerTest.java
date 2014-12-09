@@ -1,6 +1,7 @@
 package fault.circuit;
 
 import fault.metrics.IActionMetrics;
+import fault.utils.TimeProvider;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -19,6 +20,8 @@ public class DefaultCircuitBreakerTest {
 
     @Mock
     private IActionMetrics actionMetrics;
+    @Mock
+    private TimeProvider timeProvider;
 
     private ICircuitBreaker circuitBreaker;
 
@@ -36,12 +39,16 @@ public class DefaultCircuitBreakerTest {
     }
 
     @Test
-    public void testCircuitOpensWhenFailuresGreaterThanThreshold() {
+    public void testCircuitOpensOnlyWhenFailuresGreaterThanThreshold() {
         int timePeriodInMillis = 1000;
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(5).timePeriodInMillis
                 (timePeriodInMillis).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
 
+        assertFalse(circuitBreaker.isOpen());
+
+        when(actionMetrics.getFailuresForTimePeriod(timePeriodInMillis)).thenReturn(5);
+        circuitBreaker.informBreakerOfResult(false);
         assertFalse(circuitBreaker.isOpen());
 
         when(actionMetrics.getFailuresForTimePeriod(timePeriodInMillis)).thenReturn(6);
@@ -98,6 +105,31 @@ public class DefaultCircuitBreakerTest {
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
         assertFalse(circuitBreaker.isOpen());
         assertTrue(circuitBreaker.allowAction());
+    }
+
+    @Test
+    public void testActionAllowedIfPauseTimeHasPassed() {
+        final int failureThreshold = 10;
+        int timePeriodInMillis = 5000;
+        BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(failureThreshold)
+                .timePeriodInMillis(timePeriodInMillis).timeToPauseMillis(1000).build();
+
+        circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig, timeProvider);
+
+        assertFalse(circuitBreaker.isOpen());
+        assertTrue(circuitBreaker.allowAction());
+
+        when(actionMetrics.getFailuresForTimePeriod(timePeriodInMillis)).thenReturn(11);
+        when(timeProvider.currentTimeMillis()).thenReturn(0L);
+        circuitBreaker.informBreakerOfResult(false);
+
+        when(timeProvider.currentTimeMillis()).thenReturn(999L);
+        assertFalse(circuitBreaker.allowAction());
+        assertTrue(circuitBreaker.isOpen());
+
+        when(timeProvider.currentTimeMillis()).thenReturn(1001L);
+        assertTrue(circuitBreaker.allowAction());
+        assertTrue(circuitBreaker.isOpen());
 
     }
 
