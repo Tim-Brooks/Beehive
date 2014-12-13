@@ -5,6 +5,8 @@ package fault;
  */
 public interface Scheduler {
 
-    public void scheduleLoop(ScheduleLoop scheduleLoop);
+    public void scheduleServiceExecutor(ScheduleContext scheduleContext);
+
+    public void unscheduleServiceExecutor(ScheduleContext scheduleContext);
 
 }
