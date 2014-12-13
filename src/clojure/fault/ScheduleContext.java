@@ -25,13 +25,24 @@ public class ScheduleContext {
     public SortedMap<Long, List<ResultMessage<Object>>> scheduled;
 
     public ScheduleContext(int poolSize, ICircuitBreaker circuitBreaker, IActionMetrics actionMetrics) {
+        this(poolSize, circuitBreaker, actionMetrics, new ConcurrentLinkedQueue<ScheduleMessage<Object>>(), new
+                        ConcurrentLinkedQueue<ResultMessage<Object>>(),
+                Executors.newFixedThreadPool(poolSize), new TreeMap<Long, List<ResultMessage<Object>>>(), new
+                        HashMap<ResultMessage<Object>, ResilientTask<Object>>());
+    }
+
+    public ScheduleContext(int poolSize, ICircuitBreaker circuitBreaker, IActionMetrics actionMetrics,
+                           ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue,
+                           ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue, ExecutorService
+                                   executorService, SortedMap<Long, List<ResultMessage<Object>>> scheduled,
+                           Map<ResultMessage<Object>, ResilientTask<Object>> taskMap) {
         this.poolSize = poolSize;
         this.circuitBreaker = circuitBreaker;
         this.actionMetrics = actionMetrics;
-        this.toScheduleQueue = new ConcurrentLinkedQueue<>();
-        this.toReturnQueue = new ConcurrentLinkedQueue<>();
-        this.executorService = Executors.newFixedThreadPool(poolSize);
-        this.scheduled = new TreeMap<>();
-        this.taskMap = new HashMap<>();
+        this.toScheduleQueue = toScheduleQueue;
+        this.toReturnQueue = toReturnQueue;
+        this.executorService = executorService;
+        this.scheduled = scheduled;
+        this.taskMap = taskMap;
     }
 }

@@ -11,7 +11,7 @@ import java.util.concurrent.FutureTask;
  */
 public class ScheduleLoop {
 
-    public boolean runLoop(ScheduleContext scheduleContext) {
+    public static boolean runLoop(ScheduleContext scheduleContext) {
         boolean didSomething = false;
 
         for (int i = 0; i < scheduleContext.poolSize; ++i) {
@@ -38,7 +38,7 @@ public class ScheduleLoop {
         return didSomething;
     }
 
-    private boolean handleScheduling(ScheduleContext scheduleContext) {
+    private static boolean handleScheduling(ScheduleContext scheduleContext) {
         ScheduleMessage<Object> scheduleMessage = scheduleContext.toScheduleQueue.poll();
         if (scheduleMessage != null) {
             ActionCallable<Object> actionCallable = new ActionCallable<>(scheduleMessage.action, scheduleContext
@@ -55,7 +55,7 @@ public class ScheduleLoop {
         return false;
     }
 
-    private boolean handleReturnResult(ScheduleContext scheduleContext) {
+    private static boolean handleReturnResult(ScheduleContext scheduleContext) {
         ResultMessage<Object> result = scheduleContext.toReturnQueue.poll();
         if (result != null) {
             if (ResultMessage.Type.ASYNC.equals(result.type)) {
@@ -68,7 +68,7 @@ public class ScheduleLoop {
         return false;
     }
 
-    private void handleSyncResult(ScheduleContext scheduleContext, ResultMessage<Object>
+    private static void handleSyncResult(ScheduleContext scheduleContext, ResultMessage<Object>
             result) {
         if (result.result != null) {
             scheduleContext.actionMetrics.reportActionResult(Status.SUCCESS);
@@ -80,7 +80,7 @@ public class ScheduleLoop {
 
     }
 
-    private void handleAsyncResult(ScheduleContext scheduleContext,
+    private static void handleAsyncResult(ScheduleContext scheduleContext,
                                    ResultMessage<Object> result) {
         ResilientTask<Object> resilientTask = scheduleContext.taskMap.remove(result);
         if (resilientTask != null) {
@@ -97,7 +97,7 @@ public class ScheduleLoop {
         }
     }
 
-    private void scheduleTimeout(SortedMap<Long, List<ResultMessage<Object>>> scheduled, long absoluteTimeout,
+    private static void scheduleTimeout(SortedMap<Long, List<ResultMessage<Object>>> scheduled, long absoluteTimeout,
                                  ResultMessage<Object> resultMessage) {
         if (scheduled.containsKey(absoluteTimeout)) {
             scheduled.get(absoluteTimeout).add(resultMessage);
@@ -109,7 +109,7 @@ public class ScheduleLoop {
         }
     }
 
-    private long triggerTimeouts(ScheduleContext scheduleContext) {
+    private static long triggerTimeouts(ScheduleContext scheduleContext) {
         long now = System.currentTimeMillis();
         SortedMap<Long, List<ResultMessage<Object>>> toCancel = scheduleContext.scheduled.headMap(now);
         for (Map.Entry<Long, List<ResultMessage<Object>>> entry : toCancel.entrySet()) {
@@ -125,12 +125,12 @@ public class ScheduleLoop {
         return now;
     }
 
-    private void handleSyncTimeout(ScheduleContext scheduleContext) {
+    private static void handleSyncTimeout(ScheduleContext scheduleContext) {
         scheduleContext.actionMetrics.reportActionResult(Status.TIMED_OUT);
         scheduleContext.circuitBreaker.informBreakerOfResult(false);
     }
 
-    private void handleAsyncTimeout(ScheduleContext scheduleContext, ResultMessage<Object>
+    private static void handleAsyncTimeout(ScheduleContext scheduleContext, ResultMessage<Object>
             resultMessage) {
         ResilientTask<Object> task = scheduleContext.taskMap.remove(resultMessage);
         if (task != null) {
