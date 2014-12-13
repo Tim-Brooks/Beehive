@@ -17,10 +17,10 @@ import java.util.SortedMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 
+import static org.junit.Assert.assertEquals;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-import static org.junit.Assert.*;
-
 
 
 /**
@@ -28,27 +28,32 @@ import static org.junit.Assert.*;
  */
 public class ScheduleLoopTest {
 
-    public final int poolSize = 2;
+    private final int poolSize = 2;
     @Mock
-    public ICircuitBreaker circuitBreaker;
+    private ICircuitBreaker circuitBreaker;
     @Mock
-    public IActionMetrics actionMetrics;
+    private IActionMetrics actionMetrics;
     @Mock
-    public ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
+    private ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
     @Mock
-    public ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
+    private ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
     @Mock
-    public ExecutorService executorService;
+    private ExecutorService executorService;
     @Mock
-    public Map<ResultMessage<Object>, ResilientTask<Object>> taskMap;
+    private Map<ResultMessage<Object>, ResilientTask<Object>> taskMap;
     @Mock
-    public SortedMap<Long, List<ResultMessage<Object>>> scheduled;
+    private SortedMap<Long, List<ResultMessage<Object>>> scheduled;
     @Captor
-    public ArgumentCaptor<ResilientTask<Object>> taskCaptor;
+    private ArgumentCaptor<ResilientTask<Object>> taskCaptor;
     @Mock
-    ResilientAction<Object> action;
+    private ResilientAction<Object> action;
     @Mock
-    ResilientPromise<Object> promise;
+    private ResilientAction<Object> action2;
+    @Mock
+    private ResilientPromise<Object> promise2;
+    @Mock
+    private ResilientPromise<Object> promise;
+
     private ScheduleContext context;
 
     @Before
@@ -59,14 +64,26 @@ public class ScheduleLoopTest {
     }
 
     @Test
-    public void testLoop() {
+    public void testActionsScheduled() throws Exception {
         ScheduleMessage<Object> scheduleMessage = new ScheduleMessage<>(action, promise, 100L);
-        when(toScheduleQueue.poll()).thenReturn(scheduleMessage, null);
+        ScheduleMessage<Object> scheduleMessage2 = new ScheduleMessage<>(action2, promise2, 101L);
+        when(toScheduleQueue.poll()).thenReturn(scheduleMessage, scheduleMessage2);
         ScheduleLoop.runLoop(context);
 
-        verify(executorService).submit(taskCaptor.capture());
+        verify(executorService, times(2)).submit(taskCaptor.capture());
 
-        assertEquals(promise, taskCaptor.getValue().resilientPromise);
+        List<ResilientTask<Object>> tasks = taskCaptor.getAllValues();
+
+        ResilientTask<Object> task1 = tasks.get(0);
+        assertEquals(promise, task1.resilientPromise);
+        task1.run();
+        verify(action).run();
+
+
+        ResilientTask<Object> task2 = tasks.get(1);
+        assertEquals(promise2, task2.resilientPromise);
+        task2.run();
+        verify(action2).run();
 
     }
 }
