@@ -41,7 +41,7 @@ public class ManagingRunnable implements Runnable {
         SortedMap<Long, List<ResultMessage<Object>>> scheduled = new TreeMap<>();
         Map<ResultMessage<Object>, ResilientTask<Object>> taskMap = new HashMap<>();
         isRunning = true;
-        int spinCount = 1;
+        int spinCount = maxSpin;
         while (isRunning) {
             boolean didSomething = false;
 
