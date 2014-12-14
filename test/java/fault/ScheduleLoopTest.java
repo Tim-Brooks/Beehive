@@ -17,7 +17,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.FutureTask;
 
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
@@ -45,9 +44,9 @@ public class ScheduleLoopTest {
     private ResilientAction<Object> action;
     @Mock
     private ResilientAction<Object> action2;
-    @Mock
+
     private ResilientPromise<Object> promise2;
-    @Mock
+
     private ResilientPromise<Object> promise;
     @Mock
     private TimeProvider timeProvider;
@@ -57,6 +56,7 @@ public class ScheduleLoopTest {
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
+        promise = new ResilientPromise<>();
         setContext(2);
     }
 
@@ -100,7 +100,10 @@ public class ScheduleLoopTest {
         when(timeProvider.currentTimeMillis()).thenReturn(11L);
         when(toScheduleQueue.poll()).thenReturn(null);
         ScheduleLoop.runLoop(context);
-        verify(promise).setTimedOut();
+        
+        verify(actionMetrics).reportActionResult(Status.TIMED_OUT);
+        verify(circuitBreaker).informBreakerOfResult(false);
+        assertTrue(promise.isTimedOut());
     }
 
     @Test
@@ -128,19 +131,35 @@ public class ScheduleLoopTest {
 
     @Test
     public void testSuccessfulAsyncActionsHandled() {
-        Map<ResultMessage<Object>, ResilientTask<Object>> taskmap = mock(HashMap.class);
-        context = buildContext(1).setTaskMap(taskmap).build();
+        Map<ResultMessage<Object>, ResilientTask<Object>> taskMap = mock(HashMap.class);
+        context = buildContext(1).setTaskMap(taskMap).build();
 
         ResultMessage<Object> result = new ResultMessage<>(ResultMessage.Type.ASYNC);
-        ResilientPromise promise = new ResilientPromise();
         result.result = "Done";
         promise.status = Status.SUCCESS;
         when(toReturnQueue.poll()).thenReturn(result);
-        when(taskmap.remove(result)).thenReturn(new ResilientTask(null, promise));
+        when(taskMap.remove(result)).thenReturn(new ResilientTask(null, promise));
         ScheduleLoop.runLoop(context);
 
         verify(actionMetrics).reportActionResult(Status.SUCCESS);
         verify(circuitBreaker).informBreakerOfResult(true);
+    }
+
+    @Test
+    public void testErrorAsyncActionsHandled() {
+        Map<ResultMessage<Object>, ResilientTask<Object>> taskMap = mock(HashMap.class);
+        context = buildContext(1).setTaskMap(taskMap).build();
+
+        ResultMessage<Object> result = new ResultMessage<>(ResultMessage.Type.ASYNC);
+        ResilientPromise promise = new ResilientPromise();
+        result.exception = new RuntimeException("Failed");
+        promise.status = Status.ERROR;
+        when(toReturnQueue.poll()).thenReturn(result);
+        when(taskMap.remove(result)).thenReturn(new ResilientTask(null, promise));
+        ScheduleLoop.runLoop(context);
+
+        verify(actionMetrics).reportActionResult(Status.ERROR);
+        verify(circuitBreaker).informBreakerOfResult(false);
     }
 
     private void setContext(int threadNum) {
