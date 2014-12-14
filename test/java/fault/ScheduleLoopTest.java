@@ -18,6 +18,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -28,7 +30,6 @@ import static org.mockito.Mockito.when;
  */
 public class ScheduleLoopTest {
 
-    private final int poolSize = 2;
     @Mock
     private ICircuitBreaker circuitBreaker;
     @Mock
@@ -59,8 +60,35 @@ public class ScheduleLoopTest {
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
-        context = new ScheduleContext(poolSize, circuitBreaker, actionMetrics, toScheduleQueue, toReturnQueue,
-                executorService, scheduled, taskMap);
+        setContext(2);
+    }
+
+    @Test
+    public void testRunLoopReturnsFalseIfNothingDone() throws Exception {
+        setContext(1);
+        when(toScheduleQueue.poll()).thenReturn(null);
+        when(toReturnQueue.poll()).thenReturn(null);
+
+        assertFalse(ScheduleLoop.runLoop(context));
+    }
+
+    @Test
+    public void testRunLoopReturnsTrueIfActionScheduled() throws Exception {
+        setContext(1);
+        when(toScheduleQueue.poll()).thenReturn(new ScheduleMessage<>(action, promise, 100L));
+        when(toReturnQueue.poll()).thenReturn(null);
+
+        assertTrue(ScheduleLoop.runLoop(context));
+    }
+
+    @Test
+    public void testRunLoopReturnsTrueIfResultHandled() throws Exception {
+        setContext(1);
+        when(toScheduleQueue.poll()).thenReturn(null);
+        when(toReturnQueue.poll()).thenReturn(new ResultMessage<Object>(ResultMessage.Type.ASYNC));
+
+        assertTrue(ScheduleLoop.runLoop(context));
+
     }
 
     @Test
@@ -85,5 +113,10 @@ public class ScheduleLoopTest {
         task2.run();
         verify(action2).run();
 
+    }
+
+    private void setContext(int threadCount) {
+        context = new ScheduleContext(threadCount, circuitBreaker, actionMetrics, toScheduleQueue, toReturnQueue,
+                executorService, scheduled, taskMap);
     }
 }
