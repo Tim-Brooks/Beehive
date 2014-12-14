@@ -115,8 +115,8 @@ public class ScheduleLoopTest {
 
     }
 
-    private void setContext(int threadCount) {
-        context = new ScheduleContext(threadCount, circuitBreaker, actionMetrics, toScheduleQueue, toReturnQueue,
+    private void setContext(int threadNum) {
+        context = new ScheduleContext(threadNum, circuitBreaker, actionMetrics, toScheduleQueue, toReturnQueue,
                 executorService, scheduled, taskMap);
     }
 }

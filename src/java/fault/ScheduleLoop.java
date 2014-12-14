@@ -3,7 +3,9 @@ package fault;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 
-import java.util.*;
+import java.util.List;
+import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.FutureTask;
 
 /**
@@ -30,7 +32,7 @@ public class ScheduleLoop {
             }
         }
 
-        long now = triggerTimeouts(scheduleContext);
+        long now = TimeoutService.triggerTimeouts(scheduleContext);
 
         SortedMap<Long, List<ResultMessage<Object>>> tailView = scheduleContext.scheduled.tailMap(now);
         scheduleContext.scheduled = new TreeMap<>(tailView);
@@ -49,7 +51,7 @@ public class ScheduleLoop {
             scheduleContext.taskMap.put(resultMessage, resilientTask);
 
             scheduleContext.executorService.submit(resilientTask);
-            scheduleTimeout(scheduleContext.scheduled, scheduleMessage.absoluteTimeout, resultMessage);
+            TimeoutService.scheduleTimeout(scheduleContext.scheduled, scheduleMessage.absoluteTimeout, resultMessage);
             return true;
         }
         return false;
@@ -73,7 +75,7 @@ public class ScheduleLoop {
         if (result.result != null) {
             scheduleContext.actionMetrics.reportActionResult(Status.SUCCESS);
         } else if (result.exception instanceof ActionTimeoutException) {
-            scheduleTimeout(scheduleContext.scheduled, System.currentTimeMillis() - 1, result);
+            TimeoutService.scheduleTimeout(scheduleContext.scheduled, System.currentTimeMillis() - 1, result);
         } else {
             scheduleContext.actionMetrics.reportActionResult(Status.ERROR);
         }
@@ -81,7 +83,7 @@ public class ScheduleLoop {
     }
 
     private static void handleAsyncResult(ScheduleContext scheduleContext,
-                                   ResultMessage<Object> result) {
+                                          ResultMessage<Object> result) {
         ResilientTask<Object> resilientTask = scheduleContext.taskMap.remove(result);
         if (resilientTask != null) {
 
@@ -94,53 +96,6 @@ public class ScheduleLoop {
             }
             scheduleContext.actionMetrics.reportActionResult(promise.status);
             scheduleContext.circuitBreaker.informBreakerOfResult(result.exception == null);
-        }
-    }
-
-    private static void scheduleTimeout(SortedMap<Long, List<ResultMessage<Object>>> scheduled, long absoluteTimeout,
-                                 ResultMessage<Object> resultMessage) {
-        if (scheduled.containsKey(absoluteTimeout)) {
-            scheduled.get(absoluteTimeout).add(resultMessage);
-        } else {
-            List<ResultMessage<Object>> messages = new ArrayList<>();
-            messages.add(resultMessage);
-            scheduled.put(absoluteTimeout, messages);
-
-        }
-    }
-
-    private static long triggerTimeouts(ScheduleContext scheduleContext) {
-        long now = System.currentTimeMillis();
-        SortedMap<Long, List<ResultMessage<Object>>> toCancel = scheduleContext.scheduled.headMap(now);
-        for (Map.Entry<Long, List<ResultMessage<Object>>> entry : toCancel.entrySet()) {
-            List<ResultMessage<Object>> toTimeout = entry.getValue();
-            for (ResultMessage<Object> messageToTimeout : toTimeout) {
-                if (ResultMessage.Type.ASYNC.equals(messageToTimeout.type)) {
-                    handleAsyncTimeout(scheduleContext, messageToTimeout);
-                } else {
-                    handleSyncTimeout(scheduleContext);
-                }
-            }
-        }
-        return now;
-    }
-
-    private static void handleSyncTimeout(ScheduleContext scheduleContext) {
-        scheduleContext.actionMetrics.reportActionResult(Status.TIMED_OUT);
-        scheduleContext.circuitBreaker.informBreakerOfResult(false);
-    }
-
-    private static void handleAsyncTimeout(ScheduleContext scheduleContext, ResultMessage<Object>
-            resultMessage) {
-        ResilientTask<Object> task = scheduleContext.taskMap.remove(resultMessage);
-        if (task != null) {
-            ResilientPromise<Object> promise = task.resilientPromise;
-            if (!promise.isDone()) {
-                promise.setTimedOut();
-                task.cancel(true);
-                scheduleContext.actionMetrics.reportActionResult(promise.status);
-                scheduleContext.circuitBreaker.informBreakerOfResult(false);
-            }
         }
     }
 }
