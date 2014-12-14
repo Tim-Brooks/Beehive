@@ -15,9 +15,9 @@ import org.mockito.MockitoAnnotations;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.FutureTask;
 
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.any;
@@ -124,12 +124,35 @@ public class ScheduleLoopTest {
         assertEquals(promise2, task2.resilientPromise);
         task2.run();
         verify(action2).run();
+    }
 
+    @Test
+    public void testSuccessfulAsyncActionsHandled() {
+        Map<ResultMessage<Object>, ResilientTask<Object>> taskmap = mock(HashMap.class);
+        context = buildContext(1).setTaskMap(taskmap).build();
+
+        ResultMessage<Object> result = new ResultMessage<>(ResultMessage.Type.ASYNC);
+        ResilientPromise promise = new ResilientPromise();
+        result.result = "Done";
+        promise.status = Status.SUCCESS;
+        when(toReturnQueue.poll()).thenReturn(result);
+        when(taskmap.remove(result)).thenReturn(new ResilientTask(null, promise));
+        ScheduleLoop.runLoop(context);
+
+        verify(actionMetrics).reportActionResult(Status.SUCCESS);
+        verify(circuitBreaker).informBreakerOfResult(true);
     }
 
     private void setContext(int threadNum) {
-        context = new ScheduleContext(threadNum, circuitBreaker, actionMetrics, toScheduleQueue, toReturnQueue,
-                executorService, new TreeMap<Long, List<ResultMessage<Object>>>(), new HashMap<ResultMessage<Object>,
-                ResilientTask<Object>>(), timeProvider);
+        context = buildContext(threadNum).build();
     }
+
+    private ScheduleContext.ScheduleContextBuilder buildContext(int threadNum) {
+        return new ScheduleContext.ScheduleContextBuilder().setPoolSize(threadNum).setCircuitBreaker(circuitBreaker)
+                .setActionMetrics(actionMetrics).setToScheduleQueue(toScheduleQueue).setToReturnQueue(toReturnQueue)
+                .setExecutorService(executorService).setTaskMap(new HashMap<ResultMessage<Object>,
+                        ResilientTask<Object>>()).setTimeProvider(timeProvider);
+
+    }
+
 }
