@@ -4,6 +4,7 @@ import fault.circuit.ICircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.IActionMetrics;
+import fault.utils.TimeProvider;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -11,18 +12,16 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SortedMap;
+import java.util.TreeMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
+import static org.mockito.Mockito.*;
 
 
 /**
@@ -40,10 +39,6 @@ public class ScheduleLoopTest {
     private ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
     @Mock
     private ExecutorService executorService;
-    @Mock
-    private Map<ResultMessage<Object>, ResilientTask<Object>> taskMap;
-    @Mock
-    private SortedMap<Long, List<ResultMessage<Object>>> scheduled;
     @Captor
     private ArgumentCaptor<ResilientTask<Object>> taskCaptor;
     @Mock
@@ -54,6 +49,8 @@ public class ScheduleLoopTest {
     private ResilientPromise<Object> promise2;
     @Mock
     private ResilientPromise<Object> promise;
+    @Mock
+    private TimeProvider timeProvider;
 
     private ScheduleContext context;
 
@@ -85,10 +82,25 @@ public class ScheduleLoopTest {
     public void testRunLoopReturnsTrueIfResultHandled() throws Exception {
         setContext(1);
         when(toScheduleQueue.poll()).thenReturn(null);
-        when(toReturnQueue.poll()).thenReturn(new ResultMessage<Object>(ResultMessage.Type.ASYNC));
+        when(toReturnQueue.poll()).thenReturn(new ResultMessage<>(ResultMessage.Type.ASYNC));
 
         assertTrue(ScheduleLoop.runLoop(context));
+    }
 
+    @Test
+    public void testTimeoutsSetByLoop() throws Exception {
+        setContext(1);
+
+        when(timeProvider.currentTimeMillis()).thenReturn(5L);
+        when(toScheduleQueue.poll()).thenReturn(new ScheduleMessage<>(action, promise, 10L));
+        ScheduleLoop.runLoop(context);
+
+        verify(executorService).submit(any(ResilientTask.class));
+
+        when(timeProvider.currentTimeMillis()).thenReturn(11L);
+        when(toScheduleQueue.poll()).thenReturn(null);
+        ScheduleLoop.runLoop(context);
+        verify(promise).setTimedOut();
     }
 
     @Test
@@ -117,6 +129,7 @@ public class ScheduleLoopTest {
 
     private void setContext(int threadNum) {
         context = new ScheduleContext(threadNum, circuitBreaker, actionMetrics, toScheduleQueue, toReturnQueue,
-                executorService, scheduled, taskMap);
+                executorService, new TreeMap<Long, List<ResultMessage<Object>>>(), new HashMap<ResultMessage<Object>,
+                ResilientTask<Object>>(), timeProvider);
     }
 }

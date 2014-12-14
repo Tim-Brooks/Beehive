@@ -3,9 +3,6 @@ package fault;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 
-import java.util.List;
-import java.util.SortedMap;
-import java.util.TreeMap;
 import java.util.concurrent.FutureTask;
 
 /**
@@ -32,10 +29,7 @@ public class ScheduleLoop {
             }
         }
 
-        long now = TimeoutService.triggerTimeouts(scheduleContext);
-
-        SortedMap<Long, List<ResultMessage<Object>>> tailView = scheduleContext.scheduled.tailMap(now);
-        scheduleContext.scheduled = new TreeMap<>(tailView);
+        TimeoutService.triggerTimeouts(scheduleContext);
 
         return didSomething;
     }
@@ -70,20 +64,18 @@ public class ScheduleLoop {
         return false;
     }
 
-    private static void handleSyncResult(ScheduleContext scheduleContext, ResultMessage<Object>
-            result) {
+    private static void handleSyncResult(ScheduleContext scheduleContext, ResultMessage<Object> result) {
         if (result.result != null) {
             scheduleContext.actionMetrics.reportActionResult(Status.SUCCESS);
         } else if (result.exception instanceof ActionTimeoutException) {
-            TimeoutService.scheduleTimeout(scheduleContext.scheduled, System.currentTimeMillis() - 1, result);
+            TimeoutService.handleSyncTimeout(scheduleContext);
         } else {
             scheduleContext.actionMetrics.reportActionResult(Status.ERROR);
         }
 
     }
 
-    private static void handleAsyncResult(ScheduleContext scheduleContext,
-                                          ResultMessage<Object> result) {
+    private static void handleAsyncResult(ScheduleContext scheduleContext, ResultMessage<Object> result) {
         ResilientTask<Object> resilientTask = scheduleContext.taskMap.remove(result);
         if (resilientTask != null) {
 

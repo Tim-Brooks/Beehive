@@ -2,10 +2,7 @@ package fault;
 
 import fault.messages.ResultMessage;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.SortedMap;
+import java.util.*;
 
 /**
  * Created by timbrooks on 12/13/14.
@@ -24,8 +21,8 @@ public class TimeoutService {
         }
     }
 
-    public static long triggerTimeouts(ScheduleContext scheduleContext) {
-        long now = System.currentTimeMillis();
+    public static void triggerTimeouts(ScheduleContext scheduleContext) {
+        long now = scheduleContext.timeProvider.currentTimeMillis();
         SortedMap<Long, List<ResultMessage<Object>>> toCancel = scheduleContext.scheduled.headMap(now);
         for (Map.Entry<Long, List<ResultMessage<Object>>> entry : toCancel.entrySet()) {
             List<ResultMessage<Object>> toTimeout = entry.getValue();
@@ -37,15 +34,17 @@ public class TimeoutService {
                 }
             }
         }
-        return now;
+
+        SortedMap<Long, List<ResultMessage<Object>>> tailView = scheduleContext.scheduled.tailMap(now);
+        scheduleContext.scheduled = new TreeMap<>(tailView);
     }
 
-    private static void handleSyncTimeout(ScheduleContext scheduleContext) {
+    public static void handleSyncTimeout(ScheduleContext scheduleContext) {
         scheduleContext.actionMetrics.reportActionResult(Status.TIMED_OUT);
         scheduleContext.circuitBreaker.informBreakerOfResult(false);
     }
 
-    private static void handleAsyncTimeout(ScheduleContext scheduleContext, ResultMessage<Object>
+    public static void handleAsyncTimeout(ScheduleContext scheduleContext, ResultMessage<Object>
             resultMessage) {
         ResilientTask<Object> task = scheduleContext.taskMap.remove(resultMessage);
         if (task != null) {
