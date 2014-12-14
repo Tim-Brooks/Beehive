@@ -53,6 +53,7 @@ public class DefaultCircuitBreaker implements ICircuitBreaker {
     public void informBreakerOfResult(boolean successful) {
         if (successful) {
             if (circuitOpen.get()) {
+                // This can get stuck in a look with open and closing
                 circuitOpen.compareAndSet(true, false);
             }
         } else {
