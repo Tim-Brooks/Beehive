@@ -17,7 +17,7 @@ public class BreakerConfig {
 
     public static class BreakerConfigBuilder {
         public int timePeriodInMillis = 1000;
-        public int failureThreshold = 20;
+        public int failureThreshold = 30;
         public long timeToPauseMillis = 1000;
 
         public BreakerConfigBuilder timePeriodInMillis(int timePeriodInMillis) {
