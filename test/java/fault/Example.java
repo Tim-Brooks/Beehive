@@ -29,7 +29,11 @@ public class Example {
             thread.start();
         }
         try {
-            Thread.sleep(120000);
+            for (int i = 0; i < 1000; ++i) {
+                Thread.sleep(1000);
+                System.out.println("Success " + actionMetrics.getSuccessesForTimePeriod(5000));
+                System.out.println("Failures " + actionMetrics.getFailuresForTimePeriod(5000));
+            }
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

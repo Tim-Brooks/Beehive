@@ -48,9 +48,6 @@ public class MultiplexingScheduler implements Scheduler {
             int spinCount = maxSpin;
             while (running) {
                 boolean didSomething = false;
-                if (servicesToSchedule.size() > 1) {
-                    System.out.println(servicesToSchedule);
-                }
                 for (ScheduleContext context : servicesToSchedule) {
                     didSomething = ScheduleLoop.runLoop(context);
                 }
