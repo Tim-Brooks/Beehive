@@ -4,6 +4,9 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -21,17 +24,28 @@ public class ExampleRequest implements Runnable {
 
     public void run() {
         for (; ; ) {
-            ResilientPromise<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
-                @Override
-                public String run() throws Exception {
-                    Thread.sleep(1);
-//                    String result = null;
-//                    InputStream response = new URL("http://localhost:6001/").openStream();
-//                    BufferedReader reader = new BufferedReader(new InputStreamReader(response));
-//                    result = reader.readLine();
-                    return "Success";
+            List<ResilientPromise<String>> promises = new ArrayList<>();
+            for (int i = 0; i < 1; ++i) {
+                try {
+                    ResilientPromise<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
+                        @Override
+                        public String run() throws Exception {
+                            new Random().nextBoolean();
+//                            Thread.sleep(3);
+                            String result = null;
+                            InputStream response = new URL("http://localhost:6001/").openStream();
+                            BufferedReader reader = new BufferedReader(new InputStreamReader(response));
+                            result = reader.readLine();
+                            reader.close();
+                            response.close();
+                            return result;
+                        }
+                    }, 10);
+                    promises.add(result);
+                } catch (RuntimeException e) {
+//                    System.out.println("Broken");
                 }
-            }, 2);
+            }
 
 //        Future<Object> result = executorService.submit(new Callable<Object>() {
 //            @Override
@@ -45,11 +59,14 @@ public class ExampleRequest implements Runnable {
 //        });
 
             long start = System.currentTimeMillis();
-            try {
-                result.await();
+            for (ResilientPromise<String> result : promises) {
+                try {
+                    result.await();
+//                Thread.sleep(1);
 //            result.get(10L, TimeUnit.MILLISECONDS);
-            } catch (Exception e) {
+                } catch (Exception e) {
 //            e.printStackTrace();
+                }
             }
 
 //            if (result.status != Status.SUCCESS) {
