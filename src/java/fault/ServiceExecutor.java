@@ -52,7 +52,7 @@ public class ServiceExecutor {
     }
 
     public <T> ResilientPromise<T> performAction(ResilientAction<T> action, int millisTimeout) {
-        if (circuitBreaker.isOpen()) {
+        if (!circuitBreaker.allowAction()) {
             throw new RuntimeException("Circuit is Open");
         }
         long absoluteTimeout = millisTimeout + 1 + schedulingContext.timeProvider.currentTimeMillis();
