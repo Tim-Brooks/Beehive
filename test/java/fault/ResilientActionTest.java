@@ -68,6 +68,7 @@ public class ResilientActionTest {
 
     @Test
     public void testManyActions() throws Exception {
+        serviceExecutor.shutdown();
         serviceExecutor = new ServiceExecutor(50);
         Random random = new Random();
         int successCount = 0;
@@ -77,10 +78,10 @@ public class ResilientActionTest {
         for (int i = 0; i < 50; ++i) {
             int decider = random.nextInt(3);
             if (decider == 0) {
-                promises.add(serviceExecutor.performAction(new SuccessAction(successCount), 200));
+                promises.add(serviceExecutor.performAction(new SuccessAction(successCount), 25));
                 ++successCount;
             } else if (decider == 1) {
-                promises.add(serviceExecutor.performAction(new ErrorAction(errorCount), 200));
+                promises.add(serviceExecutor.performAction(new ErrorAction(errorCount), 25));
                 ++errorCount;
             } else {
                 promises.add(serviceExecutor.performAction(new TimeoutAction(), 25));
@@ -172,7 +173,7 @@ public class ResilientActionTest {
         @Override
         public String run() throws Exception {
             ThreadLocalRandom random = ThreadLocalRandom.current();
-            Thread.sleep(random.nextInt(30, 50));
+            Thread.sleep(random.nextInt(45, 55));
             return "Timeout";
         }
     }

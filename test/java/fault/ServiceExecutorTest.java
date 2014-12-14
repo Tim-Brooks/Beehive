@@ -1,12 +1,10 @@
 package fault;
 
-import fault.ManagingRunnable;
-import fault.ResilientAction;
-import fault.ResilientPromise;
-import fault.ServiceExecutor;
 import fault.circuit.ICircuitBreaker;
 import fault.messages.ScheduleMessage;
 import fault.metrics.IActionMetrics;
+import fault.scheduling.ScheduleContext;
+import fault.scheduling.Scheduler;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -14,9 +12,11 @@ import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutorService;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -33,17 +33,26 @@ public class ServiceExecutorTest {
     @Mock
     private ResilientAction<Object> resilientAction;
     @Mock
-    private ManagingRunnable managingRunnable;
+    private ConcurrentLinkedQueue<ScheduleMessage<Object>> toSchedule;
+    @Mock
+    private Scheduler scheduler;
+    @Mock
+    private ExecutorService executorService;
     @Captor
     private ArgumentCaptor<ScheduleMessage<Object>> messageCaptor;
 
+    private ScheduleContext context;
     private ServiceExecutor serviceExecutor;
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
-        doNothing().when(managingRunnable).run();
-        serviceExecutor = new ServiceExecutor(actionMetrics, circuitBreaker, managingRunnable);
+
+        context = new ScheduleContext.ScheduleContextBuilder().setPoolSize(1).setExecutorService(executorService)
+                .setActionMetrics(actionMetrics).setCircuitBreaker(circuitBreaker).setToScheduleQueue(toSchedule)
+                .build();
+
+        serviceExecutor = new ServiceExecutor(actionMetrics, circuitBreaker, context, scheduler);
     }
 
     @Test
@@ -63,7 +72,7 @@ public class ServiceExecutorTest {
         when(circuitBreaker.isOpen()).thenReturn(false);
         ResilientPromise<Object> resilientPromise = serviceExecutor.performAction(resilientAction, 1000);
 
-        verify(managingRunnable).submit(messageCaptor.capture());
+        verify(toSchedule).offer(messageCaptor.capture());
 
         ScheduleMessage scheduleMessage = messageCaptor.getValue();
         assertEquals(resilientAction, scheduleMessage.action);
@@ -71,9 +80,10 @@ public class ServiceExecutorTest {
     }
 
     @Test
-    public void testShutdownCallsShutdownOnRunnable() {
+    public void testShutdownUnschedulesService() {
         serviceExecutor.shutdown();
 
-        verify(managingRunnable).shutdown();
+        verify(scheduler).unscheduleServiceExecutor(context);
+        verify(executorService).shutdown();
     }
 }

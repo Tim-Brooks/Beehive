@@ -1,5 +1,6 @@
-package fault;
+package fault.scheduling;
 
+import fault.*;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 

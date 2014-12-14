@@ -1,5 +1,6 @@
-package fault;
+package fault.scheduling;
 
+import fault.ResilientTask;
 import fault.circuit.ICircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
@@ -9,7 +10,6 @@ import fault.utils.TimeProvider;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * Created by timbrooks on 12/12/14.

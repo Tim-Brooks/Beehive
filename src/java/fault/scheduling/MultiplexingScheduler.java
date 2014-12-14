@@ -1,7 +1,7 @@
-package fault;
+package fault.scheduling;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.LockSupport;
 import java.util.concurrent.locks.ReentrantLock;
@@ -12,16 +12,16 @@ import java.util.concurrent.locks.ReentrantLock;
 public class MultiplexingScheduler implements Scheduler {
 
     private final Lock lock = new ReentrantLock();
-    private final List<ScheduleContext> servicesToSchedule = new ArrayList<>();
-    private final ScheduleLoop loop = new ScheduleLoop();
+    private final List<ScheduleContext> servicesToSchedule = new CopyOnWriteArrayList<>();
     private Thread managingThread;
-    private boolean running = false;
+    private volatile boolean running = false;
 
     @Override
     public void scheduleServiceExecutor(ScheduleContext scheduleContext) {
         lock.lock();
         servicesToSchedule.add(scheduleContext);
         if (!running) {
+            running = true;
             managingThread = new Thread(new InternalScheduler(), "");
             managingThread.start();
         }
@@ -46,17 +46,21 @@ public class MultiplexingScheduler implements Scheduler {
 
         public void run() {
             int spinCount = maxSpin;
-            for (; ; ) {
+            while (running) {
                 boolean didSomething = false;
+                if (servicesToSchedule.size() > 1) {
+                    System.out.println(servicesToSchedule);
+                }
                 for (ScheduleContext context : servicesToSchedule) {
-                    didSomething = loop.runLoop(context);
+                    didSomething = ScheduleLoop.runLoop(context);
                 }
 
                 if (!didSomething) {
-                    spinCount = 1000;
-                    if (0 == --spinCount) {
+                    int currentSpin = --spinCount;
+                    if (0 == currentSpin) {
+                        spinCount = 1000;
                         LockSupport.parkNanos(1);
-                    } else if (50 > --spinCount) {
+                    } else if (50 > currentSpin) {
                         Thread.yield();
                     }
                 } else {

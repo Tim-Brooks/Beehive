@@ -4,6 +4,8 @@ import fault.circuit.ICircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.IActionMetrics;
+import fault.scheduling.ScheduleContext;
+import fault.scheduling.ScheduleLoop;
 import fault.utils.TimeProvider;
 import org.junit.Before;
 import org.junit.Test;
@@ -100,7 +102,7 @@ public class ScheduleLoopTest {
         when(timeProvider.currentTimeMillis()).thenReturn(11L);
         when(toScheduleQueue.poll()).thenReturn(null);
         ScheduleLoop.runLoop(context);
-        
+
         verify(actionMetrics).reportActionResult(Status.TIMED_OUT);
         verify(circuitBreaker).informBreakerOfResult(false);
         assertTrue(promise.isTimedOut());

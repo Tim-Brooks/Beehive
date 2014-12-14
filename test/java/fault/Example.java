@@ -5,6 +5,7 @@ import fault.metrics.ActionMetrics;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 /**
  * Created by timbrooks on 11/6/14.
@@ -13,7 +14,8 @@ public class Example {
 
     public static void main(String[] args) {
         ActionMetrics actionMetrics = new ActionMetrics(3600);
-        ServiceExecutor serviceExecutor = new ServiceExecutor(50, actionMetrics, new NoOpCircuitBreaker());
+        ServiceExecutor serviceExecutor = new ServiceExecutor(50, actionMetrics, new NoOpCircuitBreaker(), Executors
+                .newFixedThreadPool(50));
         List<Thread> threads = new ArrayList<>();
 
         for (int i = 0; i < 15; ++i) {
