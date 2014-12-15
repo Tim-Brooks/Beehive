@@ -1,6 +1,7 @@
 package fault;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by timbrooks on 11/16/14.
@@ -27,6 +28,10 @@ public class ResilientPromise<T> {
 
     public void await() throws InterruptedException {
         latch.await();
+    }
+
+    public boolean await(long millis) throws InterruptedException {
+        return latch.await(millis, TimeUnit.MILLISECONDS);
     }
 
     public T awaitResult() throws InterruptedException {
