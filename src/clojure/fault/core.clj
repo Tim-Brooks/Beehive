@@ -1,10 +1,14 @@
 (ns fault.core
-  (:require fault.promise :as p)
+  (:require [fault.promise :as p]
+            [fault.service :as s])
   (:import (fault ServiceExecutor ResilientAction)))
 
-(defn service-executor [num-of-threads]
-  (ServiceExecutor. num-of-threads))
+(defn service [pool-size]
+  (s/service-executor pool-size))
 
-(defn resilient-action [f]
-  (reify ResilientAction
-    (run [_] (f))))
+(defn perform-action [^ServiceExecutor service f time-out-ms]
+  (p/->CLJResilientPromise
+    (.performAction service
+                    (reify ResilientAction
+                      (run [_] (f)))
+                    time-out-ms)))

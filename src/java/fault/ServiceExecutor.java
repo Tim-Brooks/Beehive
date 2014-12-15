@@ -23,9 +23,9 @@ public class ServiceExecutor {
     private final IActionMetrics actionMetrics;
 
     private final ICircuitBreaker circuitBreaker;
+
     private final Scheduler scheduler;
     private final ScheduleContext schedulingContext;
-
     public ServiceExecutor(int poolSize) {
         this(poolSize, new ActionMetrics(3600));
     }
@@ -91,6 +91,10 @@ public class ServiceExecutor {
 
     public IActionMetrics getActionMetrics() {
         return actionMetrics;
+    }
+
+    public ICircuitBreaker getCircuitBreaker() {
+        return circuitBreaker;
     }
 
     public void shutdown() {
