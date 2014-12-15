@@ -13,8 +13,17 @@ public class MultiplexingScheduler implements Scheduler {
 
     private final Lock lock = new ReentrantLock();
     private final List<ScheduleContext> servicesToSchedule = new CopyOnWriteArrayList<>();
+    private final WaitStrategy waitStrategy;
     private Thread managingThread;
     private volatile boolean running = false;
+
+    public MultiplexingScheduler() {
+        this(new AdaptiveWait());
+    }
+
+    public MultiplexingScheduler(WaitStrategy waitStrategy) {
+        this.waitStrategy = waitStrategy;
+    }
 
     @Override
     public void scheduleServiceExecutor(ScheduleContext scheduleContext) {
@@ -53,13 +62,7 @@ public class MultiplexingScheduler implements Scheduler {
                 }
 
                 if (!didSomething) {
-                    int currentSpin = --spinCount;
-                    if (0 == currentSpin) {
-                        spinCount = 1000;
-                        LockSupport.parkNanos(1);
-                    } else if (50 > currentSpin) {
-                        Thread.yield();
-                    }
+                    spinCount = waitStrategy.executeWait(spinCount);
                 } else {
                     spinCount = maxSpin;
                 }
