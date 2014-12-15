@@ -56,8 +56,8 @@ public class ServiceExecutorTest {
     }
 
     @Test
-    public void testExceptionThrownIfCircuitIsOpen() {
-        when(circuitBreaker.isOpen()).thenReturn(true);
+    public void testExceptionThrownIfCircuitDisallowsAction() {
+        when(circuitBreaker.allowAction()).thenReturn(false);
         try {
             serviceExecutor.performAction(resilientAction, 1000);
         } catch (RuntimeException e) {
@@ -68,8 +68,8 @@ public class ServiceExecutorTest {
     }
 
     @Test
-    public void testScheduleActionIsSubmittedIfCircuitIsClosed() {
-        when(circuitBreaker.isOpen()).thenReturn(false);
+    public void testScheduleActionIsSubmittedIfCircuitAllowsRequest() {
+        when(circuitBreaker.allowAction()).thenReturn(true);
         ResilientPromise<Object> resilientPromise = serviceExecutor.performAction(resilientAction, 1000);
 
         verify(toSchedule).offer(messageCaptor.capture());
