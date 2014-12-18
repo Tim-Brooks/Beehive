@@ -17,7 +17,7 @@
                  :time-to-pause-millis (.timeToPauseMillis config)})
       default)))
 
-(defn swap-breaker-config
+(defn swap-breaker-config!
   [{:keys [circuit-breaker]}
    {:keys [time-period-in-millis failure-threshold time-to-pause-millis]}]
   (.setBreakerConfig
