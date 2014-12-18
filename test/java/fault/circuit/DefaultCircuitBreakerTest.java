@@ -1,6 +1,6 @@
 package fault.circuit;
 
-import fault.metrics.IActionMetrics;
+import fault.metrics.ActionMetrics;
 import fault.utils.TimeProvider;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,7 +19,7 @@ import static org.mockito.Mockito.when;
 public class DefaultCircuitBreakerTest {
 
     @Mock
-    private IActionMetrics actionMetrics;
+    private ActionMetrics actionMetrics;
     @Mock
     private TimeProvider timeProvider;
 

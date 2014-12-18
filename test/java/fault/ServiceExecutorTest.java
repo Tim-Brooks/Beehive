@@ -2,7 +2,7 @@ package fault;
 
 import fault.circuit.CircuitBreaker;
 import fault.messages.ScheduleMessage;
-import fault.metrics.IActionMetrics;
+import fault.metrics.ActionMetrics;
 import fault.scheduling.ScheduleContext;
 import fault.scheduling.Scheduler;
 import org.junit.Before;
@@ -29,7 +29,7 @@ public class ServiceExecutorTest {
     @Mock
     private CircuitBreaker circuitBreaker;
     @Mock
-    private IActionMetrics actionMetrics;
+    private ActionMetrics actionMetrics;
     @Mock
     private ResilientAction<Object> resilientAction;
     @Mock

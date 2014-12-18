@@ -1,7 +1,8 @@
 (ns fault.service
   (:import (fault ServiceExecutor)
            (fault.circuit CircuitBreaker BreakerConfig BreakerConfig$BreakerConfigBuilder)
-           (clojure.lang ILookup)))
+           (clojure.lang ILookup)
+           (fault.metrics ActionMetrics)))
 
 (set! *warn-on-reflection* true)
 
@@ -16,6 +17,8 @@
                  :failure-threshold (.failureThreshold config)
                  :time-to-pause-millis (.timeToPauseMillis config)})
       default)))
+
+(deftype CLJMetrics [^ActionMetrics metrics])
 
 (defn swap-breaker-config!
   [{:keys [circuit-breaker]}

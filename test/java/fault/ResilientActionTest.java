@@ -1,6 +1,6 @@
 package fault;
 
-import fault.metrics.IActionMetrics;
+import fault.metrics.ActionMetrics;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -120,7 +120,7 @@ public class ResilientActionTest {
     }
 
     private void testMetricsResult(int success, int errors, int timeouts) throws Exception {
-        IActionMetrics actionMetrics = serviceExecutor.getActionMetrics();
+        ActionMetrics actionMetrics = serviceExecutor.getActionMetrics();
         int successCount = Integer.MIN_VALUE;
         int errorCount = Integer.MIN_VALUE;
         int timeoutCount = Integer.MIN_VALUE;

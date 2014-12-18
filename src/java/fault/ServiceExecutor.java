@@ -5,8 +5,8 @@ import fault.circuit.DefaultCircuitBreaker;
 import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
+import fault.metrics.DefaultActionMetrics;
 import fault.metrics.ActionMetrics;
-import fault.metrics.IActionMetrics;
 import fault.scheduling.ScheduleContext;
 import fault.scheduling.Scheduler;
 
@@ -19,29 +19,29 @@ import java.util.concurrent.Executors;
  */
 public class ServiceExecutor {
 
-    private final IActionMetrics actionMetrics;
+    private final ActionMetrics actionMetrics;
 
     private final CircuitBreaker circuitBreaker;
 
     private final Scheduler scheduler;
     private final ScheduleContext schedulingContext;
     public ServiceExecutor(int poolSize) {
-        this(poolSize, new ActionMetrics(3600));
+        this(poolSize, new DefaultActionMetrics(3600));
     }
 
-    public ServiceExecutor(int poolSize, IActionMetrics actionMetrics) {
+    public ServiceExecutor(int poolSize, ActionMetrics actionMetrics) {
         this(poolSize, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig.BreakerConfigBuilder
                 ().failureThreshold(20).timePeriodInMillis(5000).build()), Executors.newFixedThreadPool(poolSize));
     }
 
-    public ServiceExecutor(int poolSize, IActionMetrics actionMetrics, CircuitBreaker circuitBreaker,
+    public ServiceExecutor(int poolSize, ActionMetrics actionMetrics, CircuitBreaker circuitBreaker,
                            ExecutorService executorService) {
         this(actionMetrics, circuitBreaker, new ScheduleContext.ScheduleContextBuilder().setPoolSize(poolSize)
                 .setActionMetrics(actionMetrics).setCircuitBreaker(circuitBreaker).setExecutorService
                         (executorService).build(), Scheduler.defaultScheduler);
     }
 
-    public ServiceExecutor(IActionMetrics actionMetrics, CircuitBreaker circuitBreaker, ScheduleContext
+    public ServiceExecutor(ActionMetrics actionMetrics, CircuitBreaker circuitBreaker, ScheduleContext
             scheduleContext, Scheduler scheduler) {
         this.scheduler = scheduler;
         this.actionMetrics = actionMetrics;
@@ -88,7 +88,7 @@ public class ServiceExecutor {
         return resilientPromise;
     }
 
-    public IActionMetrics getActionMetrics() {
+    public ActionMetrics getActionMetrics() {
         return actionMetrics;
     }
 

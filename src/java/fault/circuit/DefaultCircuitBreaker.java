@@ -1,6 +1,6 @@
 package fault.circuit;
 
-import fault.metrics.IActionMetrics;
+import fault.metrics.ActionMetrics;
 import fault.utils.TimeProvider;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -13,16 +13,16 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DefaultCircuitBreaker implements CircuitBreaker {
 
     private final TimeProvider timeProvider;
-    private final IActionMetrics actionMetrics;
+    private final ActionMetrics actionMetrics;
     private AtomicBoolean circuitOpen;
     private AtomicReference<BreakerConfig> breakerConfig;
     private AtomicLong lastTestedTime;
 
-    public DefaultCircuitBreaker(IActionMetrics actionMetrics, BreakerConfig breakerConfig) {
+    public DefaultCircuitBreaker(ActionMetrics actionMetrics, BreakerConfig breakerConfig) {
         this(actionMetrics, breakerConfig, new TimeProvider());
     }
 
-    public DefaultCircuitBreaker(IActionMetrics actionMetrics, BreakerConfig breakerConfig, TimeProvider timeProvider) {
+    public DefaultCircuitBreaker(ActionMetrics actionMetrics, BreakerConfig breakerConfig, TimeProvider timeProvider) {
         this.timeProvider = timeProvider;
         this.actionMetrics = actionMetrics;
         this.circuitOpen = new AtomicBoolean(false);

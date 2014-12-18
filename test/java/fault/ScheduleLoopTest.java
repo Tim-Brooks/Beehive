@@ -3,7 +3,7 @@ package fault;
 import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
-import fault.metrics.IActionMetrics;
+import fault.metrics.ActionMetrics;
 import fault.scheduling.ScheduleContext;
 import fault.scheduling.ScheduleLoop;
 import fault.utils.TimeProvider;
@@ -33,7 +33,7 @@ public class ScheduleLoopTest {
     @Mock
     private CircuitBreaker circuitBreaker;
     @Mock
-    private IActionMetrics actionMetrics;
+    private ActionMetrics actionMetrics;
     @Mock
     private ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
     @Mock

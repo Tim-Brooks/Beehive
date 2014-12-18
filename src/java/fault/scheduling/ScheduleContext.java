@@ -4,7 +4,7 @@ import fault.ResilientTask;
 import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
-import fault.metrics.IActionMetrics;
+import fault.metrics.ActionMetrics;
 import fault.utils.TimeProvider;
 
 import java.util.*;
@@ -18,7 +18,7 @@ public class ScheduleContext {
 
     public final int poolSize;
     public final CircuitBreaker circuitBreaker;
-    public final IActionMetrics actionMetrics;
+    public final ActionMetrics actionMetrics;
     public final ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
     public final ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
     public final ExecutorService executorService;
@@ -26,7 +26,7 @@ public class ScheduleContext {
     public final TimeProvider timeProvider;
     public SortedMap<Long, List<ResultMessage<Object>>> scheduled;
 
-    public ScheduleContext(int poolSize, CircuitBreaker circuitBreaker, IActionMetrics actionMetrics,
+    public ScheduleContext(int poolSize, CircuitBreaker circuitBreaker, ActionMetrics actionMetrics,
                            ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue,
                            ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue, ExecutorService
                                    executorService, SortedMap<Long, List<ResultMessage<Object>>> scheduled,
@@ -45,7 +45,7 @@ public class ScheduleContext {
     public static class ScheduleContextBuilder {
         private int poolSize;
         private CircuitBreaker circuitBreaker;
-        private IActionMetrics actionMetrics;
+        private ActionMetrics actionMetrics;
         private ExecutorService executorService;
         private ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue = new ConcurrentLinkedQueue<>();
         private ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue = new ConcurrentLinkedQueue<>();
@@ -63,7 +63,7 @@ public class ScheduleContext {
             return this;
         }
 
-        public ScheduleContextBuilder setActionMetrics(IActionMetrics actionMetrics) {
+        public ScheduleContextBuilder setActionMetrics(ActionMetrics actionMetrics) {
             this.actionMetrics = actionMetrics;
             return this;
         }

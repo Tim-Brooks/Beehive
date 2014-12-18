@@ -4,7 +4,7 @@ import fault.*;
 import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
-import fault.metrics.IActionMetrics;
+import fault.metrics.ActionMetrics;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -21,13 +21,13 @@ public class ManagingRunnable implements Runnable {
     private final int poolSize;
     private final int maxSpin;
     private final CircuitBreaker circuitBreaker;
-    private final IActionMetrics actionMetrics;
+    private final ActionMetrics actionMetrics;
     private final ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
     private final ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
     private final ExecutorService executorService;
     private volatile boolean isRunning;
 
-    public ManagingRunnable(int poolSize, CircuitBreaker circuitBreaker, IActionMetrics actionMetrics) {
+    public ManagingRunnable(int poolSize, CircuitBreaker circuitBreaker, ActionMetrics actionMetrics) {
         this.poolSize = poolSize;
         this.maxSpin = 100;
         this.circuitBreaker = circuitBreaker;
