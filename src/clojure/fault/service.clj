@@ -32,4 +32,4 @@
   (let [executor (ServiceExecutor. pool-size)]
     {:service executor
      :metrics (.getActionMetrics executor)
-     :circuit-breaker (.getCircuitBreaker executor)}))
+     :circuit-breaker (->CLJBreaker (.getCircuitBreaker executor))}))
