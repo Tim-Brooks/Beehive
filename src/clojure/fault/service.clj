@@ -44,5 +44,5 @@
 (defn service-executor [pool-size]
   (let [executor (ServiceExecutor. pool-size)]
     {:service executor
-     :metrics (.getActionMetrics executor)
+     :metrics (->CLJMetrics (.getActionMetrics executor))
      :circuit-breaker (->CLJBreaker (.getCircuitBreaker executor))}))
