@@ -12,13 +12,13 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class DefaultActionMetrics implements ActionMetrics {
 
+    private final int totalSlots;
     private final AtomicIntegerArray errorMetrics;
     private final AtomicIntegerArray successMetrics;
     private final AtomicIntegerArray timeoutMetrics;
     private final TimeProvider timeProvider;
     private final AtomicLong advanceSlotTimeInMillis;
     private final AtomicInteger slotNumber;
-    private final int totalSlots;
 
     public DefaultActionMetrics(int secondsToTrack) {
         this(secondsToTrack, new TimeProvider());
@@ -72,6 +72,11 @@ public class DefaultActionMetrics implements ActionMetrics {
     @Override
     public int getTimeoutsForTimePeriod(int milliseconds) {
         return getEventCountForTimePeriod(milliseconds, timeoutMetrics);
+    }
+
+    @Override
+    public int getSecondsTracked() {
+        return totalSlots;
     }
 
     @Override

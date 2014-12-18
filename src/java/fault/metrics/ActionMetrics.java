@@ -15,4 +15,6 @@ public interface ActionMetrics {
     public int getErrorsForTimePeriod(int milliseconds);
 
     public int getTimeoutsForTimePeriod(int milliseconds);
+
+    public int getSecondsTracked();
 }

@@ -18,7 +18,17 @@
                  :time-to-pause-millis (.timeToPauseMillis config)})
       default)))
 
-(deftype CLJMetrics [^ActionMetrics metrics])
+(deftype CLJMetrics [^ActionMetrics metrics]
+  ILookup
+  (valAt [this key] (.valAt this key nil))
+  (valAt [_ key default]
+    (let [millis (* 1000 (.getSecondsTracked metrics))]
+      (case key
+        :failures (.getFailuresForTimePeriod metrics millis)
+        :errors (.getErrorsForTimePeriod metrics millis)
+        :successes (.getSuccessesForTimePeriod metrics millis)
+        :time-outs (.getTimeoutsForTimePeriod metrics millis)
+        default))))
 
 (defn swap-breaker-config!
   [{:keys [circuit-breaker]}
