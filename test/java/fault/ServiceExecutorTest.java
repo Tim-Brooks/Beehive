@@ -1,6 +1,6 @@
 package fault;
 
-import fault.circuit.ICircuitBreaker;
+import fault.circuit.CircuitBreaker;
 import fault.messages.ScheduleMessage;
 import fault.metrics.IActionMetrics;
 import fault.scheduling.ScheduleContext;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.when;
 public class ServiceExecutorTest {
 
     @Mock
-    private ICircuitBreaker circuitBreaker;
+    private CircuitBreaker circuitBreaker;
     @Mock
     private IActionMetrics actionMetrics;
     @Mock

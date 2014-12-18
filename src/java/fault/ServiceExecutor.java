@@ -2,12 +2,11 @@ package fault;
 
 import fault.circuit.BreakerConfig;
 import fault.circuit.DefaultCircuitBreaker;
-import fault.circuit.ICircuitBreaker;
+import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.ActionMetrics;
 import fault.metrics.IActionMetrics;
-import fault.scheduling.MultiplexingScheduler;
 import fault.scheduling.ScheduleContext;
 import fault.scheduling.Scheduler;
 
@@ -22,7 +21,7 @@ public class ServiceExecutor {
 
     private final IActionMetrics actionMetrics;
 
-    private final ICircuitBreaker circuitBreaker;
+    private final CircuitBreaker circuitBreaker;
 
     private final Scheduler scheduler;
     private final ScheduleContext schedulingContext;
@@ -35,14 +34,14 @@ public class ServiceExecutor {
                 ().failureThreshold(20).timePeriodInMillis(5000).build()), Executors.newFixedThreadPool(poolSize));
     }
 
-    public ServiceExecutor(int poolSize, IActionMetrics actionMetrics, ICircuitBreaker circuitBreaker,
+    public ServiceExecutor(int poolSize, IActionMetrics actionMetrics, CircuitBreaker circuitBreaker,
                            ExecutorService executorService) {
         this(actionMetrics, circuitBreaker, new ScheduleContext.ScheduleContextBuilder().setPoolSize(poolSize)
                 .setActionMetrics(actionMetrics).setCircuitBreaker(circuitBreaker).setExecutorService
                         (executorService).build(), Scheduler.defaultScheduler);
     }
 
-    public ServiceExecutor(IActionMetrics actionMetrics, ICircuitBreaker circuitBreaker, ScheduleContext
+    public ServiceExecutor(IActionMetrics actionMetrics, CircuitBreaker circuitBreaker, ScheduleContext
             scheduleContext, Scheduler scheduler) {
         this.scheduler = scheduler;
         this.actionMetrics = actionMetrics;
@@ -93,7 +92,7 @@ public class ServiceExecutor {
         return actionMetrics;
     }
 
-    public ICircuitBreaker getCircuitBreaker() {
+    public CircuitBreaker getCircuitBreaker() {
         return circuitBreaker;
     }
 

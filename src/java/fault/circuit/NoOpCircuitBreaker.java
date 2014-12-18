@@ -3,7 +3,7 @@ package fault.circuit;
 /**
  * Created by timbrooks on 11/5/14.
  */
-public class NoOpCircuitBreaker implements ICircuitBreaker {
+public class NoOpCircuitBreaker implements CircuitBreaker {
     @Override
     public boolean isOpen() {
         return false;
@@ -21,5 +21,10 @@ public class NoOpCircuitBreaker implements ICircuitBreaker {
     @Override
     public void setBreakerConfig(BreakerConfig breakerConfig) {
 
+    }
+
+    @Override
+    public BreakerConfig getBreakerConfig() {
+        return null;
     }
 }

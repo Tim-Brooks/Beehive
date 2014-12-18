@@ -1,6 +1,6 @@
 package fault;
 
-import fault.circuit.ICircuitBreaker;
+import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.IActionMetrics;
@@ -31,7 +31,7 @@ import static org.mockito.Mockito.*;
 public class ScheduleLoopTest {
 
     @Mock
-    private ICircuitBreaker circuitBreaker;
+    private CircuitBreaker circuitBreaker;
     @Mock
     private IActionMetrics actionMetrics;
     @Mock

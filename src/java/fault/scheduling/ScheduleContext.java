@@ -1,7 +1,7 @@
 package fault.scheduling;
 
 import fault.ResilientTask;
-import fault.circuit.ICircuitBreaker;
+import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.IActionMetrics;
@@ -17,7 +17,7 @@ import java.util.concurrent.ExecutorService;
 public class ScheduleContext {
 
     public final int poolSize;
-    public final ICircuitBreaker circuitBreaker;
+    public final CircuitBreaker circuitBreaker;
     public final IActionMetrics actionMetrics;
     public final ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue;
     public final ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
@@ -26,7 +26,7 @@ public class ScheduleContext {
     public final TimeProvider timeProvider;
     public SortedMap<Long, List<ResultMessage<Object>>> scheduled;
 
-    public ScheduleContext(int poolSize, ICircuitBreaker circuitBreaker, IActionMetrics actionMetrics,
+    public ScheduleContext(int poolSize, CircuitBreaker circuitBreaker, IActionMetrics actionMetrics,
                            ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue,
                            ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue, ExecutorService
                                    executorService, SortedMap<Long, List<ResultMessage<Object>>> scheduled,
@@ -44,7 +44,7 @@ public class ScheduleContext {
 
     public static class ScheduleContextBuilder {
         private int poolSize;
-        private ICircuitBreaker circuitBreaker;
+        private CircuitBreaker circuitBreaker;
         private IActionMetrics actionMetrics;
         private ExecutorService executorService;
         private ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue = new ConcurrentLinkedQueue<>();
@@ -58,7 +58,7 @@ public class ScheduleContext {
             return this;
         }
 
-        public ScheduleContextBuilder setCircuitBreaker(ICircuitBreaker circuitBreaker) {
+        public ScheduleContextBuilder setCircuitBreaker(CircuitBreaker circuitBreaker) {
             this.circuitBreaker = circuitBreaker;
             return this;
         }

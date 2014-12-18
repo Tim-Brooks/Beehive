@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * Created by timbrooks on 11/5/14.
  */
-public class DefaultCircuitBreaker implements ICircuitBreaker {
+public class DefaultCircuitBreaker implements CircuitBreaker {
 
     private final TimeProvider timeProvider;
     private final IActionMetrics actionMetrics;
@@ -71,5 +71,10 @@ public class DefaultCircuitBreaker implements ICircuitBreaker {
     @Override
     public void setBreakerConfig(BreakerConfig breakerConfig) {
         this.breakerConfig.set(breakerConfig);
+    }
+
+    @Override
+    public BreakerConfig getBreakerConfig() {
+        return breakerConfig.get();
     }
 }

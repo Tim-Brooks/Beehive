@@ -23,7 +23,7 @@ public class DefaultCircuitBreakerTest {
     @Mock
     private TimeProvider timeProvider;
 
-    private ICircuitBreaker circuitBreaker;
+    private CircuitBreaker circuitBreaker;
 
     @Before
     public void setUp() {
