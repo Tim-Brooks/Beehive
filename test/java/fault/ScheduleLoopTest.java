@@ -74,7 +74,7 @@ public class ScheduleLoopTest {
     @Test
     public void testRunLoopReturnsTrueIfActionScheduled() throws Exception {
         setContext(1);
-        when(toScheduleQueue.poll()).thenReturn(new ScheduleMessage<>(action, promise, 100L));
+        when(toScheduleQueue.poll()).thenReturn(new ScheduleMessage<>(action, promise, 100L, 100L));
         when(toReturnQueue.poll()).thenReturn(null);
 
         assertTrue(ScheduleLoop.runLoop(context));
@@ -94,7 +94,7 @@ public class ScheduleLoopTest {
         setContext(1);
 
         when(timeProvider.currentTimeMillis()).thenReturn(5L);
-        when(toScheduleQueue.poll()).thenReturn(new ScheduleMessage<>(action, promise, 10L));
+        when(toScheduleQueue.poll()).thenReturn(new ScheduleMessage<>(action, promise, 10L, 10L));
         ScheduleLoop.runLoop(context);
 
         verify(executorService).submit(any(ResilientTask.class));
@@ -110,8 +110,8 @@ public class ScheduleLoopTest {
 
     @Test
     public void testActionsScheduled() throws Exception {
-        ScheduleMessage<Object> scheduleMessage = new ScheduleMessage<>(action, promise, 100L);
-        ScheduleMessage<Object> scheduleMessage2 = new ScheduleMessage<>(action2, promise2, 101L);
+        ScheduleMessage<Object> scheduleMessage = new ScheduleMessage<>(action, promise, 100L, 100L);
+        ScheduleMessage<Object> scheduleMessage2 = new ScheduleMessage<>(action2, promise2, 101L, 101L);
         when(toScheduleQueue.poll()).thenReturn(scheduleMessage, scheduleMessage2);
         ScheduleLoop.runLoop(context);
 

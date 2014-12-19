@@ -57,7 +57,7 @@ public class ServiceExecutor {
         long absoluteTimeout = millisTimeout + 1 + schedulingContext.timeProvider.currentTimeMillis();
         final ResilientPromise<T> resilientPromise = new ResilientPromise<>();
 
-        ScheduleMessage<T> e = new ScheduleMessage<>(action, resilientPromise, absoluteTimeout);
+        ScheduleMessage<T> e = new ScheduleMessage<>(action, resilientPromise, millisTimeout, absoluteTimeout);
         schedulingContext.toScheduleQueue.offer((ScheduleMessage<Object>) e);
         return resilientPromise;
     }
