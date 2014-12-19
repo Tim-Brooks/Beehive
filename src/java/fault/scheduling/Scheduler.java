@@ -1,7 +1,5 @@
 package fault.scheduling;
 
-import fault.scheduling.ScheduleContext;
-
 /**
  * Created by timbrooks on 12/8/14.
  */

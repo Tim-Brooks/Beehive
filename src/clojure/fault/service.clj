@@ -28,7 +28,14 @@
         :errors (.getErrorsForTimePeriod metrics millis)
         :successes (.getSuccessesForTimePeriod metrics millis)
         :time-outs (.getTimeoutsForTimePeriod metrics millis)
-        default))))
+        default)))
+  Object
+  (toString [this]
+    (let [millis (* 1000 (.getSecondsTracked metrics))]
+      (str {:failures (.getFailuresForTimePeriod metrics millis)
+            :errors (.getErrorsForTimePeriod metrics millis)
+            :successes (.getSuccessesForTimePeriod metrics millis)
+            :time-outs (.getTimeoutsForTimePeriod metrics millis)}))))
 
 (defn swap-breaker-config!
   [{:keys [circuit-breaker]}
