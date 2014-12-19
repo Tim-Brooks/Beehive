@@ -14,4 +14,8 @@ public interface CircuitBreaker {
     public void setBreakerConfig(BreakerConfig breakerConfig);
 
     public BreakerConfig getBreakerConfig();
+
+    public void forceOpen();
+
+    public void forceClosed();
 }

@@ -133,4 +133,29 @@ public class DefaultCircuitBreakerTest {
 
     }
 
+    @Test
+    public void testActionNotAllowedIfCircuitForcedOpen() {
+        final int failureThreshold = 10;
+        int timePeriodInMillis = 5000;
+        BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(failureThreshold)
+                .timePeriodInMillis(timePeriodInMillis).timeToPauseMillis(1000).build();
+
+        circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig, timeProvider);
+
+        assertFalse(circuitBreaker.isOpen());
+        assertTrue(circuitBreaker.allowAction());
+
+        circuitBreaker.forceOpen();
+
+        when(timeProvider.currentTimeMillis()).thenReturn(1001L);
+        assertFalse(circuitBreaker.allowAction());
+        assertTrue(circuitBreaker.isOpen());
+
+        circuitBreaker.forceClosed();
+
+        assertTrue(circuitBreaker.allowAction());
+        assertFalse(circuitBreaker.isOpen());
+
+    }
+
 }
