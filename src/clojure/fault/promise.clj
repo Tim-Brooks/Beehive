@@ -13,12 +13,12 @@
 
 (deftype CLJResilientPromise [^ResilientPromise promise]
   IDeref
-  (deref [_] (or (.awaitResult promise) (.error promise) :timed-out))
+  (deref [_] (or (.awaitResult promise) (.getError promise) :timed-out))
   IBlockingDeref
   (deref
     [_ timeout-ms timeout-val]
     (if (.await promise timeout-ms)
-      (or (.result promise) (.error promise) :timed-out)
+      (or (.getResult promise) (.getError promise) :timed-out)
       timeout-val))
   IPending
   (isRealized [_]
@@ -27,7 +27,7 @@
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
     (case key
-      :status (status (.status promise))
-      :result (.result promise)
-      :error (.error promise)
+      :status (status (.getStatus promise))
+      :result (.getResult promise)
+      :error (.getError promise)
       default)))

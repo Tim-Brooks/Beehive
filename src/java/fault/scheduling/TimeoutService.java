@@ -55,7 +55,7 @@ public class TimeoutService {
             if (!promise.isDone()) {
                 promise.setTimedOut();
                 task.cancel(true);
-                scheduleContext.actionMetrics.reportActionResult(promise.status);
+                scheduleContext.actionMetrics.reportActionResult(promise.getStatus());
                 scheduleContext.circuitBreaker.informBreakerOfResult(false);
             }
         }

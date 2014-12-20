@@ -58,7 +58,7 @@ public class ScheduleLoopTest {
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
-        promise = new ResilientPromise<>();
+        promise = new SingleWriterResilientPromise<>();
         setContext(2);
     }
 
@@ -138,7 +138,7 @@ public class ScheduleLoopTest {
 
         ResultMessage<Object> result = new ResultMessage<>(ResultMessage.Type.ASYNC);
         result.result = "Done";
-        promise.status = Status.SUCCESS;
+        promise.deliverResult(new Object());
         when(toReturnQueue.poll()).thenReturn(result);
         when(taskMap.remove(result)).thenReturn(new ResilientTask(null, promise));
         ScheduleLoop.runLoop(context);
@@ -153,9 +153,9 @@ public class ScheduleLoopTest {
         context = buildContext(1).setTaskMap(taskMap).build();
 
         ResultMessage<Object> result = new ResultMessage<>(ResultMessage.Type.ASYNC);
-        ResilientPromise promise = new ResilientPromise();
+        ResilientPromise promise = new SingleWriterResilientPromise();
         result.exception = new RuntimeException("Failed");
-        promise.status = Status.ERROR;
+        promise.deliverError(new RuntimeException());
         when(toReturnQueue.poll()).thenReturn(result);
         when(taskMap.remove(result)).thenReturn(new ResilientTask(null, promise));
         ScheduleLoop.runLoop(context);

@@ -88,7 +88,7 @@ public class ManagingRunnable implements Runnable {
     }
 
     public <T> ResilientPromise<T> execute(ResilientAction<T> action) {
-        ResilientPromise<T> resilientPromise = new ResilientPromise<>();
+        ResilientPromise<T> resilientPromise = new SingleWriterResilientPromise<>();
         ResultMessage<Object> resultMessage = new ResultMessage<>(ResultMessage.Type.SYNC);
         try {
             T result = action.run();
@@ -167,7 +167,7 @@ public class ManagingRunnable implements Runnable {
                 promise.deliverError(result.exception);
 
             }
-            actionMetrics.reportActionResult(promise.status);
+            actionMetrics.reportActionResult(promise.getStatus());
             circuitBreaker.informBreakerOfResult(result.exception == null);
         }
     }
@@ -214,7 +214,7 @@ public class ManagingRunnable implements Runnable {
             if (!promise.isDone()) {
                 promise.setTimedOut();
                 task.cancel(true);
-                actionMetrics.reportActionResult(promise.status);
+                actionMetrics.reportActionResult(promise.getStatus());
                 circuitBreaker.informBreakerOfResult(false);
             }
         }

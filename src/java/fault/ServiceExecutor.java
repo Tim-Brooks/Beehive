@@ -55,7 +55,7 @@ public class ServiceExecutor {
             throw new RuntimeException("Circuit is Open");
         }
         long absoluteTimeout = millisTimeout + 1 + schedulingContext.timeProvider.currentTimeMillis();
-        final ResilientPromise<T> resilientPromise = new ResilientPromise<>();
+        final ResilientPromise<T> resilientPromise = new SingleWriterResilientPromise<>();
 
         ScheduleMessage<T> e = new ScheduleMessage<>(action, resilientPromise, millisTimeout, absoluteTimeout);
         schedulingContext.toScheduleQueue.offer((ScheduleMessage<Object>) e);
@@ -67,7 +67,7 @@ public class ServiceExecutor {
             throw new RuntimeException("Circuit is Open");
         }
 
-        ResilientPromise<T> resilientPromise = new ResilientPromise<>();
+        ResilientPromise<T> resilientPromise = new SingleWriterResilientPromise<>();
         ResultMessage<Object> resultMessage = new ResultMessage<>(ResultMessage.Type.SYNC);
         ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue = schedulingContext.toReturnQueue;
         try {

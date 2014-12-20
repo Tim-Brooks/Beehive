@@ -1,68 +1,32 @@
 package fault;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
-
 /**
- * Created by timbrooks on 11/16/14.
+ * Created by timbrooks on 12/19/14.
  */
-public class ResilientPromise<T> {
-    public T result;
-    public Throwable error;
-    public volatile Status status = Status.PENDING;
-    // TODO The CountDownLatch on POSIX is leading to very high await latency. Should look at blocking in FutureTask
-    // TODO which does not have the same issue. There is probably some spin and park strategy work in that case.
-    private CountDownLatch latch = new CountDownLatch(1);
+public interface ResilientPromise<T> {
+    void deliverResult(T result);
 
-    public void deliverResult(T result) {
-        this.result = result;
-        status = Status.SUCCESS;
-        latch.countDown();
-    }
+    void deliverError(Throwable error);
 
-    public void deliverError(Throwable error) {
-        this.error = error;
-        status = Status.ERROR;
-        latch.countDown();
-    }
+    void await() throws InterruptedException;
 
-    public void await() throws InterruptedException {
-        latch.await();
-    }
+    boolean await(long millis) throws InterruptedException;
 
-    public boolean await(long millis) throws InterruptedException {
-        return latch.await(millis, TimeUnit.MILLISECONDS);
-    }
+    T awaitResult() throws InterruptedException;
 
-    public T awaitResult() throws InterruptedException {
-        latch.await();
-        return result;
-    }
+    T getResult();
 
-    public T getResult() {
-        return result;
-    }
+    Throwable getError();
 
-    public void setTimedOut() {
-        status = Status.TIMED_OUT;
-        latch.countDown();
-    }
+    Status getStatus();
 
+    void setTimedOut();
 
-    public boolean isSuccessful() {
-        return status == Status.SUCCESS;
-    }
+    boolean isSuccessful();
 
-    public boolean isDone() {
-        return status != Status.PENDING;
-    }
+    boolean isDone();
 
-    public boolean isError() {
-        return status == Status.ERROR;
-    }
+    boolean isError();
 
-    public boolean isTimedOut() {
-        return status == Status.TIMED_OUT;
-    }
-
+    boolean isTimedOut();
 }

@@ -87,7 +87,7 @@ public class ScheduleLoop {
                 promise.deliverError(result.exception);
 
             }
-            scheduleContext.actionMetrics.reportActionResult(promise.status);
+            scheduleContext.actionMetrics.reportActionResult(promise.getStatus());
             scheduleContext.circuitBreaker.informBreakerOfResult(result.exception == null);
         }
     }

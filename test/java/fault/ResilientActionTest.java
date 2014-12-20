@@ -36,7 +36,7 @@ public class ResilientActionTest {
         ResilientPromise<String> promise = serviceExecutor.performAction(successAction, 25);
 
         assertEquals("Success-1", promise.awaitResult());
-        assertEquals(Status.SUCCESS, promise.status);
+        assertEquals(Status.SUCCESS, promise.getStatus());
 
         testMetricsResult(1, 0, 0);
     }
@@ -47,10 +47,10 @@ public class ResilientActionTest {
         ResilientPromise<String> promise = serviceExecutor.performAction(errorAction, 25);
 
         assertNull(promise.awaitResult());
-        Throwable error = promise.error;
+        Throwable error = promise.getError();
         assertTrue(error instanceof IOException);
         assertEquals("IO Issue-1", error.getMessage());
-        assertEquals(Status.ERROR, promise.status);
+        assertEquals(Status.ERROR, promise.getStatus());
 
         testMetricsResult(0, 1, 0);
     }
@@ -61,7 +61,7 @@ public class ResilientActionTest {
         ResilientPromise<String> promise = serviceExecutor.performAction(timeoutAction, 25);
 
         assertNull(promise.awaitResult());
-        assertEquals(Status.TIMED_OUT, promise.status);
+        assertEquals(Status.TIMED_OUT, promise.getStatus());
 
         testMetricsResult(0, 0, 1);
     }
@@ -94,19 +94,19 @@ public class ResilientActionTest {
         int timeoutsRealized = 0;
         for (ResilientPromise<String> promise : promises) {
             promise.await();
-            if (promise.status == Status.SUCCESS) {
-                assertEquals("Success-" + successesRealized, promise.result);
-                assertNull(promise.error);
+            if (promise.getStatus() == Status.SUCCESS) {
+                assertEquals("Success-" + successesRealized, promise.getResult());
+                assertNull(promise.getError());
                 ++successesRealized;
-            } else if (promise.status == Status.ERROR) {
-                Throwable error = promise.error;
+            } else if (promise.getStatus() == Status.ERROR) {
+                Throwable error = promise.getError();
                 assertTrue(error instanceof IOException);
                 assertEquals("IO Issue-" + errorsRealized, error.getMessage());
-                assertNull(promise.result);
+                assertNull(promise.getResult());
                 ++errorsRealized;
-            } else if (promise.status == Status.TIMED_OUT) {
-                assertNull(promise.result);
-                assertNull(promise.error);
+            } else if (promise.getStatus() == Status.TIMED_OUT) {
+                assertNull(promise.getResult());
+                assertNull(promise.getError());
                 ++timeoutsRealized;
             } else {
                 fail();
