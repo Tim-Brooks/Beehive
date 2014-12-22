@@ -5,9 +5,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * Created by timbrooks on 11/16/14.
+ * Created by timbrooks on 12/22/14.
  */
-public class SingleWriterResilientPromise<T> implements ResilientPromise<T> {
+public class MultipleWriterResilientPromise<T> implements ResilientPromise<T> {
     private T result;
     private Throwable error;
     private AtomicReference<Status> status = new AtomicReference<>(Status.PENDING);
@@ -16,16 +16,20 @@ public class SingleWriterResilientPromise<T> implements ResilientPromise<T> {
 
     @Override
     public void deliverResult(T result) {
-        this.result = result;
-        status.lazySet(Status.SUCCESS);
-        latch.countDown();
+        if (status.get() == Status.PENDING) {
+            if (status.compareAndSet(Status.PENDING, Status.SUCCESS)) {
+                this.result = result;
+            }
+        }
     }
 
     @Override
     public void deliverError(Throwable error) {
-        this.error = error;
-        status.lazySet(Status.ERROR);
-        latch.countDown();
+        if (status.get() == Status.PENDING) {
+            if (status.compareAndSet(Status.PENDING, Status.ERROR)) {
+                this.error = error;
+            }
+        }
     }
 
     @Override
@@ -61,10 +65,10 @@ public class SingleWriterResilientPromise<T> implements ResilientPromise<T> {
 
     @Override
     public void setTimedOut() {
-        status.lazySet(Status.TIMED_OUT);
-        latch.countDown();
+        if (status.get() == Status.PENDING) {
+            status.compareAndSet(Status.PENDING, Status.TIMED_OUT);
+        }
     }
-
 
     @Override
     public boolean isSuccessful() {
@@ -85,5 +89,4 @@ public class SingleWriterResilientPromise<T> implements ResilientPromise<T> {
     public boolean isTimedOut() {
         return status.get() == Status.TIMED_OUT;
     }
-
 }
