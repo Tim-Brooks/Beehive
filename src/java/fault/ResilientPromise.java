@@ -4,29 +4,29 @@ package fault;
  * Created by timbrooks on 12/19/14.
  */
 public interface ResilientPromise<T> {
-    void deliverResult(T result);
+    public boolean deliverResult(T result);
 
-    void deliverError(Throwable error);
+    public boolean deliverError(Throwable error);
 
-    void await() throws InterruptedException;
+    public void await() throws InterruptedException;
 
-    boolean await(long millis) throws InterruptedException;
+    public boolean await(long millis) throws InterruptedException;
 
-    T awaitResult() throws InterruptedException;
+    public T awaitResult() throws InterruptedException;
 
-    T getResult();
+    public T getResult();
 
-    Throwable getError();
+    public Throwable getError();
 
-    Status getStatus();
+    public Status getStatus();
 
-    void setTimedOut();
+    public boolean setTimedOut();
 
-    boolean isSuccessful();
+    public boolean isSuccessful();
 
-    boolean isDone();
+    public boolean isDone();
 
-    boolean isError();
+    public boolean isError();
 
-    boolean isTimedOut();
+    public boolean isTimedOut();
 }

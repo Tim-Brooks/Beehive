@@ -15,21 +15,27 @@ public class MultipleWriterResilientPromise<T> implements ResilientPromise<T> {
     private CountDownLatch latch = new CountDownLatch(1);
 
     @Override
-    public void deliverResult(T result) {
+    public boolean deliverResult(T result) {
         if (status.get() == Status.PENDING) {
             if (status.compareAndSet(Status.PENDING, Status.SUCCESS)) {
                 this.result = result;
+                latch.countDown();
+                return true;
             }
         }
+        return false;
     }
 
     @Override
-    public void deliverError(Throwable error) {
+    public boolean deliverError(Throwable error) {
         if (status.get() == Status.PENDING) {
             if (status.compareAndSet(Status.PENDING, Status.ERROR)) {
                 this.error = error;
+                latch.countDown();
+                return true;
             }
         }
+        return false;
     }
 
     @Override
@@ -64,10 +70,14 @@ public class MultipleWriterResilientPromise<T> implements ResilientPromise<T> {
     }
 
     @Override
-    public void setTimedOut() {
+    public boolean setTimedOut() {
         if (status.get() == Status.PENDING) {
-            status.compareAndSet(Status.PENDING, Status.TIMED_OUT);
+            if (status.compareAndSet(Status.PENDING, Status.TIMED_OUT)) {
+                latch.countDown();
+                return true;
+            }
         }
+        return false;
     }
 
     @Override

@@ -15,17 +15,19 @@ public class SingleWriterResilientPromise<T> implements ResilientPromise<T> {
     private CountDownLatch latch = new CountDownLatch(1);
 
     @Override
-    public void deliverResult(T result) {
+    public boolean deliverResult(T result) {
         this.result = result;
         status.lazySet(Status.SUCCESS);
         latch.countDown();
+        return true;
     }
 
     @Override
-    public void deliverError(Throwable error) {
+    public boolean deliverError(Throwable error) {
         this.error = error;
         status.lazySet(Status.ERROR);
         latch.countDown();
+        return true;
     }
 
     @Override
@@ -60,9 +62,10 @@ public class SingleWriterResilientPromise<T> implements ResilientPromise<T> {
     }
 
     @Override
-    public void setTimedOut() {
+    public boolean setTimedOut() {
         status.lazySet(Status.TIMED_OUT);
         latch.countDown();
+        return true;
     }
 
 
