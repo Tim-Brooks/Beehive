@@ -2,6 +2,7 @@ package fault;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Created by timbrooks on 11/16/14.
@@ -11,21 +12,20 @@ public class SingleWriterResilientPromise<T> implements ResilientPromise<T> {
 
     private Throwable error;
 
-    private volatile Status status = Status.PENDING;
-    // TODO The CountDownLatch on POSIX is leading to very high await latency. Should look at blocking in FutureTask
-    // TODO which does not have the same issue. There is probably some spin and park strategy work in that case.
+    private AtomicReference<Status> status = new AtomicReference<>(Status.PENDING);
+    // TODO: Does this act as a memory barrier?
     private CountDownLatch latch = new CountDownLatch(1);
     @Override
     public void deliverResult(T result) {
         this.result = result;
-        status = Status.SUCCESS;
+        status.lazySet(Status.SUCCESS);
         latch.countDown();
     }
 
     @Override
     public void deliverError(Throwable error) {
         this.error = error;
-        status = Status.ERROR;
+        status.lazySet(Status.ERROR);
         latch.countDown();
     }
 
@@ -57,34 +57,34 @@ public class SingleWriterResilientPromise<T> implements ResilientPromise<T> {
 
     @Override
     public Status getStatus() {
-        return status;
+        return status.get();
     }
 
     @Override
     public void setTimedOut() {
-        status = Status.TIMED_OUT;
+        status.lazySet(Status.TIMED_OUT);
         latch.countDown();
     }
 
 
     @Override
     public boolean isSuccessful() {
-        return status == Status.SUCCESS;
+        return status.get() == Status.SUCCESS;
     }
 
     @Override
     public boolean isDone() {
-        return status != Status.PENDING;
+        return status.get() != Status.PENDING;
     }
 
     @Override
     public boolean isError() {
-        return status == Status.ERROR;
+        return status.get() == Status.ERROR;
     }
 
     @Override
     public boolean isTimedOut() {
-        return status == Status.TIMED_OUT;
+        return status.get() == Status.TIMED_OUT;
     }
 
 }
