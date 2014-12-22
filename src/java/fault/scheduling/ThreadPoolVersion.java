@@ -13,12 +13,12 @@ import java.util.concurrent.*;
 public class ThreadPoolVersion {
 
     private final ExecutorService service = Executors.newScheduledThreadPool(10);
-    private final ExecutorService metricsService = Executors.newSingleThreadExecutor();
-    private final ScheduledExecutorService timeoutService = Executors.newScheduledThreadPool(1);
+    private final ExecutorService managingService = Executors.newFixedThreadPool(2);
+    private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<ResilientPromise<?>> metricsQueue = new LinkedBlockingQueue<>();
 
     public ThreadPoolVersion(final ActionMetrics actionMetrics, final CircuitBreaker circuitBreaker) {
-        metricsService.submit(new Runnable() {
+        managingService.submit(new Runnable() {
             @Override
             public void run() {
                 for (; ; ) {
@@ -33,6 +33,25 @@ public class ThreadPoolVersion {
                 }
             }
         });
+
+        managingService.submit(new Runnable() {
+            @Override
+            public void run() {
+                for (; ; ) {
+                    try {
+                        ActionTimeout timeout = timeoutQueue.take();
+                        ResilientPromise<?> promise = timeout.promise;
+                        if (promise.setTimedOut()) {
+                            timeout.future.cancel(true);
+                            actionMetrics.reportActionResult(promise.getStatus());
+                            circuitBreaker.informBreakerOfResult(promise.isSuccessful());
+                        }
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+            }
+        });
     }
 
     public <T> void action(final ScheduleMessage<T> message) {
@@ -43,32 +62,45 @@ public class ThreadPoolVersion {
                 try {
                     T result = message.action.run();
                     if (promise.deliverResult(result)) {
-                        metricsQueue.add(promise);
+                        metricsQueue.offer(promise);
                     }
                 } catch (Exception e) {
                     if (promise.deliverError(e)) {
-                        metricsQueue.add(promise);
+                        metricsQueue.offer(promise);
                     }
                 }
                 return null;
             }
         });
-        timeoutService.schedule(new Runnable() {
-            @Override
-            public void run() {
-                ResilientPromise<T> promise = message.promise;
-                if (promise.setTimedOut()) {
-                    f.cancel(true);
-                    metricsQueue.add(promise);
-                }
-            }
-        }, message.relativeTimeout, TimeUnit.MILLISECONDS);
+        timeoutQueue.offer(new ActionTimeout(message.promise, message.relativeTimeout, f));
 
     }
 
     public void shutdown() {
         service.shutdown();
-        metricsService.shutdown();
-        timeoutService.shutdown();
+        managingService.shutdown();
+    }
+
+    private class ActionTimeout implements Delayed {
+
+        private final ResilientPromise<?> promise;
+        private final long millisRelativeTimeout;
+        private final Future<Void> future;
+
+        public ActionTimeout(ResilientPromise<?> promise, long millisRelativeTimeout, Future<Void> future) {
+            this.promise = promise;
+            this.millisRelativeTimeout = millisRelativeTimeout;
+            this.future = future;
+        }
+
+        @Override
+        public long getDelay(TimeUnit unit) {
+            return unit.convert(millisRelativeTimeout, TimeUnit.MILLISECONDS);
+        }
+
+        @Override
+        public int compareTo(Delayed o) {
+            return Long.compare(millisRelativeTimeout, o.getDelay(TimeUnit.MILLISECONDS));
+        }
     }
 }
