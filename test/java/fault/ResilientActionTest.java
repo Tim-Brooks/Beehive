@@ -18,11 +18,11 @@ import static org.junit.Assert.*;
  */
 public class ResilientActionTest {
 
-    private ServiceExecutor serviceExecutor;
+    private EventLoopExecutor serviceExecutor;
 
     @Before
     public void setUp() {
-        serviceExecutor = new ServiceExecutor(1);
+        serviceExecutor = new EventLoopExecutor(1);
     }
 
     @After
@@ -69,7 +69,7 @@ public class ResilientActionTest {
     @Test
     public void testManyActions() throws Exception {
         serviceExecutor.shutdown();
-        serviceExecutor = new ServiceExecutor(50);
+        serviceExecutor = new EventLoopExecutor(50);
         Random random = new Random();
         int successCount = 0;
         int errorCount = 0;

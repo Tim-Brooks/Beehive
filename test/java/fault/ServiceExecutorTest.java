@@ -42,7 +42,7 @@ public class ServiceExecutorTest {
     private ArgumentCaptor<ScheduleMessage<Object>> messageCaptor;
 
     private ScheduleContext context;
-    private ServiceExecutor serviceExecutor;
+    private EventLoopExecutor serviceExecutor;
 
     @Before
     public void setUp() {
@@ -52,7 +52,7 @@ public class ServiceExecutorTest {
                 .setActionMetrics(actionMetrics).setCircuitBreaker(circuitBreaker).setToScheduleQueue(toSchedule)
                 .build();
 
-        serviceExecutor = new ServiceExecutor(actionMetrics, circuitBreaker, context, scheduler);
+        serviceExecutor = new EventLoopExecutor(actionMetrics, circuitBreaker, context, scheduler);
     }
 
     @Test
