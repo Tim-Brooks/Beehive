@@ -14,8 +14,7 @@ import java.util.concurrent.*;
 public class BlockingExecutor extends AbstractServiceExecutor implements ServiceExecutor {
 
     private final ExecutorService service;
-    private final ExecutorService managingService = Executors.newFixedThreadPool(1);
-    private final ExecutorService tService = Executors.newFixedThreadPool(1);
+    private final ExecutorService managingService = Executors.newFixedThreadPool(2);
     private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<ResilientPromise<?>> metricsQueue = new LinkedBlockingQueue<>();
 
@@ -67,7 +66,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     public void shutdown() {
         service.shutdown();
         managingService.shutdown();
-        tService.shutdown();
+        managingService.shutdown();
     }
 
     private void startTimeoutAndMetrics() {
@@ -87,7 +86,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
             }
         });
 
-        tService.submit(new Runnable() {
+        managingService.submit(new Runnable() {
             @Override
             public void run() {
                 for (; ; ) {
