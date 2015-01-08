@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 /**
  * Created by timbrooks on 11/20/14.
  */
-public class ServiceExecutorTest {
+public class EventLoopExecutorTest {
 
     @Mock
     private CircuitBreaker circuitBreaker;

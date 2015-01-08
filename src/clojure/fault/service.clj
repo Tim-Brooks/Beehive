@@ -1,5 +1,5 @@
 (ns fault.service
-  (:import (fault ServiceExecutor)
+  (:import (fault BlockingExecutor)
            (fault.circuit CircuitBreaker BreakerConfig BreakerConfig$BreakerConfigBuilder)
            (clojure.lang ILookup)
            (fault.metrics ActionMetrics)))
@@ -49,7 +49,7 @@
                      (.build))))
 
 (defn service-executor [pool-size]
-  (let [executor (ServiceExecutor. pool-size)]
+  (let [executor (BlockingExecutor. pool-size)]
     {:service executor
      :metrics (->CLJMetrics (.getActionMetrics executor))
      :circuit-breaker (->CLJBreaker (.getCircuitBreaker executor))}))

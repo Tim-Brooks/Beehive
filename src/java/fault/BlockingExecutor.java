@@ -4,6 +4,7 @@ import fault.circuit.BreakerConfig;
 import fault.circuit.CircuitBreaker;
 import fault.circuit.DefaultCircuitBreaker;
 import fault.metrics.ActionMetrics;
+import fault.metrics.DefaultActionMetrics;
 
 import java.util.concurrent.*;
 
@@ -16,6 +17,10 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     private final ExecutorService managingService = Executors.newFixedThreadPool(2);
     private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<ResilientPromise<?>> metricsQueue = new LinkedBlockingQueue<>();
+
+    public BlockingExecutor(int poolSize) {
+        this(poolSize, new DefaultActionMetrics(3600));
+    }
 
     public BlockingExecutor(int poolSize, ActionMetrics actionMetrics) {
         this(poolSize, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig.BreakerConfigBuilder
