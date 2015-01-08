@@ -17,10 +17,12 @@ public class Example {
         DefaultActionMetrics actionMetrics = new DefaultActionMetrics(3600);
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
                 .failureThreshold(100).timeToPauseMillis(2000).build();
-        EventLoopExecutor serviceExecutor = new EventLoopExecutor(15, actionMetrics, new DefaultCircuitBreaker
-                (actionMetrics, breakerConfig), Executors.newFixedThreadPool(15));
+//        EventLoopExecutor serviceExecutor = new EventLoopExecutor(15, actionMetrics, new DefaultCircuitBreaker
+//                (actionMetrics, breakerConfig), Executors.newFixedThreadPool(15));
+        BlockingExecutor serviceExecutor = new BlockingExecutor(15, actionMetrics, new DefaultCircuitBreaker
+                (actionMetrics, breakerConfig));
         BreakerConfig breakerConfig2 = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
-                .failureThreshold(100).timeToPauseMillis(2000).build();
+                .failureThreshold(400).timeToPauseMillis(2000).build();
         DefaultActionMetrics actionMetrics2 = new DefaultActionMetrics(3600);
         ServiceExecutor serviceExecutor2 = new EventLoopExecutor(15, actionMetrics2, new DefaultCircuitBreaker
                 (actionMetrics2, breakerConfig2), Executors.newFixedThreadPool(15));

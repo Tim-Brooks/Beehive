@@ -18,7 +18,7 @@ import static org.junit.Assert.*;
  */
 public class ResilientActionTest {
 
-    private EventLoopExecutor serviceExecutor;
+    private ServiceExecutor serviceExecutor;
 
     @Before
     public void setUp() {
