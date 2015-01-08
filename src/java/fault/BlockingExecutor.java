@@ -14,7 +14,8 @@ import java.util.concurrent.*;
 public class BlockingExecutor extends AbstractServiceExecutor implements ServiceExecutor {
 
     private final ExecutorService service;
-    private final ExecutorService managingService = Executors.newFixedThreadPool(2);
+    private final ExecutorService managingService = Executors.newFixedThreadPool(1);
+    private final ExecutorService tService = Executors.newFixedThreadPool(1);
     private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<ResilientPromise<?>> metricsQueue = new LinkedBlockingQueue<>();
 
@@ -66,6 +67,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     public void shutdown() {
         service.shutdown();
         managingService.shutdown();
+        tService.shutdown();
     }
 
     private void startTimeoutAndMetrics() {
@@ -85,7 +87,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
             }
         });
 
-        managingService.submit(new Runnable() {
+        tService.submit(new Runnable() {
             @Override
             public void run() {
                 for (; ; ) {
@@ -108,23 +110,23 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     private class ActionTimeout implements Delayed {
 
         private final ResilientPromise<?> promise;
-        private final long millisRelativeTimeout;
+        private final long millisAbsoluteTimeout;
         private final Future<Void> future;
 
         public ActionTimeout(ResilientPromise<?> promise, long millisRelativeTimeout, Future<Void> future) {
             this.promise = promise;
-            this.millisRelativeTimeout = millisRelativeTimeout;
+            this.millisAbsoluteTimeout = millisRelativeTimeout + System.currentTimeMillis();
             this.future = future;
         }
 
         @Override
         public long getDelay(TimeUnit unit) {
-            return unit.convert(millisRelativeTimeout, TimeUnit.MILLISECONDS);
+            return unit.convert(millisAbsoluteTimeout - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
         }
 
         @Override
         public int compareTo(Delayed o) {
-            return Long.compare(millisRelativeTimeout, o.getDelay(TimeUnit.MILLISECONDS));
+            return Long.compare(millisAbsoluteTimeout, o.getDelay(TimeUnit.MILLISECONDS));
         }
     }
 }
