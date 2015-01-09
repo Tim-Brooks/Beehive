@@ -12,6 +12,7 @@
   :javac-target "1.7"
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [criterium "0.4.3"]]
+  :source-paths ["src/clojure"]
   :java-source-paths ["src/java"])
 
 
