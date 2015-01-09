@@ -7,11 +7,11 @@
                                   [org.mockito/mockito-core "1.10.8"]]
                    :junit ["test/java"]
                    :java-source-paths ["src/java" "test/java"]
-                   :plugins [[lein-junit "1.1.3"]]}}
+                   :plugins [[lein-junit "1.1.3"]]
+                   :junit-formatter "brief"}}
   :javac-target "1.7"
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [criterium "0.4.3"]]
-  :java-source-paths ["src/java"]
-  :junit-formatter "brief")
+  :java-source-paths ["src/java"])
 
 
