@@ -16,7 +16,14 @@
                 {:time-period-in-millis (.timePeriodInMillis config)
                  :failure-threshold (.failureThreshold config)
                  :time-to-pause-millis (.timeToPauseMillis config)})
-      default)))
+      default))
+  Object
+  (toString [this]
+    (str {:open? (.isOpen breaker)
+          :config (let [^BreakerConfig config (.getBreakerConfig breaker)]
+                    {:time-period-in-millis (.timePeriodInMillis config)
+                     :failure-threshold (.failureThreshold config)
+                     :time-to-pause-millis (.timeToPauseMillis config)})})))
 
 (deftype CLJMetrics [^ActionMetrics metrics]
   ILookup
@@ -47,6 +54,12 @@
                      (.failureThreshold failure-threshold)
                      (.timeToPauseMillis time-to-pause-millis)
                      (.build))))
+
+(defn close-circuit! [{:keys [circuit-breaker]}]
+  (.forceClosed ^CircuitBreaker circuit-breaker))
+
+(defn open-circuit! [{:keys [circuit-breaker]}]
+  (.forceOpen ^CircuitBreaker circuit-breaker))
 
 (defn service-executor [pool-size]
   (let [executor (BlockingExecutor. pool-size)]
