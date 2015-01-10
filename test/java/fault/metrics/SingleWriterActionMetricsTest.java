@@ -15,18 +15,18 @@ import static org.mockito.Mockito.when;
 /**
  * Created by timbrooks on 11/23/14.
  */
-public class DefaultActionMetricsTest {
+public class SingleWriterActionMetricsTest {
 
     @Mock
     private TimeProvider timeProvider;
 
-    private DefaultActionMetrics actionMetrics;
+    private SingleWriterActionMetrics actionMetrics;
 
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
         when(timeProvider.currentTimeMillis()).thenReturn(0L);
-        this.actionMetrics = new DefaultActionMetrics(1000, timeProvider);
+        this.actionMetrics = new SingleWriterActionMetrics(1000, timeProvider);
     }
 
     @Test

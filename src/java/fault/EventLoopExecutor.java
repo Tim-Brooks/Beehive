@@ -5,7 +5,7 @@ import fault.circuit.DefaultCircuitBreaker;
 import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
-import fault.metrics.DefaultActionMetrics;
+import fault.metrics.SingleWriterActionMetrics;
 import fault.metrics.ActionMetrics;
 import fault.scheduling.ScheduleContext;
 import fault.scheduling.Scheduler;
@@ -25,7 +25,7 @@ public class EventLoopExecutor implements ServiceExecutor {
     private final ScheduleContext schedulingContext;
 
     public EventLoopExecutor(int poolSize) {
-        this(poolSize, new DefaultActionMetrics(3600));
+        this(poolSize, new SingleWriterActionMetrics(3600));
     }
 
     public EventLoopExecutor(int poolSize, ActionMetrics actionMetrics) {

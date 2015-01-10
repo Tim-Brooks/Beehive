@@ -2,7 +2,7 @@ package fault;
 
 import fault.circuit.BreakerConfig;
 import fault.circuit.DefaultCircuitBreaker;
-import fault.metrics.DefaultActionMetrics;
+import fault.metrics.SingleWriterActionMetrics;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.concurrent.Executors;
 public class Example {
 
     public static void main(String[] args) {
-        DefaultActionMetrics actionMetrics = new DefaultActionMetrics(3600);
+        SingleWriterActionMetrics actionMetrics = new SingleWriterActionMetrics(3600);
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
                 .failureThreshold(100).timeToPauseMillis(2000).build();
 //        EventLoopExecutor serviceExecutor = new EventLoopExecutor(15, actionMetrics, new DefaultCircuitBreaker
@@ -23,7 +23,7 @@ public class Example {
                 (actionMetrics, breakerConfig));
         BreakerConfig breakerConfig2 = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
                 .failureThreshold(400).timeToPauseMillis(2000).build();
-        DefaultActionMetrics actionMetrics2 = new DefaultActionMetrics(3600);
+        SingleWriterActionMetrics actionMetrics2 = new SingleWriterActionMetrics(3600);
         ServiceExecutor serviceExecutor2 = new EventLoopExecutor(15, actionMetrics2, new DefaultCircuitBreaker
                 (actionMetrics2, breakerConfig2), Executors.newFixedThreadPool(15));
         List<Thread> threads = new ArrayList<>();

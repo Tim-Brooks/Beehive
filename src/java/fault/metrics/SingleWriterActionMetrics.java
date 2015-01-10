@@ -10,7 +10,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Created by timbrooks on 11/10/14.
  */
-public class DefaultActionMetrics implements ActionMetrics {
+public class SingleWriterActionMetrics implements ActionMetrics {
 
     private final int totalSlots;
     private final AtomicIntegerArray errorMetrics;
@@ -20,11 +20,11 @@ public class DefaultActionMetrics implements ActionMetrics {
     private final AtomicLong advanceSlotTimeInMillis;
     private final AtomicInteger slotNumber;
 
-    public DefaultActionMetrics(int secondsToTrack) {
+    public SingleWriterActionMetrics(int secondsToTrack) {
         this(secondsToTrack, new TimeProvider());
     }
 
-    public DefaultActionMetrics(int secondsToTrack, TimeProvider timeProvider) {
+    public SingleWriterActionMetrics(int secondsToTrack, TimeProvider timeProvider) {
         this.timeProvider = timeProvider;
         this.totalSlots = secondsToTrack;
         this.errorMetrics = new AtomicIntegerArray(totalSlots);
