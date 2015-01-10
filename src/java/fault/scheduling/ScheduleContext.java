@@ -1,6 +1,5 @@
 package fault.scheduling;
 
-import fault.ResilientTask;
 import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;

@@ -1,11 +1,10 @@
-package fault;
+package fault.scheduling;
 
+import fault.*;
 import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.ActionMetrics;
-import fault.scheduling.ScheduleContext;
-import fault.scheduling.ScheduleLoop;
 import fault.utils.TimeProvider;
 import org.junit.Before;
 import org.junit.Test;

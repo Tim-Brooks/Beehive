@@ -13,7 +13,7 @@
 
 (deftype CLJResilientPromise [^ResilientPromise promise]
   IDeref
-  (deref [_] (or (.awaitResult promise) (.getError promise) :timed-out))
+  (deref [this] (or (.awaitResult promise) (.getError promise) (:status this)))
   IBlockingDeref
   (deref
     [_ timeout-ms timeout-val]

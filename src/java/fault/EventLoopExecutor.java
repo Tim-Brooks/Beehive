@@ -50,7 +50,7 @@ public class EventLoopExecutor implements ServiceExecutor {
     }
 
     @Override
-    public <T> ResilientPromise<T> performAction(ResilientAction<T> action, int millisTimeout) {
+    public <T> ResilientPromise<T> performAction(ResilientAction<T> action, long millisTimeout) {
         if (!circuitBreaker.allowAction()) {
             throw new RuntimeException("Circuit is Open");
         }
