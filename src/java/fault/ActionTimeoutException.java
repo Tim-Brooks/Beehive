@@ -3,7 +3,7 @@ package fault;
 /**
  * Created by timbrooks on 11/20/14.
  */
-public class ActionTimeoutException extends Exception {
+public class ActionTimeoutException extends RuntimeException {
 
     public ActionTimeoutException(String message) {
         super(message);

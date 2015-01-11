@@ -58,7 +58,7 @@ public class EventLoopExecutor implements ServiceExecutor {
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                long millisTimeout) {
         if (!circuitBreaker.allowAction()) {
-            throw new RuntimeException("Circuit is Open");
+            throw new RejectedActionException(RejectedActionException.Reason.CIRCUIT_CLOSED);
         }
         long absoluteTimeout = millisTimeout + 1 + schedulingContext.timeProvider.currentTimeMillis();
 
@@ -70,7 +70,7 @@ public class EventLoopExecutor implements ServiceExecutor {
     @Override
     public <T> ResilientPromise<T> performAction(ResilientAction<T> action) {
         if (circuitBreaker.isOpen()) {
-            throw new RuntimeException("Circuit is Open");
+            throw new RejectedActionException(RejectedActionException.Reason.CIRCUIT_CLOSED);
         }
 
         ResilientPromise<T> resilientPromise = new SingleWriterResilientPromise<>();

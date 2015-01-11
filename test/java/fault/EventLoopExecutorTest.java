@@ -60,8 +60,8 @@ public class EventLoopExecutorTest {
         when(circuitBreaker.allowAction()).thenReturn(false);
         try {
             serviceExecutor.submitAction(resilientAction, 1000);
-        } catch (RuntimeException e) {
-            assertEquals(e.getMessage(), "Circuit is Open");
+        } catch (RejectedActionException e) {
+            assertEquals(RejectedActionException.Reason.CIRCUIT_CLOSED, e.reason);
             return;
         }
         fail();
