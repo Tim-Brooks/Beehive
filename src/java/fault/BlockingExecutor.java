@@ -42,6 +42,9 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     @Override
     public <T> ResilientFuture<T> performAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                 long millisTimeout) {
+        if (!circuitBreaker.allowAction()) {
+            throw new RuntimeException("Circuit is Open");
+        }
         final Future<Void> f = service.submit(new Callable<Void>() {
             @Override
             public Void call() {
@@ -64,7 +67,20 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
 
     @Override
     public <T> ResilientPromise<T> performSyncAction(final ResilientAction<T> action) {
-        return null;
+        ResilientPromise<T> promise = new SingleWriterResilientPromise<>();
+        if (!circuitBreaker.allowAction()) {
+            throw new RuntimeException("Circuit is Open");
+        }
+        try {
+            T result = action.run();
+            promise.deliverResult(result);
+        } catch (ActionTimeoutException e) {
+            promise.setTimedOut();
+        } catch (Exception e) {
+            promise.deliverError(e);
+        }
+        metricsQueue.offer(promise);
+        return promise;
     }
 
     @Override
