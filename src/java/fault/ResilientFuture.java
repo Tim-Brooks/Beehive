@@ -14,7 +14,6 @@ public class ResilientFuture<T> implements Future {
 
     public ResilientFuture() {
         this(new MultipleWriterResilientPromise<T>());
-
     }
 
     public ResilientFuture(ResilientPromise<T> promise) {
@@ -55,5 +54,9 @@ public class ResilientFuture<T> implements Future {
     @Override
     public boolean isCancelled() {
         return false;
+    }
+
+    public Status getStatus() {
+        return promise.getStatus();
     }
 }
