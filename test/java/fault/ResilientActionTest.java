@@ -9,7 +9,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -33,10 +35,10 @@ public class ResilientActionTest {
     @Test
     public void testActionSuccess() throws Exception {
         ResilientAction<String> successAction = new SuccessAction(1);
-        ResilientPromise<String> promise = serviceExecutor.performAction(successAction, 25);
+        ResilientFuture<String> future = serviceExecutor.performAction(successAction, 25);
 
-        assertEquals("Success-1", promise.awaitResult());
-        assertEquals(Status.SUCCESS, promise.getStatus());
+        assertEquals("Success-1", future.get());
+        assertEquals(Status.SUCCESS, future.getStatus());
 
         testMetricsResult(1, 0, 0);
     }
@@ -44,24 +46,26 @@ public class ResilientActionTest {
     @Test
     public void testActionError() throws Exception {
         ResilientAction<String> errorAction = new ErrorAction(1);
-        ResilientPromise<String> promise = serviceExecutor.performAction(errorAction, 25);
+        ResilientFuture<String> future = serviceExecutor.performAction(errorAction, 25);
 
-        assertNull(promise.awaitResult());
-        Throwable error = promise.getError();
-        assertTrue(error instanceof IOException);
-        assertEquals("IO Issue-1", error.getMessage());
-        assertEquals(Status.ERROR, promise.getStatus());
-
+        try {
+            future.get();
+        } catch (ExecutionException e) {
+            Throwable cause = e.getCause();
+            assertTrue(cause instanceof IOException);
+            assertEquals("IO Issue-1", cause.getMessage());
+        }
+        assertEquals(Status.ERROR, future.getStatus());
         testMetricsResult(0, 1, 0);
     }
 
     @Test
     public void testActionTimeout() throws Exception {
         ResilientAction<String> timeoutAction = new TimeoutAction();
-        ResilientPromise<String> promise = serviceExecutor.performAction(timeoutAction, 25);
+        ResilientFuture<String> future = serviceExecutor.performAction(timeoutAction, 25);
 
-        assertNull(promise.awaitResult());
-        assertEquals(Status.TIMED_OUT, promise.getStatus());
+        assertNull(future.get());
+        assertEquals(Status.TIMED_OUT, future.getStatus());
 
         testMetricsResult(0, 0, 1);
     }
@@ -74,17 +78,17 @@ public class ResilientActionTest {
         int successCount = 0;
         int errorCount = 0;
         int timeoutCount = 0;
-        List<ResilientPromise<String>> promises = new ArrayList<>();
+        List<ResilientFuture<String>> futures = new ArrayList<>();
         for (int i = 0; i < 50; ++i) {
             int decider = random.nextInt(3);
             if (decider == 0) {
-                promises.add(serviceExecutor.performAction(new SuccessAction(successCount), 25));
+                futures.add(serviceExecutor.performAction(new SuccessAction(successCount), 25));
                 ++successCount;
             } else if (decider == 1) {
-                promises.add(serviceExecutor.performAction(new ErrorAction(errorCount), 25));
+                futures.add(serviceExecutor.performAction(new ErrorAction(errorCount), 25));
                 ++errorCount;
             } else {
-                promises.add(serviceExecutor.performAction(new TimeoutAction(), 25));
+                futures.add(serviceExecutor.performAction(new TimeoutAction(), 25));
                 ++timeoutCount;
             }
         }
@@ -92,24 +96,22 @@ public class ResilientActionTest {
         int successesRealized = 0;
         int errorsRealized = 0;
         int timeoutsRealized = 0;
-        for (ResilientPromise<String> promise : promises) {
-            promise.await();
-            if (promise.getStatus() == Status.SUCCESS) {
-                assertEquals("Success-" + successesRealized, promise.getResult());
-                assertNull(promise.getError());
-                ++successesRealized;
-            } else if (promise.getStatus() == Status.ERROR) {
-                Throwable error = promise.getError();
+        for (ResilientFuture<String> future : futures) {
+            try {
+                String result = future.get();
+                if (future.getStatus() == Status.SUCCESS) {
+                    assertEquals("Success-" + successesRealized, result);
+                    ++successesRealized;
+                } else {
+                    assertEquals(Status.TIMED_OUT, future.getStatus());
+                    assertNull(result);
+                    ++timeoutsRealized;
+                }
+            } catch (ExecutionException e) {
+                Throwable error = e.getCause();
                 assertTrue(error instanceof IOException);
                 assertEquals("IO Issue-" + errorsRealized, error.getMessage());
-                assertNull(promise.getResult());
                 ++errorsRealized;
-            } else if (promise.getStatus() == Status.TIMED_OUT) {
-                assertNull(promise.getResult());
-                assertNull(promise.getError());
-                ++timeoutsRealized;
-            } else {
-                fail();
             }
         }
         assertEquals(successCount, successesRealized);

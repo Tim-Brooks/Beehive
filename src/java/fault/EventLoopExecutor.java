@@ -50,16 +50,16 @@ public class EventLoopExecutor implements ServiceExecutor {
     }
 
     @Override
-    public <T> ResilientPromise<T> performAction(ResilientAction<T> action, long millisTimeout) {
+    public <T> ResilientFuture<T> performAction(ResilientAction<T> action, long millisTimeout) {
         if (!circuitBreaker.allowAction()) {
             throw new RuntimeException("Circuit is Open");
         }
         long absoluteTimeout = millisTimeout + 1 + schedulingContext.timeProvider.currentTimeMillis();
-        final ResilientPromise<T> resilientPromise = new SingleWriterResilientPromise<>();
+        final ResilientPromise<T> promise = new SingleWriterResilientPromise<>();
 
-        ScheduleMessage<T> e = new ScheduleMessage<>(action, resilientPromise, millisTimeout, absoluteTimeout);
+        ScheduleMessage<T> e = new ScheduleMessage<>(action, promise, millisTimeout, absoluteTimeout);
         schedulingContext.toScheduleQueue.offer((ScheduleMessage<Object>) e);
-        return resilientPromise;
+        return new ResilientFuture<>(promise);
     }
 
     @Override

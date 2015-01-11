@@ -7,7 +7,7 @@ import fault.metrics.ActionMetrics;
  * Created by timbrooks on 12/22/14.
  */
 public interface ServiceExecutor {
-    <T> ResilientPromise<T> performAction(ResilientAction<T> action, long millisTimeout);
+    <T> ResilientFuture<T> performAction(ResilientAction<T> action, long millisTimeout);
 
     <T> ResilientPromise<T> performSyncAction(ResilientAction<T> action);
 

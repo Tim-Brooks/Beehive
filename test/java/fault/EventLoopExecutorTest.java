@@ -42,7 +42,7 @@ public class EventLoopExecutorTest {
     private ArgumentCaptor<ScheduleMessage<Object>> messageCaptor;
 
     private ScheduleContext context;
-    private EventLoopExecutor serviceExecutor;
+    private ServiceExecutor serviceExecutor;
 
     @Before
     public void setUp() {
@@ -70,13 +70,12 @@ public class EventLoopExecutorTest {
     @Test
     public void testScheduleActionIsSubmittedIfCircuitAllowsRequest() {
         when(circuitBreaker.allowAction()).thenReturn(true);
-        ResilientPromise<Object> resilientPromise = serviceExecutor.performAction(resilientAction, 1000);
+        ResilientFuture<Object> future = serviceExecutor.performAction(resilientAction, 1000);
 
         verify(toSchedule).offer(messageCaptor.capture());
 
         ScheduleMessage scheduleMessage = messageCaptor.getValue();
         assertEquals(resilientAction, scheduleMessage.action);
-        assertEquals(resilientPromise, scheduleMessage.promise);
     }
 
     @Test

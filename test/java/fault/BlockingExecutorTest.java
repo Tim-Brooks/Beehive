@@ -11,7 +11,7 @@ import static org.junit.Assert.assertEquals;
  */
 public class BlockingExecutorTest {
 
-    private BlockingExecutor blockingExecutor;
+    private ServiceExecutor blockingExecutor;
 
     @Before
     public void setUp() {
@@ -20,15 +20,15 @@ public class BlockingExecutorTest {
 
     @Test
     public void testTimeoutScheduled() throws Exception {
-        ResilientPromise<String> promise = blockingExecutor.performAction(new ResilientAction<String>() {
+        ResilientFuture<String> future = blockingExecutor.performAction(new ResilientAction<String>() {
             @Override
             public String run() throws Exception {
                 Thread.sleep(10000L);
                 return "Hello";
             }
         }, 1);
-        promise.await();
+        future.get();
 
-        assertEquals(Status.TIMED_OUT, promise.getStatus());
+        assertEquals(Status.TIMED_OUT, future.getStatus());
     }
 }

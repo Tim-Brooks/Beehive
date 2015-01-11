@@ -35,7 +35,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     }
 
     @Override
-    public <T> ResilientPromise<T> performAction(final ResilientAction<T> action, long millisTimeout) {
+    public <T> ResilientFuture<T> performAction(final ResilientAction<T> action, long millisTimeout) {
         final ResilientPromise<T> promise = new MultipleWriterResilientPromise<>();
         final Future<Void> f = service.submit(new Callable<Void>() {
             @Override
@@ -54,7 +54,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
             }
         });
         timeoutQueue.offer(new ActionTimeout(promise, millisTimeout, f));
-        return promise;
+        return new ResilientFuture<>(promise);
     }
 
     @Override

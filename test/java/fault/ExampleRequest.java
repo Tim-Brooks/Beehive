@@ -24,10 +24,10 @@ public class ExampleRequest implements Runnable {
 
     public void run() {
         for (; ; ) {
-            List<ResilientPromise<String>> promises = new ArrayList<>();
+            List<ResilientFuture<String>> futures = new ArrayList<>();
             for (int i = 0; i < 1; ++i) {
                 try {
-                    ResilientPromise<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
+                    ResilientFuture<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
                         @Override
                         public String run() throws Exception {
                             new Random().nextBoolean();
@@ -41,7 +41,7 @@ public class ExampleRequest implements Runnable {
                             return result;
                         }
                     }, 10);
-                    promises.add(result);
+                    futures.add(result);
                 } catch (RuntimeException e) {
 //                    System.out.println("Broken");
                 }
@@ -59,9 +59,9 @@ public class ExampleRequest implements Runnable {
 //        });
 
             long start = System.currentTimeMillis();
-            for (ResilientPromise<String> result : promises) {
+            for (ResilientFuture<String> result : futures) {
                 try {
-                    result.await();
+                    result.get();
 //                Thread.sleep(1);
 //            result.get(10L, TimeUnit.MILLISECONDS);
                 } catch (Exception e) {
