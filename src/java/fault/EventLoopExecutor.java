@@ -1,12 +1,12 @@
 package fault;
 
 import fault.circuit.BreakerConfig;
-import fault.circuit.DefaultCircuitBreaker;
 import fault.circuit.CircuitBreaker;
+import fault.circuit.DefaultCircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
-import fault.metrics.SingleWriterActionMetrics;
 import fault.metrics.ActionMetrics;
+import fault.metrics.SingleWriterActionMetrics;
 import fault.scheduling.ScheduleContext;
 import fault.scheduling.Scheduler;
 
@@ -51,11 +51,16 @@ public class EventLoopExecutor implements ServiceExecutor {
 
     @Override
     public <T> ResilientFuture<T> performAction(ResilientAction<T> action, long millisTimeout) {
+        return performAction(action, new SingleWriterResilientPromise<T>(), millisTimeout);
+    }
+
+    @Override
+    public <T> ResilientFuture<T> performAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
+                                                long millisTimeout) {
         if (!circuitBreaker.allowAction()) {
             throw new RuntimeException("Circuit is Open");
         }
         long absoluteTimeout = millisTimeout + 1 + schedulingContext.timeProvider.currentTimeMillis();
-        final ResilientPromise<T> promise = new SingleWriterResilientPromise<>();
 
         ScheduleMessage<T> e = new ScheduleMessage<>(action, promise, millisTimeout, absoluteTimeout);
         schedulingContext.toScheduleQueue.offer((ScheduleMessage<Object>) e);

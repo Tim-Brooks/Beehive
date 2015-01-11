@@ -36,7 +36,12 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
 
     @Override
     public <T> ResilientFuture<T> performAction(final ResilientAction<T> action, long millisTimeout) {
-        final ResilientPromise<T> promise = new MultipleWriterResilientPromise<>();
+        return performAction(action, new MultipleWriterResilientPromise<T>(), millisTimeout);
+    }
+
+    @Override
+    public <T> ResilientFuture<T> performAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
+                                                long millisTimeout) {
         final Future<Void> f = service.submit(new Callable<Void>() {
             @Override
             public Void call() {

@@ -9,6 +9,8 @@ import fault.metrics.ActionMetrics;
 public interface ServiceExecutor {
     <T> ResilientFuture<T> performAction(ResilientAction<T> action, long millisTimeout);
 
+    <T> ResilientFuture<T> performAction(ResilientAction<T> action, ResilientPromise<T> promise, long millisTimeout);
+
     <T> ResilientPromise<T> performSyncAction(ResilientAction<T> action);
 
     ActionMetrics getActionMetrics();
