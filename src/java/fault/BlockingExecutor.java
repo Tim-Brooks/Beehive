@@ -7,6 +7,7 @@ import fault.metrics.ActionMetrics;
 import fault.metrics.SingleWriterActionMetrics;
 
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by timbrooks on 12/23/14.
@@ -18,18 +19,20 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<ResilientPromise<?>> metricsQueue = new LinkedBlockingQueue<>();
 
-    public BlockingExecutor(int poolSize) {
-        this(poolSize, new SingleWriterActionMetrics(3600));
+    public BlockingExecutor(int poolSize, int queueSize) {
+        this(poolSize, queueSize, new SingleWriterActionMetrics(3600));
     }
 
-    public BlockingExecutor(int poolSize, ActionMetrics actionMetrics) {
-        this(poolSize, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig.BreakerConfigBuilder
+    public BlockingExecutor(int poolSize, int queueSize, ActionMetrics actionMetrics) {
+        this(poolSize, queueSize, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig
+                .BreakerConfigBuilder
                 ().failureThreshold(20).timePeriodInMillis(5000).build()));
     }
 
-    public BlockingExecutor(int poolSize, ActionMetrics actionMetrics, CircuitBreaker circuitBreaker) {
+    public BlockingExecutor(int poolSize, int queueSize, ActionMetrics actionMetrics, CircuitBreaker circuitBreaker) {
         super(circuitBreaker, actionMetrics);
-        this.service = Executors.newFixedThreadPool(poolSize);
+        this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS, new
+                ArrayBlockingQueue<Runnable>(queueSize), new ServiceThreadFactory());
         startTimeoutAndMetrics();
     }
 
@@ -146,6 +149,16 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
         @Override
         public int compareTo(Delayed o) {
             return Long.compare(millisAbsoluteTimeout, o.getDelay(TimeUnit.MILLISECONDS));
+        }
+    }
+
+    private class ServiceThreadFactory implements ThreadFactory {
+
+        public AtomicInteger count = new AtomicInteger(0);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r, "Hello-" + count.getAndIncrement());
         }
     }
 }

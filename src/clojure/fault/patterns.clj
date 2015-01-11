@@ -1,3 +1,6 @@
 (ns fault.patterns)
 
-(defn load-balancer [])
+(set! *warn-on-reflection* true)
+
+(defn load-balancer []
+  )

@@ -23,7 +23,7 @@ public class ResilientActionTest {
 
     @Before
     public void setUp() {
-        serviceExecutor = new BlockingExecutor(1);
+        serviceExecutor = new BlockingExecutor(1, 1000);
     }
 
     @After
