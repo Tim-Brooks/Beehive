@@ -50,13 +50,13 @@ public class EventLoopExecutor implements ServiceExecutor {
     }
 
     @Override
-    public <T> ResilientFuture<T> performAction(ResilientAction<T> action, long millisTimeout) {
-        return performAction(action, new SingleWriterResilientPromise<T>(), millisTimeout);
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, long millisTimeout) {
+        return submitAction(action, new SingleWriterResilientPromise<T>(), millisTimeout);
     }
 
     @Override
-    public <T> ResilientFuture<T> performAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
-                                                long millisTimeout) {
+    public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
+                                               long millisTimeout) {
         if (!circuitBreaker.allowAction()) {
             throw new RuntimeException("Circuit is Open");
         }
@@ -68,7 +68,7 @@ public class EventLoopExecutor implements ServiceExecutor {
     }
 
     @Override
-    public <T> ResilientPromise<T> performSyncAction(ResilientAction<T> action) {
+    public <T> ResilientPromise<T> performAction(ResilientAction<T> action) {
         if (circuitBreaker.isOpen()) {
             throw new RuntimeException("Circuit is Open");
         }

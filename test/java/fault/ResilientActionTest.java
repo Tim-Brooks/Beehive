@@ -11,7 +11,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeoutException;
 
 import static org.junit.Assert.*;
 
@@ -35,7 +34,7 @@ public class ResilientActionTest {
     @Test
     public void testActionSuccess() throws Exception {
         ResilientAction<String> successAction = new SuccessAction(1);
-        ResilientFuture<String> future = serviceExecutor.performAction(successAction, 25);
+        ResilientFuture<String> future = serviceExecutor.submitAction(successAction, 25);
 
         assertEquals("Success-1", future.get());
         assertEquals(Status.SUCCESS, future.getStatus());
@@ -46,7 +45,7 @@ public class ResilientActionTest {
     @Test
     public void testActionError() throws Exception {
         ResilientAction<String> errorAction = new ErrorAction(1);
-        ResilientFuture<String> future = serviceExecutor.performAction(errorAction, 25);
+        ResilientFuture<String> future = serviceExecutor.submitAction(errorAction, 25);
 
         try {
             future.get();
@@ -62,7 +61,7 @@ public class ResilientActionTest {
     @Test
     public void testActionTimeout() throws Exception {
         ResilientAction<String> timeoutAction = new TimeoutAction();
-        ResilientFuture<String> future = serviceExecutor.performAction(timeoutAction, 25);
+        ResilientFuture<String> future = serviceExecutor.submitAction(timeoutAction, 25);
 
         assertNull(future.get());
         assertEquals(Status.TIMED_OUT, future.getStatus());
@@ -82,13 +81,13 @@ public class ResilientActionTest {
         for (int i = 0; i < 50; ++i) {
             int decider = random.nextInt(3);
             if (decider == 0) {
-                futures.add(serviceExecutor.performAction(new SuccessAction(successCount), 25));
+                futures.add(serviceExecutor.submitAction(new SuccessAction(successCount), 25));
                 ++successCount;
             } else if (decider == 1) {
-                futures.add(serviceExecutor.performAction(new ErrorAction(errorCount), 25));
+                futures.add(serviceExecutor.submitAction(new ErrorAction(errorCount), 25));
                 ++errorCount;
             } else {
-                futures.add(serviceExecutor.performAction(new TimeoutAction(), 25));
+                futures.add(serviceExecutor.submitAction(new TimeoutAction(), 25));
                 ++timeoutCount;
             }
         }

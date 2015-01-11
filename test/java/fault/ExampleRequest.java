@@ -27,7 +27,7 @@ public class ExampleRequest implements Runnable {
             List<ResilientFuture<String>> futures = new ArrayList<>();
             for (int i = 0; i < 1; ++i) {
                 try {
-                    ResilientFuture<String> result = serviceExecutor.performAction(new ResilientAction<String>() {
+                    ResilientFuture<String> result = serviceExecutor.submitAction(new ResilientAction<String>() {
                         @Override
                         public String run() throws Exception {
                             new Random().nextBoolean();

@@ -59,7 +59,7 @@ public class EventLoopExecutorTest {
     public void testExceptionThrownIfCircuitDisallowsAction() {
         when(circuitBreaker.allowAction()).thenReturn(false);
         try {
-            serviceExecutor.performAction(resilientAction, 1000);
+            serviceExecutor.submitAction(resilientAction, 1000);
         } catch (RuntimeException e) {
             assertEquals(e.getMessage(), "Circuit is Open");
             return;
@@ -70,7 +70,7 @@ public class EventLoopExecutorTest {
     @Test
     public void testScheduleActionIsSubmittedIfCircuitAllowsRequest() {
         when(circuitBreaker.allowAction()).thenReturn(true);
-        ResilientFuture<Object> future = serviceExecutor.performAction(resilientAction, 1000);
+        ResilientFuture<Object> future = serviceExecutor.submitAction(resilientAction, 1000);
 
         verify(toSchedule).offer(messageCaptor.capture());
 

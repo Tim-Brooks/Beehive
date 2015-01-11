@@ -20,7 +20,7 @@ public class BlockingExecutorTest {
 
     @Test
     public void testTimeoutScheduled() throws Exception {
-        ResilientFuture<String> future = blockingExecutor.performAction(new ResilientAction<String>() {
+        ResilientFuture<String> future = blockingExecutor.submitAction(new ResilientAction<String>() {
             @Override
             public String run() throws Exception {
                 Thread.sleep(10000L);

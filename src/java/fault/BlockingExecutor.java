@@ -34,13 +34,13 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     }
 
     @Override
-    public <T> ResilientFuture<T> performAction(final ResilientAction<T> action, long millisTimeout) {
-        return performAction(action, new MultipleWriterResilientPromise<T>(), millisTimeout);
+    public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, long millisTimeout) {
+        return submitAction(action, new MultipleWriterResilientPromise<T>(), millisTimeout);
     }
 
     @Override
-    public <T> ResilientFuture<T> performAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
-                                                long millisTimeout) {
+    public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
+                                               long millisTimeout) {
         if (!circuitBreaker.allowAction()) {
             throw new RuntimeException("Circuit is Open");
         }
@@ -65,7 +65,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     }
 
     @Override
-    public <T> ResilientPromise<T> performSyncAction(final ResilientAction<T> action) {
+    public <T> ResilientPromise<T> performAction(final ResilientAction<T> action) {
         ResilientPromise<T> promise = new SingleWriterResilientPromise<>();
         if (!circuitBreaker.allowAction()) {
             throw new RuntimeException("Circuit is Open");

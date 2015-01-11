@@ -8,9 +8,9 @@
 (defn service [pool-size]
   (s/service-executor pool-size))
 
-(defn perform-action [^ServiceExecutor service f time-out-ms]
+(defn submit-action [^ServiceExecutor service f time-out-ms]
   (f/->CLJResilientFuture
-    (.promise ^ResilientFuture (.performAction service
+    (.promise ^ResilientFuture (.submitAction service
                                               (reify ResilientAction
                                                 (run [_] (f)))
                                               time-out-ms))))
