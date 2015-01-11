@@ -1,7 +1,7 @@
 (ns fault.core
   (:require [fault.future :as f]
             [fault.service :as s])
-  (:import (fault ServiceExecutor ResilientAction ResilientFuture)))
+  (:import (fault ServiceExecutor ResilientAction ResilientFuture ResilientPromise)))
 
 (set! *warn-on-reflection* true)
 
@@ -14,3 +14,9 @@
                                               (reify ResilientAction
                                                 (run [_] (f)))
                                               time-out-ms))))
+
+(defn perform-action [^ServiceExecutor service f]
+  (f/->CLJResilientFuture
+    ^ResilientPromise (.performAction service
+                                      (reify ResilientAction
+                                        (run [_] (f))))))
