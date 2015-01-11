@@ -10,7 +10,7 @@ import java.util.concurrent.TimeoutException;
  */
 public class ResilientFuture<T> implements Future {
 
-    private final ResilientPromise<T> promise;
+    public final ResilientPromise<T> promise;
 
     public ResilientFuture(ResilientPromise<T> promise) {
         this.promise = promise;

@@ -1,4 +1,4 @@
-(ns fault.promise
+(ns fault.future
   (:import (fault ResilientPromise Status)
            (clojure.lang IDeref IBlockingDeref IPending ILookup)))
 
@@ -11,7 +11,7 @@
     (= Status/ERROR status-enum) :error
     (= Status/TIMED_OUT status-enum) :timed-out))
 
-(deftype CLJResilientPromise [^ResilientPromise promise]
+(deftype CLJResilientFuture [^ResilientPromise promise]
   IDeref
   (deref [this] (or (.awaitResult promise) (.getError promise) (:status this)))
   IBlockingDeref

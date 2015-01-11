@@ -31,7 +31,6 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
         super(circuitBreaker, actionMetrics);
         this.service = Executors.newFixedThreadPool(poolSize);
         startTimeoutAndMetrics();
-
     }
 
     @Override
