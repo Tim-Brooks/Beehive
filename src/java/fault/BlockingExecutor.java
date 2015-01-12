@@ -32,7 +32,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     public BlockingExecutor(int poolSize, int queueSize, ActionMetrics actionMetrics, CircuitBreaker circuitBreaker) {
         super(circuitBreaker, actionMetrics);
         this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS, new
-                ArrayBlockingQueue<Runnable>(queueSize), new ServiceThreadFactory());
+                ArrayBlockingQueue<Runnable>(queueSize), new ServiceThreadFactory("Hello"));
         startTimeoutAndMetrics();
     }
 
@@ -154,11 +154,16 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
 
     private class ServiceThreadFactory implements ThreadFactory {
 
-        public AtomicInteger count = new AtomicInteger(0);
+        private final String name;
+        public final AtomicInteger count = new AtomicInteger(0);
+
+        public ServiceThreadFactory(String name) {
+            this.name = name;
+        }
 
         @Override
         public Thread newThread(Runnable r) {
-            return new Thread(r, "Hello-" + count.getAndIncrement());
+            return new Thread(r, name + "-" + count.getAndIncrement());
         }
     }
 }
