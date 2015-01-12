@@ -18,21 +18,31 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     private final ExecutorService managingService = Executors.newFixedThreadPool(2);
     private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<ResilientPromise<?>> metricsQueue = new LinkedBlockingQueue<>();
+    private final String name;
 
     public BlockingExecutor(int poolSize, int queueSize) {
-        this(poolSize, queueSize, new SingleWriterActionMetrics(3600));
+        this(poolSize, queueSize, null);
     }
 
-    public BlockingExecutor(int poolSize, int queueSize, ActionMetrics actionMetrics) {
-        this(poolSize, queueSize, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig
-                .BreakerConfigBuilder
-                ().failureThreshold(20).timePeriodInMillis(5000).build()));
+    public BlockingExecutor(int poolSize, int queueSize, String name) {
+        this(poolSize, queueSize, name, new SingleWriterActionMetrics(3600));
     }
 
-    public BlockingExecutor(int poolSize, int queueSize, ActionMetrics actionMetrics, CircuitBreaker circuitBreaker) {
+    public BlockingExecutor(int poolSize, int queueSize, String name, ActionMetrics actionMetrics) {
+        this(poolSize, queueSize, name, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig
+                .BreakerConfigBuilder().failureThreshold(20).timePeriodInMillis(5000).build()));
+    }
+
+    public BlockingExecutor(int poolSize, int queueSize, String name, ActionMetrics actionMetrics, CircuitBreaker
+            circuitBreaker) {
         super(circuitBreaker, actionMetrics);
-        this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS, new
-                ArrayBlockingQueue<Runnable>(queueSize), new ServiceThreadFactory("Hello"));
+        if (name == null) {
+            this.name = this.toString();
+        } else {
+            this.name = name;
+        }
+        this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS,
+                new ArrayBlockingQueue<Runnable>(queueSize), new ServiceThreadFactory());
         startTimeoutAndMetrics();
     }
 
@@ -154,12 +164,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
 
     private class ServiceThreadFactory implements ThreadFactory {
 
-        private final String name;
         public final AtomicInteger count = new AtomicInteger(0);
-
-        public ServiceThreadFactory(String name) {
-            this.name = name;
-        }
 
         @Override
         public Thread newThread(Runnable r) {
