@@ -57,23 +57,28 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
         if (!circuitBreaker.allowAction()) {
             throw new RejectedActionException(RejectedActionException.Reason.CIRCUIT_CLOSED);
         }
-        final Future<Void> f = service.submit(new Callable<Void>() {
-            @Override
-            public Void call() {
-                try {
-                    T result = action.run();
-                    if (promise.deliverResult(result)) {
-                        metricsQueue.offer(promise);
+        try {
+            final Future<Void> f = service.submit(new Callable<Void>() {
+                @Override
+                public Void call() {
+                    try {
+                        T result = action.run();
+                        if (promise.deliverResult(result)) {
+                            metricsQueue.offer(promise);
+                        }
+                    } catch (Exception e) {
+                        if (promise.deliverError(e)) {
+                            metricsQueue.offer(promise);
+                        }
                     }
-                } catch (Exception e) {
-                    if (promise.deliverError(e)) {
-                        metricsQueue.offer(promise);
-                    }
+                    return null;
                 }
-                return null;
-            }
-        });
-        timeoutQueue.offer(new ActionTimeout(promise, millisTimeout, f));
+            });
+            timeoutQueue.offer(new ActionTimeout(promise, millisTimeout, f));
+        } catch (RejectedExecutionException e) {
+            throw new RejectedActionException(RejectedActionException.Reason.QUEUE_FULL);
+        }
+
         return new ResilientFuture<>(promise);
     }
 
