@@ -80,13 +80,29 @@ public class BlockingExecutorTest {
     }
 
     @Test
-    public void futureIsPendingUntilActionFinished() throws Exception {
+    public void futureIsPendingUntilSubmittedActionFinished() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
         ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.blockedAction(latch), Long.MAX_VALUE);
         assertEquals(Status.PENDING, f.getStatus());
         latch.countDown();
         f.get();
         assertEquals(Status.SUCCESS, f.getStatus());
+    }
+
+    @Test
+    public void performActionCompletesAction() throws Exception {
+        ResilientPromise<String> promise = blockingExecutor.performAction(TestActions.successAction(1));
+        assertEquals("Success", promise.getResult());
+    }
+
+    @Test
+    public void promisePassedToExecutorWillBeCompleted() throws Exception {
+        MultipleWriterResilientPromise<String> promise = new MultipleWriterResilientPromise<>();
+        ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.successAction(50, "Same Promise"),
+                promise, Long.MAX_VALUE);
+
+        assertEquals("Same Promise", promise.awaitResult());
+        assertEquals(promise, f.promise);
     }
 
     @Test

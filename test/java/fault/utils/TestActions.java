@@ -21,11 +21,15 @@ public class TestActions {
     }
 
     public static ResilientAction<String> successAction(final long waitTime) {
+        return successAction(waitTime, "Success");
+    }
+
+    public static ResilientAction<String> successAction(final long waitTime, final String result) {
         return new ResilientAction<String>() {
             @Override
             public String run() throws Exception {
                 Thread.sleep(waitTime);
-                return "Success";
+                return result;
             }
         };
     }
