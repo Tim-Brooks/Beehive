@@ -123,7 +123,6 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     public void shutdown() {
         service.shutdown();
         managingService.shutdown();
-        managingService.shutdown();
     }
 
     private void startTimeoutAndMetrics() {
