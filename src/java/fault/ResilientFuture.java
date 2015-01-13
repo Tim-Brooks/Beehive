@@ -22,6 +22,7 @@ public class ResilientFuture<T> implements Future {
         if (promise.isError()) {
             throw new ExecutionException(promise.getError());
         }
+
         return promise.getResult();
     }
 

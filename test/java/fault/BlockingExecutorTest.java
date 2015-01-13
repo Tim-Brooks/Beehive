@@ -7,10 +7,9 @@ import org.junit.Test;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 
 /**
@@ -125,16 +124,27 @@ public class BlockingExecutorTest {
     }
 
     @Test
-    public void testTimeoutScheduled() throws Exception {
-        ResilientFuture<String> future = blockingExecutor.submitAction(new ResilientAction<String>() {
-            @Override
-            public String run() throws Exception {
-                Thread.sleep(10000L);
-                return "Hello";
-            }
-        }, 1);
-        future.get();
+    public void submittedActionWillTimeout() throws Exception {
+        ResilientFuture<String> future = blockingExecutor.submitAction(TestActions.blockedAction(new CountDownLatch
+                (1)), 1);
 
+        assertNull(future.get());
         assertEquals(Status.TIMED_OUT, future.getStatus());
+    }
+
+    @Test
+    public void erredActionWillReturnedException() {
+        RuntimeException exception = new RuntimeException();
+        ResilientFuture<String> future = blockingExecutor.submitAction(TestActions.erredAction(exception), 100);
+
+        try {
+            future.get();
+            fail();
+        } catch (InterruptedException e) {
+            fail();
+        } catch (ExecutionException e) {
+            assertEquals(exception, e.getCause());
+        }
+        assertEquals(Status.ERROR, future.getStatus());
     }
 }

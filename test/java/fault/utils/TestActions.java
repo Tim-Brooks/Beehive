@@ -33,4 +33,13 @@ public class TestActions {
             }
         };
     }
+
+    public static ResilientAction<String> erredAction(final Exception exception) {
+        return new ResilientAction<String>() {
+            @Override
+            public String run() throws Exception {
+                throw exception;
+            }
+        };
+    }
 }
