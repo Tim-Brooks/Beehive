@@ -6,6 +6,8 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -31,8 +33,9 @@ public class BlockingExecutorTest {
     @Test
     public void actionNotScheduledIfMaxConcurrencyLevelViolated() {
         blockingExecutor = new BlockingExecutor(1, 2);
-        blockingExecutor.submitAction(TestActions.blockedAction(), Long.MAX_VALUE);
-        blockingExecutor.submitAction(TestActions.blockedAction(), Long.MAX_VALUE);
+        CountDownLatch latch = new CountDownLatch(1);
+        blockingExecutor.submitAction(TestActions.blockedAction(latch), Long.MAX_VALUE);
+        blockingExecutor.submitAction(TestActions.blockedAction(latch), Long.MAX_VALUE);
 
         try {
             blockingExecutor.submitAction(TestActions.successAction(1), Long.MAX_VALUE);
@@ -46,6 +49,7 @@ public class BlockingExecutorTest {
         } catch (RejectedActionException e) {
             assertEquals(RejectedActionException.Reason.MAX_CONCURRENCY_LEVEL_EXCEEDED, e.reason);
         }
+        latch.countDown();
     }
 
     @Test
@@ -66,6 +70,25 @@ public class BlockingExecutorTest {
                 }
             }
         }
+    }
+
+    @Test
+    public void actionIsSubmittedAndRan() throws Exception {
+        ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.successAction(1), 500);
+
+        assertEquals("Success", f.get());
+        assertEquals(Status.SUCCESS, f.getStatus());
+    }
+
+    @Test
+    public void futureIsPendingUntilActionFinished() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.blockedAction(latch), Long
+                .MAX_VALUE);
+        assertEquals(Status.PENDING, f.getStatus());
+        latch.countDown();
+        f.get();
+        assertEquals(Status.SUCCESS, f.getStatus());
     }
 
     @Test

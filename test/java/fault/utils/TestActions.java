@@ -9,15 +9,13 @@ import java.util.concurrent.CountDownLatch;
  */
 public class TestActions {
 
-    public static ResilientAction<String> blockedAction() {
+    public static ResilientAction<String> blockedAction(final CountDownLatch blockingLatch) {
         return new ResilientAction<String>() {
-
-            private CountDownLatch blockingLatch = new CountDownLatch(1);
 
             @Override
             public String run() throws Exception {
                 blockingLatch.await();
-                return "Failure";
+                return "Success";
             }
         };
     }
