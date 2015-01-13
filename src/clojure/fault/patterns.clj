@@ -4,17 +4,25 @@
 
 (set! *warn-on-reflection* true)
 
-(defn- next-service [last-idx current]
+(defn- next-idx [last-idx current]
   (if (<= last-idx current)
     0
     (inc current)))
 
+(defn- next-service-seq [next-fn current]
+  (lazy-seq
+    (cons current
+          (next-service-seq next-fn (next-fn current)))))
+
 (defn load-balancer [key->service]
-  (let [next-fn (partial next-service (dec (count key->service)))
+  (let [next-fn (partial next-idx (dec (count key->service)))
         state (atom -1)
         key-service-tuples (vec key->service)]
     (fn []
-      (nth key-service-tuples (swap! state next-fn)))))
+      (let [start-idx (swap! state next-fn)]
+        (map #(nth key-service-tuples %) (take (count key->service)
+                                               (next-service-seq next-fn
+                                                                 start-idx)))))))
 
 (defn submit-load-balanced-action [load-balancer key->fn timeout-millis]
   (let [[key {:keys [service]}] (load-balancer)]
