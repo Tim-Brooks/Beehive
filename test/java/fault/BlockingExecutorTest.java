@@ -7,7 +7,6 @@ import org.junit.Test;
 
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -83,8 +82,7 @@ public class BlockingExecutorTest {
     @Test
     public void futureIsPendingUntilActionFinished() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
-        ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.blockedAction(latch), Long
-                .MAX_VALUE);
+        ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.blockedAction(latch), Long.MAX_VALUE);
         assertEquals(Status.PENDING, f.getStatus());
         latch.countDown();
         f.get();
