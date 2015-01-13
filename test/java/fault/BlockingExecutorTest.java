@@ -35,7 +35,13 @@ public class BlockingExecutorTest {
         blockingExecutor.submitAction(TestActions.blockedAction(), Long.MAX_VALUE);
 
         try {
-            blockingExecutor.submitAction(TestActions.blockedAction(), Long.MAX_VALUE);
+            blockingExecutor.submitAction(TestActions.successAction(1), Long.MAX_VALUE);
+            fail();
+        } catch (RejectedActionException e) {
+            assertEquals(RejectedActionException.Reason.MAX_CONCURRENCY_LEVEL_EXCEEDED, e.reason);
+        }
+        try {
+            blockingExecutor.performAction(TestActions.successAction(1));
             fail();
         } catch (RejectedActionException e) {
             assertEquals(RejectedActionException.Reason.MAX_CONCURRENCY_LEVEL_EXCEEDED, e.reason);
