@@ -147,4 +147,7 @@ public class BlockingExecutorTest {
         }
         assertEquals(Status.ERROR, future.getStatus());
     }
+
+    // @TODO Write tests for metrics. And tests that ensure metrics are updated even if a different service completes
+    // @TODO promise. Add circuit breaker tests. Add queue limit test? Is that possible?
 }
