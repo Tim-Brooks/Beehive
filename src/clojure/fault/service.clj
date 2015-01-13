@@ -61,8 +61,8 @@
 (defn open-circuit! [{:keys [circuit-breaker]}]
   (.forceOpen ^CircuitBreaker circuit-breaker))
 
-(defn service-executor [pool-size]
-  (let [executor (BlockingExecutor. pool-size)]
+(defn service-executor [pool-size max-concurrency]
+  (let [executor (BlockingExecutor. pool-size max-concurrency)]
     {:service executor
      :metrics (->CLJMetrics (.getActionMetrics executor))
      :circuit-breaker (->CLJBreaker (.getCircuitBreaker executor))}))

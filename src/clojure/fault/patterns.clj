@@ -1,4 +1,5 @@
 (ns fault.patterns
+  (:require [fault.core :as core])
   (:import (fault ServiceExecutor)))
 
 (set! *warn-on-reflection* true)
@@ -17,8 +18,10 @@
 
 (defn submit-load-balanced-action [load-balancer key->fn timeout-millis]
   (let [[key {:keys [service]}] (load-balancer)]
-    (.submitAction ^ServiceExecutor service (get key->fn key) timeout-millis)))
+    (core/submit-action ^ServiceExecutor service
+                        (get key->fn key)
+                        timeout-millis)))
 
 (defn perform-load-balanced-action [load-balancer key->fn]
   (let [[key {:keys [service]}] (load-balancer)]
-    (.performAction ^ServiceExecutor service (get key->fn key))))
+    (core/perform-action service (get key->fn key))))

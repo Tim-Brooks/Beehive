@@ -5,8 +5,8 @@
 
 (set! *warn-on-reflection* true)
 
-(defn service [pool-size]
-  (s/service-executor pool-size))
+(defn service [pool-size max-concurrency]
+  (s/service-executor pool-size max-concurrency))
 
 (defn submit-action [^ServiceExecutor service f time-out-ms]
   (f/->CLJResilientFuture
