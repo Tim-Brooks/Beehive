@@ -3,12 +3,15 @@ package fault;
 import fault.circuit.CircuitBreaker;
 import fault.metrics.ActionMetrics;
 
+import java.util.UUID;
+
 /**
  * Created by timbrooks on 12/23/14.
  */
 public class AbstractServiceExecutor {
     protected final ActionMetrics actionMetrics;
     protected final CircuitBreaker circuitBreaker;
+    protected final UUID uuid = UUID.randomUUID();
 
     public AbstractServiceExecutor(CircuitBreaker circuitBreaker, ActionMetrics actionMetrics) {
         this.circuitBreaker = circuitBreaker;
@@ -21,5 +24,9 @@ public class AbstractServiceExecutor {
 
     public CircuitBreaker getCircuitBreaker() {
         return circuitBreaker;
+    }
+
+    public UUID getExecutorUUID() {
+        return uuid;
     }
 }

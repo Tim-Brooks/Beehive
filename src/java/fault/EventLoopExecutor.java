@@ -17,10 +17,8 @@ import java.util.concurrent.Executors;
 /**
  * Created by timbrooks on 11/13/14.
  */
-public class EventLoopExecutor implements ServiceExecutor {
+public class EventLoopExecutor extends AbstractServiceExecutor implements ServiceExecutor {
 
-    private final ActionMetrics actionMetrics;
-    private final CircuitBreaker circuitBreaker;
     private final Scheduler scheduler;
     private final ScheduleContext schedulingContext;
 
@@ -42,9 +40,8 @@ public class EventLoopExecutor implements ServiceExecutor {
 
     public EventLoopExecutor(ActionMetrics actionMetrics, CircuitBreaker circuitBreaker, ScheduleContext
             scheduleContext, Scheduler scheduler) {
+        super(circuitBreaker, actionMetrics);
         this.scheduler = scheduler;
-        this.actionMetrics = actionMetrics;
-        this.circuitBreaker = circuitBreaker;
         this.schedulingContext = scheduleContext;
         this.scheduler.scheduleServiceExecutor(scheduleContext);
     }
@@ -92,16 +89,6 @@ public class EventLoopExecutor implements ServiceExecutor {
         }
 
         return resilientPromise;
-    }
-
-    @Override
-    public ActionMetrics getActionMetrics() {
-        return actionMetrics;
-    }
-
-    @Override
-    public CircuitBreaker getCircuitBreaker() {
-        return circuitBreaker;
     }
 
     @Override

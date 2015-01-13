@@ -1,5 +1,7 @@
 package fault;
 
+import java.util.UUID;
+
 /**
  * Created by timbrooks on 12/19/14.
  */
@@ -29,4 +31,8 @@ public interface ResilientPromise<T> {
     public boolean isError();
 
     public boolean isTimedOut();
+
+    public UUID getCompletedBy();
+
+    public void setCompletedBy(UUID executorUUID);
 }

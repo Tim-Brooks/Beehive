@@ -1,5 +1,6 @@
 package fault;
 
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -13,6 +14,7 @@ public abstract class AbstractResilientPromise<T> implements ResilientPromise<T>
     protected AtomicReference<Status> status = new AtomicReference<>(Status.PENDING);
     // TODO: Does this act as a memory barrier?
     protected CountDownLatch latch = new CountDownLatch(1);
+    private UUID completingServiceUUID;
 
     @Override
     public void await() throws InterruptedException {
@@ -63,5 +65,15 @@ public abstract class AbstractResilientPromise<T> implements ResilientPromise<T>
     @Override
     public boolean isTimedOut() {
         return status.get() == Status.TIMED_OUT;
+    }
+
+    @Override
+    public void setCompletedBy(UUID uuid) {
+        this.completingServiceUUID = uuid;
+    }
+
+    @Override
+    public UUID getCompletedBy() {
+        return completingServiceUUID;
     }
 }

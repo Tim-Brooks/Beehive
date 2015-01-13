@@ -6,6 +6,7 @@ import fault.circuit.DefaultCircuitBreaker;
 import fault.metrics.ActionMetrics;
 import fault.metrics.SingleWriterActionMetrics;
 
+import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -70,10 +71,16 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                     try {
                         T result = action.run();
                         if (promise.deliverResult(result)) {
+                            promise.setCompletedBy(uuid);
+                            metricsQueue.offer(promise);
+                        } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise);
                         }
                     } catch (Exception e) {
                         if (promise.deliverError(e)) {
+                            promise.setCompletedBy(uuid);
+                            metricsQueue.offer(promise);
+                        } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise);
                         }
                     } finally {
@@ -149,9 +156,12 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                         ActionTimeout timeout = timeoutQueue.take();
                         ResilientPromise<?> promise = timeout.promise;
                         if (promise.setTimedOut()) {
+                            promise.setCompletedBy(uuid);
                             timeout.future.cancel(true);
                             actionMetrics.reportActionResult(promise.getStatus());
                             circuitBreaker.informBreakerOfResult(promise.isSuccessful());
+                        } else if (!uuid.equals(promise.getCompletedBy())) {
+                            metricsQueue.offer(promise);
                         }
                     } catch (InterruptedException e) {
                         break;

@@ -9,6 +9,7 @@ import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 
 
@@ -103,6 +104,24 @@ public class BlockingExecutorTest {
 
         assertEquals("Same Promise", promise.awaitResult());
         assertEquals(promise, f.promise);
+        assertEquals(blockingExecutor.getExecutorUUID(), promise.getCompletedBy());
+    }
+
+    @Test
+    public void promiseWillNotBeCompletedTwice() throws Exception {
+        CountDownLatch latch = new CountDownLatch(1);
+        MultipleWriterResilientPromise<String> promise = new MultipleWriterResilientPromise<>();
+
+        blockingExecutor.submitAction(TestActions.blockedAction(latch), promise, Long.MAX_VALUE);
+
+        promise.deliverResult("CompleteOnThisThread");
+        latch.countDown();
+
+        for (int i = 0; i < 10; ++i) {
+            Thread.sleep(5);
+            assertEquals("CompleteOnThisThread", promise.awaitResult());
+            assertNull(promise.getCompletedBy());
+        }
     }
 
     @Test

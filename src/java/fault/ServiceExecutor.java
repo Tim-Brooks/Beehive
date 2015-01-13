@@ -3,19 +3,24 @@ package fault;
 import fault.circuit.CircuitBreaker;
 import fault.metrics.ActionMetrics;
 
+import java.util.UUID;
+
 /**
  * Created by timbrooks on 12/22/14.
  */
 public interface ServiceExecutor {
-    <T> ResilientFuture<T> submitAction(ResilientAction<T> action, long millisTimeout);
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, long millisTimeout);
 
-    <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise, long millisTimeout);
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise, long
+            millisTimeout);
 
-    <T> ResilientPromise<T> performAction(ResilientAction<T> action);
+    public <T> ResilientPromise<T> performAction(ResilientAction<T> action);
 
-    ActionMetrics getActionMetrics();
+    public ActionMetrics getActionMetrics();
 
-    CircuitBreaker getCircuitBreaker();
+    public CircuitBreaker getCircuitBreaker();
+
+    public UUID getExecutorUUID();
 
     void shutdown();
 }
