@@ -15,7 +15,7 @@ public class BlockingExecutorTest {
 
     @Before
     public void setUp() {
-        blockingExecutor = new BlockingExecutor(1, 1000);
+        blockingExecutor = new BlockingExecutor(1, 30);
     }
 
     @Test

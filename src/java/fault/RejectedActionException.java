@@ -11,5 +11,5 @@ public class RejectedActionException extends RuntimeException {
         this.reason = reason;
     }
 
-    public enum Reason {CIRCUIT_CLOSED, QUEUE_FULL;}
+    public enum Reason {CIRCUIT_CLOSED, QUEUE_FULL, MAX_CONCURRENCY_LEVEL_EXCEEDED;}
 }

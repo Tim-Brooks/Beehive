@@ -14,35 +14,43 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class BlockingExecutor extends AbstractServiceExecutor implements ServiceExecutor {
 
+    private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
     private final ExecutorService service;
     private final ExecutorService managingService = Executors.newFixedThreadPool(2);
     private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<ResilientPromise<?>> metricsQueue = new LinkedBlockingQueue<>();
     private final String name;
+    private final Semaphore semaphore;
 
-    public BlockingExecutor(int poolSize, int queueSize) {
-        this(poolSize, queueSize, null);
+    public BlockingExecutor(int poolSize, int concurrencyLevel) {
+        this(poolSize, concurrencyLevel, null);
     }
 
-    public BlockingExecutor(int poolSize, int queueSize, String name) {
-        this(poolSize, queueSize, name, new SingleWriterActionMetrics(3600));
+    public BlockingExecutor(int poolSize, int concurrencyLevel, String name) {
+        this(poolSize, concurrencyLevel, name, new SingleWriterActionMetrics(3600));
     }
 
-    public BlockingExecutor(int poolSize, int queueSize, String name, ActionMetrics actionMetrics) {
-        this(poolSize, queueSize, name, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig
+    public BlockingExecutor(int poolSize, int concurrencyLevel, String name, ActionMetrics actionMetrics) {
+        this(poolSize, concurrencyLevel, name, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig
                 .BreakerConfigBuilder().failureThreshold(20).timePeriodInMillis(5000).build()));
     }
 
-    public BlockingExecutor(int poolSize, int queueSize, String name, ActionMetrics actionMetrics, CircuitBreaker
+    public BlockingExecutor(int poolSize, int concurrencyLevel, String name, ActionMetrics actionMetrics, CircuitBreaker
             circuitBreaker) {
         super(circuitBreaker, actionMetrics);
+        if (concurrencyLevel > MAX_CONCURRENCY_LEVEL) {
+            throw new RuntimeException("Concurrency Level \"" + concurrencyLevel + "\" is greater than the allowed " +
+                    "maximum: " + MAX_CONCURRENCY_LEVEL + ".");
+        }
+
         if (name == null) {
             this.name = this.toString();
         } else {
             this.name = name;
         }
+        this.semaphore = new Semaphore(concurrencyLevel);
         this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS,
-                new ArrayBlockingQueue<Runnable>(queueSize), new ServiceThreadFactory());
+                new ArrayBlockingQueue<Runnable>(concurrencyLevel * 2), new ServiceThreadFactory());
         startTimeoutAndMetrics();
     }
 
@@ -54,6 +62,9 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     @Override
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                long millisTimeout) {
+        if (!semaphore.aquirePermit()) {
+            throw new RejectedActionException(RejectedActionException.Reason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+        }
         if (!circuitBreaker.allowAction()) {
             throw new RejectedActionException(RejectedActionException.Reason.CIRCUIT_CLOSED);
         }
@@ -70,6 +81,8 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                         if (promise.deliverError(e)) {
                             metricsQueue.offer(promise);
                         }
+                    } finally {
+                        semaphore.releasePermit();
                     }
                     return null;
                 }
@@ -85,6 +98,9 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     @Override
     public <T> ResilientPromise<T> performAction(final ResilientAction<T> action) {
         ResilientPromise<T> promise = new SingleWriterResilientPromise<>();
+        if (!semaphore.aquirePermit()) {
+            throw new RejectedActionException(RejectedActionException.Reason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+        }
         if (!circuitBreaker.allowAction()) {
             throw new RejectedActionException(RejectedActionException.Reason.CIRCUIT_CLOSED);
         }
@@ -96,7 +112,10 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
         } catch (Exception e) {
             promise.deliverError(e);
         }
+
         metricsQueue.offer(promise);
+        semaphore.releasePermit();
+
         return promise;
     }
 
