@@ -34,7 +34,7 @@
   (let [[key {:keys [service]}] (load-balancer)]
     (core/perform-action service (get key->fn key))))
 
-(defn shot-gun [key->service action-count]
+(defn shotgun [key->service action-count]
   (let [key-service-tuples (vec key->service)
         service-count (count key->service)
         rand-fn (fn [] (rand-int service-count))]
