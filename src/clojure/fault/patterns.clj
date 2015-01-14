@@ -33,3 +33,21 @@
 (defn perform-load-balanced-action [load-balancer key->fn]
   (let [[key {:keys [service]}] (load-balancer)]
     (core/perform-action service (get key->fn key))))
+
+(defn shot-gun [key->service action-count]
+  (let [key-service-tuples (vec key->service)
+        service-count (count key->service)
+        rand-fn (fn [] (rand-int service-count))]
+    (assert (>= service-count action-count))
+    (if (= service-count action-count)
+      (fn []
+        key-service-tuples)
+      (fn []
+        (map #(nth key-service-tuples %)
+             (reduce (fn [acc i]
+                       (let [acc1 (conj! acc i)]
+                         (if (= action-count (count acc1))
+                           (reduced (persistent! acc1))
+                           acc1)))
+                     (transient #{})
+                     (repeatedly rand-fn)))))))
