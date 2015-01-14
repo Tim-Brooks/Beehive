@@ -16,9 +16,9 @@
   (deref [this] (or (.awaitResult promise) (.getError promise) (:status this)))
   IBlockingDeref
   (deref
-    [_ timeout-ms timeout-val]
+    [this timeout-ms timeout-val]
     (if (.await promise timeout-ms)
-      (or (.getResult promise) (.getError promise) :timed-out)
+      (or (.getResult promise) (.getError promise) (:status this))
       timeout-val))
   IPending
   (isRealized [_]

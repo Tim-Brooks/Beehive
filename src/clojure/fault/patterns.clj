@@ -9,10 +9,6 @@
 
 (set! *warn-on-reflection* true)
 
-(defn- wrap-in-action [fn]
-  (reify ResilientAction
-    (run [_] (fn))))
-
 (defn- next-idx [last-idx current]
   (if (<= last-idx current)
     0
@@ -28,16 +24,16 @@
                                                (iterate next-fn start-idx)))))))
 
 (defn submit-load-balanced-action [load-balancer key->fn timeout-millis]
-  (some (fn [[key {:keys [service]}]]
-          (try (core/submit-action ^ServiceExecutor service
-                                   (wrap-in-action (get key->fn key))
+  (some (fn [[key service]]
+          (try (core/submit-action service
+                                   (get key->fn key)
                                    timeout-millis)
                (catch RejectedActionException _ nil)))
         (load-balancer)))
 
 (defn perform-load-balanced-action [load-balancer key->fn]
-  (some (fn [[key {:keys [service]}]]
-          (try (core/perform-action service (wrap-in-action (get key->fn key)))
+  (some (fn [[key service]]
+          (try (core/perform-action service (get key->fn key))
                (catch RejectedActionException _ nil)))
         (load-balancer)))
 
@@ -61,9 +57,9 @@
 
 (defn submit-shotgun-actions [shotgun key->fn timeout-millis]
   (let [^ResilientPromise promise (MultipleWriterResilientPromise.)]
-    (doseq [[key {:keys [service]}] (shotgun)]
-      (.submitAction ^ServiceExecutor service
-                     (wrap-in-action (get key->fn key))
+    (doseq [[key service] (shotgun)]
+      (.submitAction ^ServiceExecutor (:service service)
+                     (reify ResilientAction (run [_] (get key->fn key)))
                      promise
                      timeout-millis))
     (future/->CLJResilientFuture promise)))
