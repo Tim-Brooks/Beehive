@@ -8,15 +8,10 @@
 (defn service [pool-size max-concurrency]
   (s/service-executor pool-size max-concurrency))
 
-(defn submit-action [{:keys [service]} f time-out-ms]
+(defn submit-action [service f time-out-ms]
   (f/->CLJResilientFuture
-    (.promise ^ResilientFuture (.submitAction ^ServiceExecutor service
-                                              (reify ResilientAction
-                                                (run [_] (f)))
-                                              time-out-ms))))
+    (.promise ^ResilientFuture (s/submit-action service f time-out-ms))))
 
-(defn perform-action [{:keys [service]} f]
+(defn perform-action [service f]
   (f/->CLJResilientFuture
-    ^ResilientPromise (.performAction ^ServiceExecutor service
-                                      (reify ResilientAction
-                                        (run [_] (f))))))
+    ^ResilientPromise (s/perform-action service f)))

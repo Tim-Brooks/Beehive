@@ -1,10 +1,18 @@
 (ns fault.service
-  (:import (fault BlockingExecutor)
+  (:import (fault BlockingExecutor ServiceExecutor ResilientAction)
            (fault.circuit CircuitBreaker BreakerConfig BreakerConfig$BreakerConfigBuilder)
            (clojure.lang ILookup)
            (fault.metrics ActionMetrics)))
 
 (set! *warn-on-reflection* true)
+
+(defn- wrap-action-fn [action-fn]
+  (reify ResilientAction
+    (run [_] (action-fn))))
+
+(defprotocol Service
+  (submit-action [this action-fn timeout-millis])
+  (perform-action [this action-fn]))
 
 (deftype CLJBreaker [^CircuitBreaker breaker]
   ILookup
@@ -44,6 +52,22 @@
             :successes (.getSuccessesForTimePeriod metrics millis)
             :time-outs (.getTimeoutsForTimePeriod metrics millis)}))))
 
+(deftype CLJService
+  [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]
+  Service
+  (submit-action [_ action-fn timeout-millis]
+    (.submitAction executor (wrap-action-fn action-fn) timeout-millis))
+  (perform-action [_ action-fn]
+    (.performAction executor (wrap-action-fn action-fn)))
+  ILookup
+  (valAt [this key] (.valAt this key nil))
+  (valAt [_ key default]
+    (case key
+      :metrics metrics
+      :service-executor executor
+      :breaker breaker
+      default)))
+
 (defn swap-breaker-config!
   [{:keys [circuit-breaker]}
    {:keys [time-period-in-millis failure-threshold time-to-pause-millis]}]
@@ -63,6 +87,6 @@
 
 (defn service-executor [pool-size max-concurrency]
   (let [executor (BlockingExecutor. pool-size max-concurrency)]
-    {:service executor
-     :metrics (->CLJMetrics (.getActionMetrics executor))
-     :circuit-breaker (->CLJBreaker (.getCircuitBreaker executor))}))
+    (->CLJService executor
+                  (->CLJMetrics (.getActionMetrics executor))
+                  (->CLJBreaker (.getCircuitBreaker executor)))))

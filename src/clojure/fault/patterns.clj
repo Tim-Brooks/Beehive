@@ -59,7 +59,7 @@
   (let [^ResilientPromise promise (MultipleWriterResilientPromise.)]
     (doseq [[key service] (shotgun)
             :let [fn (get key->fn key)]]
-      (.submitAction ^ServiceExecutor (:service service)
+      (.submitAction ^ServiceExecutor (:service-executor service)
                      (reify ResilientAction (run [_] (fn)))
                      promise
                      timeout-millis))

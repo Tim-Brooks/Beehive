@@ -16,9 +16,9 @@
   (alter-var-root #'service2 (fn [_] (fault/service 1 1)))
   (alter-var-root #'service3 (fn [_] (fault/service 1 1)))
   (f)
-  (.shutdown ^ServiceExecutor (:service service1))
-  (.shutdown ^ServiceExecutor (:service service2))
-  (.shutdown ^ServiceExecutor (:service service3)))
+  (.shutdown ^ServiceExecutor (:service-executor service1))
+  (.shutdown ^ServiceExecutor (:service-executor service2))
+  (.shutdown ^ServiceExecutor (:service-executor service3)))
 
 (use-fixtures :each start-and-stop)
 
