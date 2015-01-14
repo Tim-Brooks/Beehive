@@ -72,7 +72,9 @@
 (deftest shotgun
   (let [shotgun (patterns/shotgun {:service1 service1
                                    :service2 service2
-                                   :service3 service3} 2)
+                                   :service3 service3}
+                                  2
+                                  {})
         action-blocking-latch (CountDownLatch. 1)
         test-blocking-latch (CountDownLatch. 1)
         counter (atom 0)
@@ -87,21 +89,21 @@
                            result))]
     (testing "Actions submitted to multiple services"
       (is (= 1
-             @(patterns/submit-shotgun-actions shotgun
-                                               {:service1 action-fn
-                                                :service2 action-fn
-                                                :service3 action-fn}
-                                               Long/MAX_VALUE)))
+             @(patterns/submit-action-map shotgun
+                                          {:service1 action-fn
+                                           :service2 action-fn
+                                           :service3 action-fn}
+                                          Long/MAX_VALUE)))
       (.countDown action-blocking-latch)
       (.await test-blocking-latch)
       (is (= 2 @counter)))
     (testing "Result is from the the first services to response"
       (reset! counter 0)
-      (let [f (patterns/submit-shotgun-actions shotgun
-                                               {:service1 action-fn
-                                                :service2 action-fn
-                                                :service3 action-fn}
-                                               Long/MAX_VALUE)]
+      (let [f (patterns/submit-action-map shotgun
+                                          {:service1 action-fn
+                                           :service2 action-fn
+                                           :service3 action-fn}
+                                          Long/MAX_VALUE)]
         @f
         (.countDown action-blocking-latch)
         (.await test-blocking-latch)

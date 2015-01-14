@@ -13,7 +13,7 @@
   (submit-action [this action-fn timeout-millis])
   (submit-action-map [this key->fn timeout-millis])
   (perform-action [this action-fn])
-  (perform-action-map [this action-fn]))
+  (perform-action-map [this key->fn]))
 
 (deftype LoadBalancer [context load-balancer-fn]
   ComposedService
@@ -60,30 +60,46 @@
           (map #(nth key-service-tuples %)
                (take service-count (iterate next-fn start-idx))))))))
 
-(defn shotgun [key->service action-count]
+(deftype Shotgun [context shotgun-fn]
+  ComposedService
+  (submit-action [this action-fn timeout-millis]
+    (let [^ResilientPromise promise (MultipleWriterResilientPromise.)]
+      (doseq [[key service] (shotgun-fn)
+              :let [svc-context (get context key)]]
+        (.submitAction ^ServiceExecutor (:service-executor service)
+                       (reify ResilientAction (run [_] (action-fn svc-context)))
+                       promise
+                       timeout-millis))
+      (future/->CLJResilientFuture promise)))
+  (submit-action-map [this key->fn timeout-millis]
+    (let [^ResilientPromise promise (MultipleWriterResilientPromise.)]
+      (doseq [[key service] (shotgun-fn)
+              :let [fn (get key->fn key)]]
+        (.submitAction ^ServiceExecutor (:service-executor service)
+                       (reify ResilientAction (run [_] (fn)))
+                       promise
+                       timeout-millis))
+      (future/->CLJResilientFuture promise)))
+  (perform-action [this action-fn]
+    (throw (UnsupportedOperationException. "Cannot perform action with Shotgun")))
+  (perform-action-map [this key->fn]
+    (throw (UnsupportedOperationException. "Cannot perform action with Shotgun"))))
+
+(defn shotgun [key->service action-count context]
   (let [key-service-tuples (vec key->service)
         service-count (count key->service)
         rand-fn (fn [] (rand-int service-count))]
     (assert (>= service-count action-count))
-    (if (= service-count action-count)
-      (fn []
-        key-service-tuples)
-      (fn []
-        (map #(nth key-service-tuples %)
-             (reduce (fn [acc i]
-                       (let [acc1 (conj! acc i)]
-                         (if (= action-count (count acc1))
-                           (reduced (persistent! acc1))
-                           acc1)))
-                     (transient #{})
-                     (repeatedly rand-fn)))))))
-
-(defn submit-shotgun-actions [shotgun key->fn timeout-millis]
-  (let [^ResilientPromise promise (MultipleWriterResilientPromise.)]
-    (doseq [[key service] (shotgun)
-            :let [fn (get key->fn key)]]
-      (.submitAction ^ServiceExecutor (:service-executor service)
-                     (reify ResilientAction (run [_] (fn)))
-                     promise
-                     timeout-millis))
-    (future/->CLJResilientFuture promise)))
+    (->Shotgun context
+               (if (= service-count action-count)
+                 (fn []
+                   key-service-tuples)
+                 (fn []
+                   (map #(nth key-service-tuples %)
+                        (reduce (fn [acc i]
+                                  (let [acc1 (conj! acc i)]
+                                    (if (= action-count (count acc1))
+                                      (reduced (persistent! acc1))
+                                      acc1)))
+                                (transient #{})
+                                (repeatedly rand-fn))))))))
