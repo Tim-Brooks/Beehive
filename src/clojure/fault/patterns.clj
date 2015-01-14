@@ -57,9 +57,10 @@
 
 (defn submit-shotgun-actions [shotgun key->fn timeout-millis]
   (let [^ResilientPromise promise (MultipleWriterResilientPromise.)]
-    (doseq [[key service] (shotgun)]
+    (doseq [[key service] (shotgun)
+            :let [fn (get key->fn key)]]
       (.submitAction ^ServiceExecutor (:service service)
-                     (reify ResilientAction (run [_] (get key->fn key)))
+                     (reify ResilientAction (run [_] (fn)))
                      promise
                      timeout-millis))
     (future/->CLJResilientFuture promise)))

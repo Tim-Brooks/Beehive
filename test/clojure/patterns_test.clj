@@ -3,7 +3,7 @@
   (:require [fault.core :as fault]
             [fault.patterns :as patterns])
   (:import (fault ServiceExecutor)
-           (java.util.concurrent CountDownLatch)))
+           (java.util.concurrent CountDownLatch TimeUnit)))
 
 (set! *warn-on-reflection* true)
 
@@ -67,3 +67,30 @@
                                                          1000)))
 
         (.countDown latch)))))
+
+(deftest shotgun
+  (let [shotgun (patterns/shotgun {:service1 service1
+                                   :service2 service2
+                                   :service3 service3} 2)
+        action-blocking-latch (CountDownLatch. 1)
+        test-blocking-latch (CountDownLatch. 1)
+        counter (atom 0)
+        inc-fn (fn [current]
+                 (if (= 1 current)
+                   (do (.await action-blocking-latch)
+                       (inc current))
+                   (inc current)))
+        action-fn (fn [] (let [result (swap! counter inc-fn)]
+                           (when (= result 2)
+                             (.countDown test-blocking-latch))
+                           result))]
+    (testing "Actions submitted to multiple services"
+      (is (= 1
+             @(patterns/submit-shotgun-actions shotgun
+                                               {:service1 action-fn
+                                                :service2 action-fn
+                                                :service3 action-fn}
+                                               Long/MAX_VALUE)))
+      (.countDown action-blocking-latch)
+      (.await test-blocking-latch 1000 TimeUnit/MILLISECONDS)
+      (is (= 2 @counter)))))
