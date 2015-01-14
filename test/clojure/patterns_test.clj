@@ -92,5 +92,16 @@
                                                 :service3 action-fn}
                                                Long/MAX_VALUE)))
       (.countDown action-blocking-latch)
-      (.await test-blocking-latch 1000 TimeUnit/MILLISECONDS)
-      (is (= 2 @counter)))))
+      (.await test-blocking-latch)
+      (is (= 2 @counter)))
+    (testing "Result is from the the first services to response"
+      (reset! counter 0)
+      (let [f (patterns/submit-shotgun-actions shotgun
+                                               {:service1 action-fn
+                                                :service2 action-fn
+                                                :service3 action-fn}
+                                               Long/MAX_VALUE)]
+        @f
+        (.countDown action-blocking-latch)
+        (.await test-blocking-latch)
+        (is (= 1 @f))))))
