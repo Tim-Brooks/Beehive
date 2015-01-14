@@ -1,7 +1,8 @@
 (ns fault.service
-  (:import (fault BlockingExecutor ServiceExecutor ResilientAction)
+  (:require [fault.future :as f])
+  (:import (clojure.lang ILookup)
+           (fault BlockingExecutor ServiceExecutor ResilientAction ResilientFuture ResilientPromise)
            (fault.circuit CircuitBreaker BreakerConfig BreakerConfig$BreakerConfigBuilder)
-           (clojure.lang ILookup)
            (fault.metrics ActionMetrics)))
 
 (set! *warn-on-reflection* true)
@@ -56,9 +57,13 @@
   [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]
   Service
   (submit-action [_ action-fn timeout-millis]
-    (.submitAction executor (wrap-action-fn action-fn) timeout-millis))
+    (f/->CLJResilientFuture
+      (.promise ^ResilientFuture (.submitAction executor
+                                                (wrap-action-fn action-fn)
+                                                timeout-millis))))
   (perform-action [_ action-fn]
-    (.performAction executor (wrap-action-fn action-fn)))
+    (f/->CLJResilientFuture
+      ^ResilientPromise (.performAction executor (wrap-action-fn action-fn))))
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]

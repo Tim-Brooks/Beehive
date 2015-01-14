@@ -5,37 +5,60 @@
                   RejectedActionException
                   MultipleWriterResilientPromise
                   ResilientPromise
-                  ResilientAction ResilientFuture)))
+                  ResilientAction)))
 
 (set! *warn-on-reflection* true)
+
+(defprotocol ComposedService
+  (submit-action [this action-fn timeout-millis])
+  (submit-action-map [this key->fn timeout-millis])
+  (perform-action [this action-fn])
+  (perform-action-map [this action-fn]))
+
+(deftype LoadBalancer [context load-balancer-fn]
+  ComposedService
+  (submit-action [this action-fn timeout-millis]
+    (some (fn [[key service]]
+            (try (core/submit-action service
+                                     (partial action-fn (get context key))
+                                     timeout-millis)
+                 (catch RejectedActionException _ nil)))
+          (load-balancer-fn)))
+  (submit-action-map [this key->fn timeout-millis]
+    (some (fn [[key service]]
+            (try (core/submit-action service
+                                     (get key->fn key)
+                                     timeout-millis)
+                 (catch RejectedActionException _ nil)))
+          (load-balancer-fn)))
+  (perform-action [this action-fn]
+    (some (fn [[key service]]
+            (try
+              (core/perform-action service (partial action-fn (get context key)))
+              (catch RejectedActionException _ nil)))
+          (load-balancer-fn)))
+  (perform-action-map [this key->fn]
+    (some (fn [[key service]]
+            (try (core/perform-action service (get key->fn key))
+                 (catch RejectedActionException _ nil)))
+          (load-balancer-fn))))
 
 (defn- next-idx [last-idx current]
   (if (<= last-idx current)
     0
     (inc current)))
 
-(defn load-balancer [key->service]
-  (let [next-fn (partial next-idx (dec (count key->service)))
+(defn load-balancer [key->service context]
+  (let [service-count (count key->service)
+        next-fn (partial next-idx (dec service-count))
         state (atom -1)
         key-service-tuples (vec key->service)]
-    (fn []
-      (let [start-idx (swap! state next-fn)]
-        (map #(nth key-service-tuples %) (take (count key->service)
-                                               (iterate next-fn start-idx)))))))
-
-(defn submit-load-balanced-action [load-balancer key->fn timeout-millis]
-  (some (fn [[key service]]
-          (try (core/submit-action service
-                                   (get key->fn key)
-                                   timeout-millis)
-               (catch RejectedActionException _ nil)))
-        (load-balancer)))
-
-(defn perform-load-balanced-action [load-balancer key->fn]
-  (some (fn [[key service]]
-          (try (core/perform-action service (get key->fn key))
-               (catch RejectedActionException _ nil)))
-        (load-balancer)))
+    (->LoadBalancer
+      context
+      (fn []
+        (let [start-idx (swap! state next-fn)]
+          (map #(nth key-service-tuples %)
+               (take service-count (iterate next-fn start-idx))))))))
 
 (defn shotgun [key->service action-count]
   (let [key-service-tuples (vec key->service)

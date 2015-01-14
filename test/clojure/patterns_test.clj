@@ -25,18 +25,19 @@
 (deftest load-balancer
   (let [load-balancer (patterns/load-balancer {:service1 service1
                                                :service2 service2
-                                               :service3 service3})]
+                                               :service3 service3}
+                                              {})]
     (testing "Submitted Actions will be spread among services."
       (is (= #{1 2 3}
              (set (for [_ (range 3)]
-                    @(patterns/submit-load-balanced-action
+                    @(patterns/submit-action-map
                        load-balancer {:service1 (fn [] 1)
                                       :service2 (fn [] 2)
                                       :service3 (fn [] 3)}
                        1000)))))
       (is (= #{1 2 3}
              (set (for [_ (range 3)]
-                    @(patterns/perform-load-balanced-action
+                    @(patterns/perform-action-map
                        load-balancer {:service1 (fn [] 1)
                                       :service2 (fn [] 2)
                                       :service3 (fn [] 3)}))))))
@@ -44,27 +45,27 @@
       (let [latch (CountDownLatch. 1)]
         (fault/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
         (fault/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
-        (is (= 2 @(patterns/submit-load-balanced-action load-balancer
-                                                        {:service1 (fn [] 1)
-                                                         :service2 (fn [] 2)
-                                                         :service3 (fn [] 3)}
-                                                        1000)))
-        (is (= 2 @(patterns/submit-load-balanced-action load-balancer
-                                                        {:service1 (fn [] 1)
-                                                         :service2 (fn [] 2)
-                                                         :service3 (fn [] 3)}
-                                                        1000)))
+        (is (= 2 @(patterns/submit-action-map load-balancer
+                                              {:service1 (fn [] 1)
+                                               :service2 (fn [] 2)
+                                               :service3 (fn [] 3)}
+                                              1000)))
+        (is (= 2 @(patterns/submit-action-map load-balancer
+                                              {:service1 (fn [] 1)
+                                               :service2 (fn [] 2)
+                                               :service3 (fn [] 3)}
+                                              1000)))
         (.countDown latch)))
     (testing "Nil returned if all services reject action"
       (let [latch (CountDownLatch. 1)]
         (fault/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
         (fault/submit-action service2 (fn [] (.await latch)) Long/MAX_VALUE)
         (fault/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
-        (is (= nil (patterns/submit-load-balanced-action load-balancer
-                                                         {:service1 (fn [] 1)
-                                                          :service2 (fn [] 2)
-                                                          :service3 (fn [] 3)}
-                                                         1000)))
+        (is (= nil (patterns/submit-action-map load-balancer
+                                               {:service1 (fn [] 1)
+                                                :service2 (fn [] 2)
+                                                :service3 (fn [] 3)}
+                                               1000)))
 
         (.countDown latch)))))
 
