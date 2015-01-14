@@ -1,6 +1,6 @@
 (ns fault.patterns
   (:require [fault.core :as core])
-  (:import (fault ServiceExecutor)))
+  (:import (fault ServiceExecutor RejectedActionException)))
 
 (set! *warn-on-reflection* true)
 
@@ -19,14 +19,18 @@
                                                (iterate next-fn start-idx)))))))
 
 (defn submit-load-balanced-action [load-balancer key->fn timeout-millis]
-  (let [[key {:keys [service]}] (load-balancer)]
-    (core/submit-action ^ServiceExecutor service
-                        (get key->fn key)
-                        timeout-millis)))
+  (some (fn [[key {:keys [service]}]]
+          (try (core/submit-action ^ServiceExecutor service
+                                   (get key->fn key)
+                                   timeout-millis)
+               (catch RejectedActionException _ nil)))
+        (load-balancer)))
 
 (defn perform-load-balanced-action [load-balancer key->fn]
-  (let [[key {:keys [service]}] (load-balancer)]
-    (core/perform-action service (get key->fn key))))
+  (some (fn [[key {:keys [service]}]]
+          (try (core/perform-action service (get key->fn key))
+               (catch RejectedActionException _ nil)))
+        (load-balancer)))
 
 (defn shotgun [key->service action-count]
   (let [key-service-tuples (vec key->service)
@@ -45,3 +49,6 @@
                            acc1)))
                      (transient #{})
                      (repeatedly rand-fn)))))))
+
+(defn submit-shotgun-actions [shotgun key->fn timeout-millis]
+  )
