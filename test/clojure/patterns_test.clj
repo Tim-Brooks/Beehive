@@ -26,15 +26,24 @@
   (let [load-balancer (patterns/load-balancer {:service1 service1
                                                :service2 service2
                                                :service3 service3}
-                                              {})]
+                                              {:service1 {:result 1}
+                                               :service2 {:result 2}
+                                               :service3 {:result 3}})]
     (testing "Submitted Actions will be spread among services."
+      (is (= #{1 2 3}
+             (set (for [_ (range 3)]
+                    @(patterns/submit-action
+                       load-balancer (fn [context] (:result context 10)) 1000)))))
+      (is (= #{1 2 3}
+             (set (for [_ (range 3)]
+                    @(patterns/perform-action
+                       load-balancer (fn [context] (:result context 10)))))))
       (is (= #{1 2 3}
              (set (for [_ (range 3)]
                     @(patterns/submit-action-map
                        load-balancer {:service1 (fn [] 1)
                                       :service2 (fn [] 2)
-                                      :service3 (fn [] 3)}
-                       1000)))))
+                                      :service3 (fn [] 3)} 1000)))))
       (is (= #{1 2 3}
              (set (for [_ (range 3)]
                     @(patterns/perform-action-map
