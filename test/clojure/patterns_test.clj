@@ -1,9 +1,9 @@
 (ns clojure.patterns-test
   (:use [clojure.test])
   (:require [fault.core :as fault]
+            [fault.service :as service]
             [fault.patterns :as patterns])
-  (:import (fault ServiceExecutor)
-           (java.util.concurrent CountDownLatch TimeUnit)))
+  (:import (java.util.concurrent CountDownLatch)))
 
 (set! *warn-on-reflection* true)
 
@@ -16,9 +16,9 @@
   (alter-var-root #'service2 (fn [_] (fault/service 1 1)))
   (alter-var-root #'service3 (fn [_] (fault/service 1 1)))
   (f)
-  (.shutdown ^ServiceExecutor (:service-executor service1))
-  (.shutdown ^ServiceExecutor (:service-executor service2))
-  (.shutdown ^ServiceExecutor (:service-executor service3)))
+  (service/shutdown service1)
+  (service/shutdown service2)
+  (service/shutdown service3))
 
 (use-fixtures :each start-and-stop)
 

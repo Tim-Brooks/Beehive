@@ -13,7 +13,8 @@
 
 (defprotocol Service
   (submit-action [this action-fn timeout-millis])
-  (perform-action [this action-fn]))
+  (perform-action [this action-fn])
+  (shutdown [this]))
 
 (deftype CLJBreaker [^CircuitBreaker breaker]
   ILookup
@@ -64,6 +65,7 @@
   (perform-action [_ action-fn]
     (f/->CLJResilientFuture
       ^ResilientPromise (.performAction executor (wrap-action-fn action-fn))))
+  (shutdown [_] (.shutdown executor))
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]

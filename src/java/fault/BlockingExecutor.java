@@ -6,7 +6,6 @@ import fault.circuit.DefaultCircuitBreaker;
 import fault.metrics.ActionMetrics;
 import fault.metrics.SingleWriterActionMetrics;
 
-import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -173,8 +172,8 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
 
     private class ActionTimeout implements Delayed {
 
+        protected final long millisAbsoluteTimeout;
         private final ResilientPromise<?> promise;
-        private final long millisAbsoluteTimeout;
         private final Future<Void> future;
 
         public ActionTimeout(ResilientPromise<?> promise, long millisRelativeTimeout, Future<Void> future) {
@@ -190,7 +189,10 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
 
         @Override
         public int compareTo(Delayed o) {
-            return Long.compare(millisAbsoluteTimeout, o.getDelay(TimeUnit.MILLISECONDS));
+            if (o instanceof ActionTimeout) {
+                return Long.compare(millisAbsoluteTimeout, ((ActionTimeout) o).millisAbsoluteTimeout);
+            }
+            return Long.compare(getDelay(TimeUnit.MILLISECONDS), o.getDelay(TimeUnit.MILLISECONDS));
         }
     }
 
