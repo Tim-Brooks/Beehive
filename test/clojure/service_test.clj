@@ -17,7 +17,7 @@
 
 (use-fixtures :each start-and-stop)
 
-(deftest service-test
+(deftest submit-test
   (testing "Submit action returns CLJ future wrapping result"
     (let [latch (CountDownLatch. 1)
           f (service/submit-action service
@@ -44,4 +44,10 @@
       (is (= :timed-out (:status f)))
       (.countDown latch)
       (is (nil? (:result f)))
-      (is (nil? (:error f))))))
+      (is (nil? (:error f)))))
+  (testing "If concurrency level exhausted, action rejected"
+    (let [latch (CountDownLatch. 1)
+          _ (service/submit-action service (fn [] (.await latch)) Long/MAX_VALUE)
+          f (service/submit-action service (fn [] 1) Long/MAX_VALUE)]
+      (is (= :max-concurrency-level-exceeded @f))
+      (is (= :rejected (:status f))))))

@@ -5,11 +5,10 @@ package fault;
  */
 public class RejectedActionException extends RuntimeException {
 
-    public final Reason reason;
+    public final RejectedReason reason;
 
-    public RejectedActionException(Reason reason) {
+    public RejectedActionException(RejectedReason reason) {
         this.reason = reason;
     }
 
-    public enum Reason {CIRCUIT_CLOSED, QUEUE_FULL, MAX_CONCURRENCY_LEVEL_EXCEEDED;}
 }

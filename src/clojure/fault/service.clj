@@ -1,7 +1,7 @@
 (ns fault.service
   (:require [fault.future :as f])
   (:import (clojure.lang ILookup)
-           (fault BlockingExecutor ServiceExecutor ResilientAction ResilientFuture ResilientPromise)
+           (fault BlockingExecutor ServiceExecutor ResilientAction ResilientFuture ResilientPromise RejectedActionException)
            (fault.circuit CircuitBreaker BreakerConfig BreakerConfig$BreakerConfigBuilder)
            (fault.metrics ActionMetrics)))
 
@@ -58,13 +58,17 @@
   [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]
   Service
   (submit-action [_ action-fn timeout-millis]
-    (f/->CLJResilientFuture
-      (.promise ^ResilientFuture (.submitAction executor
-                                                (wrap-action-fn action-fn)
-                                                timeout-millis))))
+    (try (f/->CLJResilientFuture
+           (.promise ^ResilientFuture (.submitAction executor
+                                                     (wrap-action-fn action-fn)
+                                                     timeout-millis)))
+         (catch RejectedActionException e
+           (f/rejected-action-future (.reason e)))))
   (perform-action [_ action-fn]
-    (f/->CLJResilientFuture
-      ^ResilientPromise (.performAction executor (wrap-action-fn action-fn))))
+    (try (f/->CLJResilientFuture
+           ^ResilientPromise (.performAction executor (wrap-action-fn action-fn)))
+         (catch RejectedActionException e
+           (f/rejected-action-future (.reason e)))))
   (shutdown [_] (.shutdown executor))
   ILookup
   (valAt [this key] (.valAt this key nil))

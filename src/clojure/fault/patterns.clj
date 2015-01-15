@@ -1,8 +1,7 @@
 (ns fault.patterns
-  (:require [fault.core :as core]
+  (:require [fault.service :as service]
             [fault.future :as future])
   (:import (fault ServiceExecutor
-                  RejectedActionException
                   MultipleWriterResilientPromise
                   ResilientPromise
                   ResilientAction)))
@@ -19,28 +18,26 @@
   ComposedService
   (submit-action [this action-fn timeout-millis]
     (some (fn [[key service]]
-            (try (core/submit-action service
-                                     (partial action-fn (get context key))
-                                     timeout-millis)
-                 (catch RejectedActionException _ nil)))
+            (let [f (service/submit-action service
+                                        (partial action-fn (get context key))
+                                        timeout-millis)]
+              (if (identical? :rejected (:status f)) nil f)))
           (load-balancer-fn)))
   (submit-action-map [this key->fn timeout-millis]
     (some (fn [[key service]]
-            (try (core/submit-action service
-                                     (get key->fn key)
-                                     timeout-millis)
-                 (catch RejectedActionException _ nil)))
+            (let [f (service/submit-action service (get key->fn key) timeout-millis)]
+              (if (identical? :rejected (:status f)) nil f)))
           (load-balancer-fn)))
   (perform-action [this action-fn]
     (some (fn [[key service]]
-            (try
-              (core/perform-action service (partial action-fn (get context key)))
-              (catch RejectedActionException _ nil)))
+            (let [f (service/perform-action
+                      service (partial action-fn (get context key)))]
+              (if (identical? :rejected (:status f)) nil f)))
           (load-balancer-fn)))
   (perform-action-map [this key->fn]
     (some (fn [[key service]]
-            (try (core/perform-action service (get key->fn key))
-                 (catch RejectedActionException _ nil)))
+            (let [f (service/perform-action service (get key->fn key))]
+              (if (identical? :rejected (:status f)) nil f)))
           (load-balancer-fn))))
 
 (defn- next-idx [last-idx current]

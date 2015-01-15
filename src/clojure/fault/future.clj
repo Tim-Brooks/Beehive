@@ -1,5 +1,5 @@
 (ns fault.future
-  (:import (fault ResilientPromise Status)
+  (:import (fault ResilientPromise Status RejectedReason)
            (clojure.lang IDeref IBlockingDeref IPending ILookup)))
 
 (set! *warn-on-reflection* true)
@@ -31,3 +31,27 @@
       :result (.getResult promise)
       :error (.getError promise)
       default)))
+
+(deftype CLJRejectedFuture [reason]
+  IDeref
+  (deref [this] reason)
+  IBlockingDeref
+  (deref [this timeout-ms timeout-val] reason)
+  IPending
+  (isRealized [_]
+    true)
+  ILookup
+  (valAt [this key] (.valAt this key nil))
+  (valAt [_ key default]
+    (case key
+      :status :rejected
+      :rejected-reason reason
+      default)))
+
+(def ^:private reject-enum->keyword
+  {RejectedReason/CIRCUIT_OPEN :circuit-open
+   RejectedReason/MAX_CONCURRENCY_LEVEL_EXCEEDED :max-concurrency-level-exceeded
+   RejectedReason/QUEUE_FULL :queue-full})
+
+(defn rejected-action-future [reason]
+  (->CLJRejectedFuture (get reject-enum->keyword reason)))
