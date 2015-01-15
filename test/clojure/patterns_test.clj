@@ -59,11 +59,15 @@
                                                :service2 (fn [] 2)
                                                :service3 (fn [] 3)}
                                               1000)))
-        (is (= 2 @(patterns/submit-action-map load-balancer
-                                              {:service1 (fn [] 1)
-                                               :service2 (fn [] 2)
-                                               :service3 (fn [] 3)}
-                                              1000)))
+        (is (= 2 @(patterns/submit-action load-balancer
+                                          (fn [context] (:result context 10))
+                                          1000)))
+        (is (= 2 @(patterns/perform-action load-balancer
+                                           (fn [context] (:result context 10)))))
+        (is (= 2 @(patterns/perform-action-map load-balancer
+                                               {:service1 (fn [] 1)
+                                                :service2 (fn [] 2)
+                                                :service3 (fn [] 3)})))
         (.countDown latch)))
     (testing "Nil returned if all services reject action"
       (let [latch (CountDownLatch. 1)]
@@ -75,7 +79,15 @@
                                                 :service2 (fn [] 2)
                                                 :service3 (fn [] 3)}
                                                1000)))
-
+        (is (= nil (patterns/submit-action load-balancer
+                                           (fn [context] (:result context 10))
+                                           1000)))
+        (is (= nil (patterns/perform-action-map load-balancer
+                                                {:service1 (fn [] 1)
+                                                 :service2 (fn [] 2)
+                                                 :service3 (fn [] 3)})))
+        (is (= nil (patterns/perform-action load-balancer
+                                            (fn [context] (:result context 10)))))
         (.countDown latch)))))
 
 (deftest shotgun
