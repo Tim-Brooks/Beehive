@@ -5,9 +5,9 @@ package fault;
  */
 public class RejectedActionException extends RuntimeException {
 
-    public final RejectedReason reason;
+    public final RejectionReason reason;
 
-    public RejectedActionException(RejectedReason reason) {
+    public RejectedActionException(RejectionReason reason) {
         this.reason = reason;
     }
 

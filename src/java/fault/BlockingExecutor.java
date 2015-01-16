@@ -94,7 +94,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                 timeoutQueue.offer(new ActionTimeout(promise, millisTimeout, f));
             }
         } catch (RejectedExecutionException e) {
-            throw new RejectedActionException(RejectedReason.QUEUE_FULL);
+            throw new RejectedActionException(RejectionReason.QUEUE_FULL);
         }
 
         return new ResilientFuture<>(promise);
@@ -127,10 +127,10 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
 
     private void rejectIfActionNotAllowed() {
         if (!semaphore.aquirePermit()) {
-            throw new RejectedActionException(RejectedReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+            throw new RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         }
         if (!circuitBreaker.allowAction()) {
-            throw new RejectedActionException(RejectedReason.CIRCUIT_OPEN);
+            throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }
     }
 

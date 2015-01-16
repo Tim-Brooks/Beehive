@@ -1,5 +1,6 @@
 package fault.metrics;
 
+import fault.RejectionReason;
 import fault.Status;
 
 /**
@@ -7,6 +8,8 @@ import fault.Status;
  */
 public interface ActionMetrics {
     public void reportActionResult(Status status);
+
+    public void reportRejectionAction(RejectionReason reason);
 
     public int getFailuresForTimePeriod(int milliseconds);
 

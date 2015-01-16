@@ -1,5 +1,6 @@
 package fault.metrics;
 
+import fault.RejectionReason;
 import fault.Status;
 import fault.utils.TimeProvider;
 
@@ -109,6 +110,30 @@ public class SingleWriterActionMetrics implements ActionMetrics {
         metrics.lazySet(slotNumber, metrics.get(slotNumber) + 1);
     }
 
+    @Override
+    public void reportRejectionAction(RejectionReason reason) {
+        int currentSlotNumber = slotNumber.get();
+        int slotsToAdvance = slotsToAdvance();
+        int slotNumber = advanceToCurrentSlot(currentSlotNumber, slotsToAdvance);
+
+        AtomicIntegerArray metrics;
+        switch (reason) {
+            case CIRCUIT_OPEN:
+                metrics = this.circuitOpenMetrics;
+                break;
+            case MAX_CONCURRENCY_LEVEL_EXCEEDED:
+                metrics = this.maxConcurrencyMetrics;
+                break;
+            case QUEUE_FULL:
+                metrics = this.queueFullMetrics;
+                break;
+            default:
+                return;
+        }
+
+        metrics.lazySet(slotNumber, metrics.get(slotNumber) + 1);
+    }
+
     private int getEventCountForTimePeriod(int milliseconds, AtomicIntegerArray metricsArray) {
         int slotsBack = milliseconds / 1000;
         if (slotsBack > totalSlots) {
@@ -141,11 +166,17 @@ public class SingleWriterActionMetrics implements ActionMetrics {
                     errorMetrics.lazySet(i, 0);
                     successMetrics.lazySet(i, 0);
                     timeoutMetrics.lazySet(i, 0);
+                    circuitOpenMetrics.lazySet(i, 0);
+                    queueFullMetrics.lazySet(i, 0);
+                    maxConcurrencyMetrics.lazySet(i, 0);
                 } else {
                     int adjustedSlot = i - totalSlots;
                     errorMetrics.lazySet(adjustedSlot, 0);
                     successMetrics.lazySet(adjustedSlot, 0);
                     timeoutMetrics.lazySet(adjustedSlot, 0);
+                    circuitOpenMetrics.lazySet(adjustedSlot, 0);
+                    queueFullMetrics.lazySet(adjustedSlot, 0);
+                    maxConcurrencyMetrics.lazySet(adjustedSlot, 0);
                 }
             }
             int adjustedNewSlot = newSlot < totalSlots ? newSlot : newSlot - totalSlots;

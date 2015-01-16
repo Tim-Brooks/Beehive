@@ -55,7 +55,7 @@ public class EventLoopExecutor extends AbstractServiceExecutor implements Servic
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                long millisTimeout) {
         if (!circuitBreaker.allowAction()) {
-            throw new RejectedActionException(RejectedReason.CIRCUIT_OPEN);
+            throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }
         long absoluteTimeout = millisTimeout + 1 + schedulingContext.timeProvider.currentTimeMillis();
 
@@ -67,7 +67,7 @@ public class EventLoopExecutor extends AbstractServiceExecutor implements Servic
     @Override
     public <T> ResilientPromise<T> performAction(ResilientAction<T> action) {
         if (circuitBreaker.isOpen()) {
-            throw new RejectedActionException(RejectedReason.CIRCUIT_OPEN);
+            throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }
 
         ResilientPromise<T> resilientPromise = new SingleWriterResilientPromise<>();

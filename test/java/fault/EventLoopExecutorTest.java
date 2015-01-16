@@ -61,7 +61,7 @@ public class EventLoopExecutorTest {
         try {
             serviceExecutor.submitAction(resilientAction, 1000);
         } catch (RejectedActionException e) {
-            assertEquals(RejectedReason.CIRCUIT_OPEN, e.reason);
+            assertEquals(RejectionReason.CIRCUIT_OPEN, e.reason);
             return;
         }
         fail();
