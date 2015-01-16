@@ -39,6 +39,8 @@ public class SingleWriterActionMetrics implements ActionMetrics {
         int slotsBack = milliseconds / 1000;
         if (slotsBack > totalSlots) {
             throw new RuntimeException("That amount of time is not tracked.");
+        } else if (slotsBack == totalSlots) {
+            slotsBack--;
         }
 
         int slotsToAdvance = slotsToAdvance();
@@ -107,6 +109,8 @@ public class SingleWriterActionMetrics implements ActionMetrics {
         int slotsBack = milliseconds / 1000;
         if (slotsBack > totalSlots) {
             throw new RuntimeException("That amount of time is not tracked.");
+        } else if (slotsBack == totalSlots) {
+            slotsBack--;
         }
 
         int slotsToAdvance = slotsToAdvance();
