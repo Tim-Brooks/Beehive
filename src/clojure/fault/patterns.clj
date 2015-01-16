@@ -4,7 +4,8 @@
   (:import (fault ServiceExecutor
                   MultipleWriterResilientPromise
                   ResilientPromise
-                  ResilientAction)))
+                  ResilientAction RejectedActionException)
+           (java.util ArrayList)))
 
 (set! *warn-on-reflection* true)
 
@@ -19,8 +20,8 @@
   (submit-action [this action-fn timeout-millis]
     (some (fn [[key service]]
             (let [f (service/submit-action service
-                                        (partial action-fn (get context key))
-                                        timeout-millis)]
+                                           (partial action-fn (get context key))
+                                           timeout-millis)]
               (if (identical? :rejected (:status f)) nil f)))
           (load-balancer-fn)))
   (submit-action-map [this key->fn timeout-millis]
@@ -57,26 +58,34 @@
           (map #(nth key-service-tuples %)
                (take service-count (iterate next-fn start-idx))))))))
 
-(deftype Shotgun [context shotgun-fn]
+(deftype Shotgun [action-count context shotgun-fn]
   ComposedService
   (submit-action [this action-fn timeout-millis]
-    (let [^ResilientPromise promise (MultipleWriterResilientPromise.)]
+    (let [^ResilientPromise promise (MultipleWriterResilientPromise.)
+          rejects (ArrayList. ^long action-count)]
       (doseq [[key service] (shotgun-fn)
               :let [svc-context (get context key)]]
-        (.submitAction ^ServiceExecutor (:service-executor service)
-                       (reify ResilientAction (run [_] (action-fn svc-context)))
-                       promise
-                       timeout-millis))
-      (future/->CLJResilientFuture promise)))
+        (try
+          (.submitAction ^ServiceExecutor (:service-executor service)
+                         (reify ResilientAction (run [_] (action-fn svc-context)))
+                         promise
+                         timeout-millis)
+          (catch RejectedActionException e (.add rejects (.reason e)))))
+      (when (not= (count rejects) action-count)
+        (future/->CLJResilientFuture promise))))
   (submit-action-map [this key->fn timeout-millis]
-    (let [^ResilientPromise promise (MultipleWriterResilientPromise.)]
+    (let [^ResilientPromise promise (MultipleWriterResilientPromise.)
+          rejects (ArrayList. ^long action-count)]
       (doseq [[key service] (shotgun-fn)
               :let [fn (get key->fn key)]]
-        (.submitAction ^ServiceExecutor (:service-executor service)
-                       (reify ResilientAction (run [_] (fn)))
-                       promise
-                       timeout-millis))
-      (future/->CLJResilientFuture promise)))
+        (try
+          (.submitAction ^ServiceExecutor (:service-executor service)
+                         (reify ResilientAction (run [_] (fn)))
+                         promise
+                         timeout-millis)
+          (catch RejectedActionException e (.add rejects (.reason e)))))
+      (when (not= (count rejects) action-count)
+        (future/->CLJResilientFuture promise))))
   (perform-action [this action-fn]
     (throw (UnsupportedOperationException. "Cannot perform action with Shotgun")))
   (perform-action-map [this key->fn]
@@ -87,7 +96,8 @@
         service-count (count key->service)
         rand-fn (fn [] (rand-int service-count))]
     (assert (>= service-count action-count))
-    (->Shotgun context
+    (->Shotgun action-count
+               context
                (if (= service-count action-count)
                  (fn []
                    key-service-tuples)
