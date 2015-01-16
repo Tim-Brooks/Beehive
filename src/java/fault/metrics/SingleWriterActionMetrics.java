@@ -16,6 +16,9 @@ public class SingleWriterActionMetrics implements ActionMetrics {
     private final AtomicIntegerArray errorMetrics;
     private final AtomicIntegerArray successMetrics;
     private final AtomicIntegerArray timeoutMetrics;
+    private final AtomicIntegerArray maxConcurrencyMetrics;
+    private final AtomicIntegerArray circuitOpenMetrics;
+    private final AtomicIntegerArray queueFullMetrics;
     private final TimeProvider timeProvider;
     private final AtomicLong advanceSlotTimeInMillis;
     private final AtomicInteger slotNumber;
@@ -30,6 +33,9 @@ public class SingleWriterActionMetrics implements ActionMetrics {
         this.errorMetrics = new AtomicIntegerArray(totalSlots);
         this.successMetrics = new AtomicIntegerArray(totalSlots);
         this.timeoutMetrics = new AtomicIntegerArray(totalSlots);
+        this.maxConcurrencyMetrics = new AtomicIntegerArray(totalSlots);
+        this.circuitOpenMetrics = new AtomicIntegerArray(totalSlots);
+        this.queueFullMetrics = new AtomicIntegerArray(totalSlots);
         this.slotNumber = new AtomicInteger(0);
         this.advanceSlotTimeInMillis = new AtomicLong(timeProvider.currentTimeMillis() + 1000L);
     }
