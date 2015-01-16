@@ -3,7 +3,9 @@
   (:require [fault.core :as fault]
             [fault.service :as service])
   (:import (java.io IOException)
-           (java.util.concurrent CountDownLatch)))
+           (java.util.concurrent CountDownLatch)
+           (fault.metrics ActionMetrics)
+           (fault.service CLJMetrics CLJService)))
 
 (set! *warn-on-reflection* true)
 
@@ -50,4 +52,11 @@
           _ (service/submit-action service (fn [] (.await latch)) Long/MAX_VALUE)
           f (service/submit-action service (fn [] 1) Long/MAX_VALUE)]
       (is (= :max-concurrency-level-exceeded @f))
-      (is (= :rejected (:status f))))))
+      (is (= :rejected (:status f)))
+      (.countDown latch))))
+
+(deftest metrics-test
+  (testing "Testing that metrics are updated"
+    (let [metrics-service (fault/service 1 100)
+          _ @(service/submit-action metrics-service (fn [] 1) Long/MAX_VALUE)]
+      (is (= 1 (-> metrics-service :metrics :successes))))))
