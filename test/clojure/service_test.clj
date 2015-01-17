@@ -18,12 +18,19 @@
 
 (use-fixtures :each start-and-stop)
 
+(defn- block-fn [result ^CountDownLatch latch]
+  (fn [] (.await latch) result))
+
+(defn- success-fn [result]
+  (fn [] result))
+
+(defn- error-fn [e]
+  (fn [] (throw e)))
+
 (deftest submit-test
   (testing "Submit action returns CLJ future wrapping result"
     (let [latch (CountDownLatch. 1)
-          f (service/submit-action service
-                                   (fn [] (.await latch) (* 8 8))
-                                   Long/MAX_VALUE)]
+          f (service/submit-action service (block-fn 64 latch) Long/MAX_VALUE)]
       (is (= :pending (:status f)))
       (is (not (realized? f)))
       (is (= :not-done (deref f 100 :not-done)))
@@ -33,14 +40,14 @@
       (is (nil? (:error f)))))
   (testing "Submitted action can return error"
     (let [exception (IOException.)
-          f (service/submit-action service (fn [] (throw exception)) 10000)]
+          f (service/submit-action service (error-fn exception) 10000)]
       (is (= exception @f))
       (is (= exception (:error f)))
       (is (nil? (:result f)))
       (is (= :error (:status f)))))
   (testing "Submitted action can timeout"
     (let [latch (CountDownLatch. 1)
-          f (service/submit-action service (fn [] (.await latch)) 50)]
+          f (service/submit-action service (block-fn 1 latch) 50)]
       (is (= :timed-out @f))
       (is (= :timed-out (:status f)))
       (.countDown latch)
@@ -48,8 +55,8 @@
       (is (nil? (:error f)))))
   (testing "If concurrency level exhausted, action rejected"
     (let [latch (CountDownLatch. 1)
-          _ (service/submit-action service (fn [] (.await latch)) Long/MAX_VALUE)
-          f (service/submit-action service (fn [] 1) Long/MAX_VALUE)]
+          _ (service/submit-action service (block-fn 1 latch) Long/MAX_VALUE)
+          f (service/submit-action service (success-fn 1) Long/MAX_VALUE)]
       (is (= :max-concurrency-level-exceeded @f))
       (is (= :rejected (:status f)))
       (.countDown latch))))
@@ -58,9 +65,9 @@
   (testing "Testing that metrics are updated with result of action"
     (let [metrics-service (fault/service 1 100)
           latch (CountDownLatch. 1)]
-      @(service/submit-action metrics-service (fn [] 1) Long/MAX_VALUE)
-      @(service/submit-action metrics-service (fn [] (throw (IOException.))) Long/MAX_VALUE)
-      @(service/submit-action metrics-service (fn [] (.await latch)) 10)
+      @(service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
+      @(service/submit-action metrics-service (error-fn (IOException.)) Long/MAX_VALUE)
+      @(service/submit-action metrics-service (block-fn 1 latch) 10)
       (.countDown latch)
       (is (= 1 (-> metrics-service :metrics :successes)))
       (is (= 1 (-> metrics-service :metrics :time-outs)))
@@ -70,12 +77,12 @@
     (let [metrics-service (fault/service 1 1)
           latch (CountDownLatch. 1)]
       (service/open-circuit! metrics-service)
-      @(service/submit-action metrics-service (fn [] 1) Long/MAX_VALUE)
+      @(service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
       (is (= 1 (-> metrics-service :metrics :circuit-open)))
       (service/close-circuit! metrics-service)
 
-      (service/submit-action metrics-service (fn [] (.await latch)) Long/MAX_VALUE)
-      (service/submit-action metrics-service (fn [] 1) Long/MAX_VALUE)
+      (service/submit-action metrics-service (block-fn 1 latch) Long/MAX_VALUE)
+      (service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
       (.countDown latch)
       (is (= 1 (-> metrics-service :metrics :max-concurrency-level-exceeded)))
       (service/shutdown metrics-service))))
