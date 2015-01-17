@@ -84,6 +84,21 @@ public class SingleWriterActionMetrics implements ActionMetrics {
     }
 
     @Override
+    public int getCircuitOpenedRejectionsForTimePeriod(int milliseconds) {
+        return getEventCountForTimePeriod(milliseconds, circuitOpenMetrics);
+    }
+
+    @Override
+    public int getQueueFullRejectionsForTimePeriod(int milliseconds) {
+        return getEventCountForTimePeriod(milliseconds, queueFullMetrics);
+    }
+
+    @Override
+    public int getMaxConcurrencyRejectionsForTimePeriod(int milliseconds) {
+        return getEventCountForTimePeriod(milliseconds, maxConcurrencyMetrics);
+    }
+
+    @Override
     public int getSecondsTracked() {
         return totalSlots;
     }

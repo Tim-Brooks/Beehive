@@ -1,5 +1,6 @@
 package fault.metrics;
 
+import fault.RejectionReason;
 import fault.Status;
 import fault.utils.TimeProvider;
 import org.junit.Before;
@@ -74,6 +75,9 @@ public class SingleWriterActionMetricsTest {
         int errorCount = 0;
         int successCount = 0;
         int timeoutCount = 0;
+        int circuitOpenCount = 0;
+        int maxConcurrencyCount = 0;
+        int queueFullCount = 0;
 
         Random random = new Random();
 
@@ -92,13 +96,30 @@ public class SingleWriterActionMetricsTest {
                 when(timeProvider.currentTimeMillis()).thenReturn(500L);
                 actionMetrics.reportActionResult(Status.TIMED_OUT);
                 ++timeoutCount;
-
+            }
+            if (random.nextBoolean()) {
+                when(timeProvider.currentTimeMillis()).thenReturn(500L);
+                actionMetrics.reportRejectionAction(RejectionReason.CIRCUIT_OPEN);
+                ++circuitOpenCount;
+            }
+            if (random.nextBoolean()) {
+                when(timeProvider.currentTimeMillis()).thenReturn(500L);
+                actionMetrics.reportRejectionAction(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+                ++maxConcurrencyCount;
+            }
+            if (random.nextBoolean()) {
+                when(timeProvider.currentTimeMillis()).thenReturn(500L);
+                actionMetrics.reportRejectionAction(RejectionReason.QUEUE_FULL);
+                ++queueFullCount;
             }
         }
         when(timeProvider.currentTimeMillis()).thenReturn(1999L, 1999L, 1999L);
         assertEquals(successCount, actionMetrics.getSuccessesForTimePeriod(1000));
         assertEquals(errorCount, actionMetrics.getErrorsForTimePeriod(1000));
         assertEquals(timeoutCount, actionMetrics.getTimeoutsForTimePeriod(1000));
+        assertEquals(queueFullCount, actionMetrics.getQueueFullRejectionsForTimePeriod(1000));
+        assertEquals(maxConcurrencyCount, actionMetrics.getMaxConcurrencyRejectionsForTimePeriod(1000));
+        assertEquals(circuitOpenCount, actionMetrics.getCircuitOpenedRejectionsForTimePeriod(1000));
 
     }
 
@@ -110,6 +131,9 @@ public class SingleWriterActionMetricsTest {
             actionMetrics.reportActionResult(Status.ERROR);
             actionMetrics.reportActionResult(Status.SUCCESS);
             actionMetrics.reportActionResult(Status.TIMED_OUT);
+            actionMetrics.reportRejectionAction(RejectionReason.CIRCUIT_OPEN);
+            actionMetrics.reportRejectionAction(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+            actionMetrics.reportRejectionAction(RejectionReason.QUEUE_FULL);
         }
 
         when(timeProvider.currentTimeMillis()).thenReturn(2000L, 2000L, 2000L, 2000L, 2000L, 2000L);
@@ -119,6 +143,12 @@ public class SingleWriterActionMetricsTest {
         assertEquals(2, actionMetrics.getErrorsForTimePeriod(1000));
         assertEquals(3, actionMetrics.getTimeoutsForTimePeriod(2000));
         assertEquals(2, actionMetrics.getTimeoutsForTimePeriod(1000));
+        assertEquals(3, actionMetrics.getMaxConcurrencyRejectionsForTimePeriod(2000));
+        assertEquals(2, actionMetrics.getMaxConcurrencyRejectionsForTimePeriod(1000));
+        assertEquals(3, actionMetrics.getQueueFullRejectionsForTimePeriod(2000));
+        assertEquals(2, actionMetrics.getQueueFullRejectionsForTimePeriod(1000));
+        assertEquals(3, actionMetrics.getCircuitOpenedRejectionsForTimePeriod(2000));
+        assertEquals(2, actionMetrics.getCircuitOpenedRejectionsForTimePeriod(1000));
     }
 
     @Test
@@ -129,14 +159,26 @@ public class SingleWriterActionMetricsTest {
             actionMetrics.reportActionResult(Status.ERROR);
             actionMetrics.reportActionResult(Status.SUCCESS);
             actionMetrics.reportActionResult(Status.TIMED_OUT);
+            actionMetrics.reportRejectionAction(RejectionReason.CIRCUIT_OPEN);
+            actionMetrics.reportRejectionAction(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+            actionMetrics.reportRejectionAction(RejectionReason.QUEUE_FULL);
         }
 
         when(timeProvider.currentTimeMillis()).thenReturn(1005000L);
         actionMetrics.reportActionResult(Status.ERROR);
         actionMetrics.reportActionResult(Status.SUCCESS);
         actionMetrics.reportActionResult(Status.TIMED_OUT);
+        actionMetrics.reportRejectionAction(RejectionReason.CIRCUIT_OPEN);
+        actionMetrics.reportRejectionAction(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+        actionMetrics.reportRejectionAction(RejectionReason.QUEUE_FULL);
 
         assertEquals(2, actionMetrics.getSuccessesForTimePeriod(6000));
+        assertEquals(2, actionMetrics.getErrorsForTimePeriod(6000));
+        assertEquals(2, actionMetrics.getTimeoutsForTimePeriod(6000));
+        assertEquals(4, actionMetrics.getFailuresForTimePeriod(6000));
+        assertEquals(2, actionMetrics.getMaxConcurrencyRejectionsForTimePeriod(6000));
+        assertEquals(2, actionMetrics.getQueueFullRejectionsForTimePeriod(6000));
+        assertEquals(2, actionMetrics.getCircuitOpenedRejectionsForTimePeriod(6000));
 
     }
 }

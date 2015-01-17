@@ -19,5 +19,11 @@ public interface ActionMetrics {
 
     public int getTimeoutsForTimePeriod(int milliseconds);
 
+    public int getCircuitOpenedRejectionsForTimePeriod(int milliseconds);
+
+    public int getQueueFullRejectionsForTimePeriod(int milliseconds);
+
+    public int getMaxConcurrencyRejectionsForTimePeriod(int milliseconds);
+
     public int getSecondsTracked();
 }
