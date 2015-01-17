@@ -4,8 +4,7 @@
             [fault.service :as service])
   (:import (java.io IOException)
            (java.util.concurrent CountDownLatch)
-           (fault.metrics ActionMetrics)
-           (fault.service CLJMetrics CLJService)))
+           (fault ServiceExecutor)))
 
 (set! *warn-on-reflection* true)
 
@@ -78,4 +77,5 @@
       (service/submit-action metrics-service (fn [] (.await latch)) Long/MAX_VALUE)
       (service/submit-action metrics-service (fn [] 1) Long/MAX_VALUE)
       (.countDown latch)
-      (is (= 1 (-> metrics-service :metrics :max-concurrency-level-exceeded))))))
+      (is (= 1 (-> metrics-service :metrics :max-concurrency-level-exceeded)))
+      (service/shutdown metrics-service))))
