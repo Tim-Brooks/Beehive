@@ -3,8 +3,7 @@
   (:require [fault.core :as fault]
             [fault.service :as service])
   (:import (java.io IOException)
-           (java.util.concurrent CountDownLatch)
-           (fault ServiceExecutor)))
+           (java.util.concurrent CountDownLatch)))
 
 (set! *warn-on-reflection* true)
 
