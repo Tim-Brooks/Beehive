@@ -13,8 +13,14 @@ public interface ServiceExecutor {
 
     public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, long millisTimeout);
 
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientCallback<T> callback, long
+            millisTimeout);
+
     public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise, long
             millisTimeout);
+
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise,
+                                               ResilientCallback<T> callback, long millisTimeout);
 
     public <T> ResilientPromise<T> performAction(ResilientAction<T> action);
 

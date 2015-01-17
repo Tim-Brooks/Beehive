@@ -52,8 +52,23 @@ public class EventLoopExecutor extends AbstractServiceExecutor implements Servic
     }
 
     @Override
-    public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
-                                               long millisTimeout) {
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientCallback<T> callback, long
+            millisTimeout) {
+        return submitAction(action, new SingleWriterResilientPromise<T>(), callback, millisTimeout);
+    }
+
+    @Override
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise, long
+            millisTimeout) {
+        return submitAction(action, promise, null, millisTimeout);
+    }
+
+    @Override
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise,
+                                               ResilientCallback<T> callback, long millisTimeout) {
+        if (callback != null) {
+            throw new UnsupportedOperationException("Call back API is not currently supported on EventLoopExecutor.");
+        }
         if (!circuitBreaker.allowAction()) {
             throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }

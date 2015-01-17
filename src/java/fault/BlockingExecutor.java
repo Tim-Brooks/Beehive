@@ -55,13 +55,25 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     }
 
     @Override
-    public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, long millisTimeout) {
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, long millisTimeout) {
         return submitAction(action, new MultipleWriterResilientPromise<T>(), millisTimeout);
     }
 
     @Override
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise, long
+            millisTimeout) {
+        return submitAction(action, promise, null, millisTimeout);
+    }
+
+    @Override
+    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientCallback<T> callback, long
+            millisTimeout) {
+        return submitAction(action, new MultipleWriterResilientPromise<T>(), callback, millisTimeout);
+    }
+
+    @Override
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
-                                               long millisTimeout) {
+                                               final ResilientCallback<T> callback, long millisTimeout) {
         rejectIfActionNotAllowed();
         try {
             final Future<Void> f = service.submit(new Callable<Void>() {
@@ -72,6 +84,9 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                         if (promise.deliverResult(result)) {
                             promise.setCompletedBy(uuid);
                             metricsQueue.offer(promise.getStatus());
+                            if (callback != null) {
+                                callback.run(promise);
+                            }
                         } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise.getStatus());
                         }
@@ -79,6 +94,9 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                         if (promise.deliverError(e)) {
                             promise.setCompletedBy(uuid);
                             metricsQueue.offer(promise.getStatus());
+                            if (callback != null) {
+                                callback.run(promise);
+                            }
                         } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise.getStatus());
                         }
@@ -165,12 +183,19 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                 for (; ; ) {
                     try {
                         ActionTimeout timeout = timeoutQueue.take();
-                        ResilientPromise<?> promise = timeout.promise;
+                        @SuppressWarnings("unchecked")
+                        ResilientPromise<Object> promise = (ResilientPromise<Object>) timeout.promise;
                         if (promise.setTimedOut()) {
                             promise.setCompletedBy(uuid);
                             timeout.future.cancel(true);
                             actionMetrics.reportActionResult(promise.getStatus());
                             circuitBreaker.informBreakerOfResult(promise.isSuccessful());
+
+                            @SuppressWarnings("unchecked")
+                            ResilientCallback<Object> callback = (ResilientCallback<Object>) timeout.callback;
+                            if (callback != null) {
+                                callback.run(promise);
+                            }
                         } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise.getStatus());
                         }
@@ -184,12 +209,19 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
 
     private class ActionTimeout implements Delayed {
 
-        protected final long millisAbsoluteTimeout;
+        private final long millisAbsoluteTimeout;
         private final ResilientPromise<?> promise;
+        private final ResilientCallback<?> callback;
         private final Future<Void> future;
 
         public ActionTimeout(ResilientPromise<?> promise, long millisRelativeTimeout, Future<Void> future) {
+            this(promise, millisRelativeTimeout, future, null);
+        }
+
+        public ActionTimeout(ResilientPromise<?> promise, long millisRelativeTimeout, Future<Void> future,
+                             ResilientCallback<?> callback) {
             this.promise = promise;
+            this.callback = callback;
             this.millisAbsoluteTimeout = millisRelativeTimeout + System.currentTimeMillis();
             this.future = future;
         }

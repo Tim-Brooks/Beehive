@@ -69,7 +69,7 @@
           (.submitAction ^ServiceExecutor (:service-executor service)
                          (reify ResilientAction (run [_] (action-fn svc-context)))
                          promise
-                         timeout-millis)
+                         ^long (long timeout-millis))
           (catch RejectedActionException e (.add rejects (.reason e)))))
       (when (not= (count rejects) action-count)
         (future/->CLJResilientFuture promise))))
@@ -82,7 +82,7 @@
           (.submitAction ^ServiceExecutor (:service-executor service)
                          (reify ResilientAction (run [_] (fn)))
                          promise
-                         timeout-millis)
+                         ^long (long timeout-millis))
           (catch RejectedActionException e (.add rejects (.reason e)))))
       (when (not= (count rejects) action-count)
         (future/->CLJResilientFuture promise))))
