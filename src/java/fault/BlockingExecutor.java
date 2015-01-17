@@ -18,7 +18,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     private final ExecutorService service;
     private final ExecutorService managingService = Executors.newFixedThreadPool(2);
     private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
-    private final BlockingQueue<ResilientPromise<?>> metricsQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Enum<?>> metricsQueue = new LinkedBlockingQueue<>();
     private final String name;
     private final Semaphore semaphore;
 
@@ -71,16 +71,16 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                         T result = action.run();
                         if (promise.deliverResult(result)) {
                             promise.setCompletedBy(uuid);
-                            metricsQueue.offer(promise);
+                            metricsQueue.offer(promise.getStatus());
                         } else if (!uuid.equals(promise.getCompletedBy())) {
-                            metricsQueue.offer(promise);
+                            metricsQueue.offer(promise.getStatus());
                         }
                     } catch (Exception e) {
                         if (promise.deliverError(e)) {
                             promise.setCompletedBy(uuid);
-                            metricsQueue.offer(promise);
+                            metricsQueue.offer(promise.getStatus());
                         } else if (!uuid.equals(promise.getCompletedBy())) {
-                            metricsQueue.offer(promise);
+                            metricsQueue.offer(promise.getStatus());
                         }
                     } finally {
                         semaphore.releasePermit();
@@ -94,6 +94,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                 timeoutQueue.offer(new ActionTimeout(promise, millisTimeout, f));
             }
         } catch (RejectedExecutionException e) {
+            metricsQueue.add(RejectionReason.QUEUE_FULL);
             throw new RejectedActionException(RejectionReason.QUEUE_FULL);
         }
 
@@ -113,7 +114,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
             promise.deliverError(e);
         }
 
-        metricsQueue.offer(promise);
+        metricsQueue.offer(promise.getStatus());
         semaphore.releasePermit();
 
         return promise;
@@ -126,10 +127,13 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
     }
 
     private void rejectIfActionNotAllowed() {
-        if (!semaphore.aquirePermit()) {
+        if (!semaphore.acquirePermit()) {
+            metricsQueue.add(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             throw new RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         }
         if (!circuitBreaker.allowAction()) {
+            metricsQueue.add(RejectionReason.CIRCUIT_OPEN);
+            semaphore.releasePermit();
             throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }
     }
@@ -140,9 +144,13 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
             public void run() {
                 for (; ; ) {
                     try {
-                        ResilientPromise<?> promise = metricsQueue.take();
-                        actionMetrics.reportActionResult(promise.getStatus());
-                        circuitBreaker.informBreakerOfResult(promise.isSuccessful());
+                        Enum result = metricsQueue.take();
+                        if (result instanceof Status) {
+                            actionMetrics.reportActionResult((Status) result);
+                            circuitBreaker.informBreakerOfResult(result == Status.SUCCESS);
+                        } else {
+                            actionMetrics.reportRejectionAction((RejectionReason) result);
+                        }
                     } catch (InterruptedException e) {
                         break;
                     }
@@ -164,7 +172,7 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                             actionMetrics.reportActionResult(promise.getStatus());
                             circuitBreaker.informBreakerOfResult(promise.isSuccessful());
                         } else if (!uuid.equals(promise.getCompletedBy())) {
-                            metricsQueue.offer(promise);
+                            metricsQueue.offer(promise.getStatus());
                         }
                     } catch (InterruptedException e) {
                         break;

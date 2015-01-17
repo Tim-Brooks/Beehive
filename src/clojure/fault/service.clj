@@ -45,6 +45,10 @@
         :errors (.getErrorsForTimePeriod metrics millis)
         :successes (.getSuccessesForTimePeriod metrics millis)
         :time-outs (.getTimeoutsForTimePeriod metrics millis)
+        :circuit-open (.getCircuitOpenedRejectionsForTimePeriod metrics millis)
+        :queue-full (.getQueueFullRejectionsForTimePeriod metrics millis)
+        :max-concurrency-level-exceeded (.getMaxConcurrencyRejectionsForTimePeriod
+                                          metrics millis)
         default)))
   Object
   (toString [this]
@@ -90,11 +94,11 @@
                      (.timeToPauseMillis time-to-pause-millis)
                      (.build))))
 
-(defn close-circuit! [{:keys [circuit-breaker]}]
-  (.forceClosed ^CircuitBreaker circuit-breaker))
+(defn close-circuit! [^CLJService service]
+  (.forceClosed ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
-(defn open-circuit! [{:keys [circuit-breaker]}]
-  (.forceOpen ^CircuitBreaker circuit-breaker))
+(defn open-circuit! [^CLJService service]
+  (.forceOpen ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
 (defn service-executor [pool-size max-concurrency]
   (let [executor (BlockingExecutor. pool-size max-concurrency)]

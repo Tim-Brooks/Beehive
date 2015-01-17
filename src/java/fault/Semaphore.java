@@ -13,7 +13,7 @@ public class Semaphore {
         permitsRemaining = new AtomicInteger(concurrencyLevel);
     }
 
-    public boolean aquirePermit() {
+    public boolean acquirePermit() {
         int permitsRemaining = this.permitsRemaining.get();
         for (; ; ) {
             if (permitsRemaining > 0) {
