@@ -74,7 +74,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     @Override
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                final ResilientCallback<T> callback, long millisTimeout) {
-        rejectIfActionNotAllowed();
+        final Semaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
         try {
             final Future<Void> f = service.submit(new Callable<Void>() {
                 @Override
@@ -87,7 +87,6 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             if (callback != null) {
                                 callback.run(promise);
                             }
-                            semaphore.releasePermit();
                         } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise.getStatus());
                         }
@@ -98,21 +97,23 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             if (callback != null) {
                                 callback.run(promise);
                             }
-                            semaphore.releasePermit();
                         } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise.getStatus());
                         }
+                    } finally {
+                        semaphore.releasePermit(permit);
                     }
                     return null;
                 }
             });
             if (millisTimeout > MAX_TIMEOUT_MILLIS) {
-                timeoutQueue.offer(new ActionTimeout(promise, MAX_TIMEOUT_MILLIS, f, callback));
+                timeoutQueue.offer(new ActionTimeout(permit, promise, MAX_TIMEOUT_MILLIS, f, callback));
             } else {
-                timeoutQueue.offer(new ActionTimeout(promise, millisTimeout, f, callback));
+                timeoutQueue.offer(new ActionTimeout(permit, promise, millisTimeout, f, callback));
             }
         } catch (RejectedExecutionException e) {
             metricsQueue.add(RejectionReason.QUEUE_FULL);
+            semaphore.releasePermit(permit);
             throw new RejectedActionException(RejectionReason.QUEUE_FULL);
         }
 
@@ -122,7 +123,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     @Override
     public <T> ResilientPromise<T> performAction(final ResilientAction<T> action) {
         ResilientPromise<T> promise = new SingleWriterResilientPromise<>();
-        rejectIfActionNotAllowed();
+        Semaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
         try {
             T result = action.run();
             promise.deliverResult(result);
@@ -133,7 +134,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         }
 
         metricsQueue.offer(promise.getStatus());
-        semaphore.releasePermit();
+        semaphore.releasePermit(permit);
 
         return promise;
     }
@@ -144,16 +145,18 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         managingService.shutdown();
     }
 
-    private void rejectIfActionNotAllowed() {
-        if (!semaphore.acquirePermit()) {
+    private Semaphore.Permit acquirePermitOrRejectIfActionNotAllowed() {
+        Semaphore.Permit permit = semaphore.acquirePermit();
+        if (permit == null) {
             metricsQueue.add(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             throw new RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         }
         if (!circuitBreaker.allowAction()) {
             metricsQueue.add(RejectionReason.CIRCUIT_OPEN);
-            semaphore.releasePermit();
+            semaphore.releasePermit(permit);
             throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }
+        return permit;
     }
 
     private void startTimeoutAndMetrics() {
@@ -196,10 +199,12 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             if (callback != null) {
                                 callback.run(promise);
                             }
-                            semaphore.releasePermit();
                         } else if (!uuid.equals(promise.getCompletedBy())) {
+                            timeout.future.cancel(true);
                             metricsQueue.offer(promise.getStatus());
                         }
+                        semaphore.releasePermit(timeout.permit);
+
                     } catch (InterruptedException e) {
                         break;
                     }
@@ -211,16 +216,14 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     private class ActionTimeout implements Delayed {
 
         private final long millisAbsoluteTimeout;
+        private final Semaphore.Permit permit;
         private final ResilientPromise<?> promise;
         private final ResilientCallback<?> callback;
         private final Future<Void> future;
 
-        public ActionTimeout(ResilientPromise<?> promise, long millisRelativeTimeout, Future<Void> future) {
-            this(promise, millisRelativeTimeout, future, null);
-        }
-
-        public ActionTimeout(ResilientPromise<?> promise, long millisRelativeTimeout, Future<Void> future,
-                             ResilientCallback<?> callback) {
+        public ActionTimeout(Semaphore.Permit permit, ResilientPromise<?> promise, long millisRelativeTimeout,
+                             Future<Void> future, ResilientCallback<?> callback) {
+            this.permit = permit;
             this.promise = promise;
             this.callback = callback;
             this.millisAbsoluteTimeout = millisRelativeTimeout + System.currentTimeMillis();

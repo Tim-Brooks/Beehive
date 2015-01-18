@@ -9,7 +9,7 @@
                     "census/county/%s?format=json")
   )
 
-(defonce county-service (fault/service 10 30))
+(defonce service (atom nil))
 
 (defn lookup-state-action [county]
   (fn [] (-> (http/get (format api-route county) {:as :json})
@@ -36,7 +36,7 @@
   (go
     (loop []
       (let [county (<! in-channel)
-            f (service/submit-action county-service
+            f (service/submit-action @service
                                      (lookup-state-action county)
                                      (fa/return-channels {:success out-channel
                                                           :failed err-channel})
@@ -46,6 +46,7 @@
         (recur)))))
 
 (defn run []
+  (reset! service (fault/service 10 30))
   (let [in-channel (async/chan 10)
         out-channel (async/chan 10)
         err-channel (async/chan 10)]

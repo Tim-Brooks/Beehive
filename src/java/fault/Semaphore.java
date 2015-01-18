@@ -1,5 +1,7 @@
 package fault;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -8,25 +10,32 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Semaphore {
 
     public final AtomicInteger permitsRemaining;
+    public final ConcurrentHashMap<Permit, Boolean> permitHolders = new ConcurrentHashMap<>();
 
     public Semaphore(int concurrencyLevel) {
         permitsRemaining = new AtomicInteger(concurrencyLevel);
     }
 
-    public boolean acquirePermit() {
+    public Permit acquirePermit() {
         int permitsRemaining = this.permitsRemaining.get();
         for (; ; ) {
             if (permitsRemaining > 0) {
                 if (this.permitsRemaining.compareAndSet(permitsRemaining, permitsRemaining - 1)) {
-                    return true;
+                    Permit permit = new Permit();
+                    permitHolders.put(permit, true);
+                    return permit;
                 }
             } else {
-                return false;
+                return null;
             }
         }
     }
 
-    public void releasePermit() {
-        this.permitsRemaining.incrementAndGet();
+    public void releasePermit(Permit permit) {
+        if (permitHolders.remove(permit)) {
+            this.permitsRemaining.incrementAndGet();
+        }
     }
+
+    final class Permit{}
 }
