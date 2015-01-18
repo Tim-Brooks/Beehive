@@ -74,13 +74,19 @@
   (submit-action [this action-fn timeout-millis]
     (submit-action this action-fn nil timeout-millis))
   (submit-action [_ action-fn callback timeout-millis]
-    (try (f/->CLJResilientFuture
-           (.promise ^ResilientFuture (.submitAction executor
-                                                     ^ResilientAction (wrap-action-fn action-fn)
-                                                     ^ResilientCallback (wrap-callback-fn callback)
-                                                     ^long (long timeout-millis))))
-         (catch RejectedActionException e
-           (f/rejected-action-future (.reason e)))))
+    (try
+      (f/->CLJResilientFuture
+        (.promise ^ResilientFuture
+                  (if callback
+                    (.submitAction executor
+                                   ^ResilientAction (wrap-action-fn action-fn)
+                                   ^ResilientCallback (wrap-callback-fn callback)
+                                   ^long (long timeout-millis))
+                    (.submitAction executor
+                                   ^ResilientAction (wrap-action-fn action-fn)
+                                   ^long (long timeout-millis)))))
+      (catch RejectedActionException e
+        (f/rejected-action-future (.reason e)))))
   (perform-action [_ action-fn]
     (try (f/->CLJResilientFuture
            ^ResilientPromise (.performAction executor (wrap-action-fn action-fn)))
