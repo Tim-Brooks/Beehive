@@ -15,15 +15,19 @@
              :Results
              :county)))
 
-(defn hello [in-channel]
+(defn handle-success [success-channel]
   (go (loop []
-        (println "Success " (<! in-channel))
-        (recur))))
+        (let [success-future (<! success-channel)]
+          (println "Success")
+          (println (:result success-future))
+          (recur)))))
 
 (defn handle-error [err-channel]
   (go (loop []
-        (println "Error " (<! err-channel))
-        (recur))))
+        (let [error-future (<! err-channel)]
+          (println "Error")
+          (println (:status error-future))
+          (recur)))))
 
 (defn thing [in-channel out-channel err-channel]
   (go
@@ -43,7 +47,7 @@
         out-channel (async/chan 10)
         err-channel (async/chan 10)]
     (thing in-channel out-channel err-channel)
-    (hello out-channel)
+    (handle-success out-channel)
     (handle-error err-channel)
     in-channel))
 
