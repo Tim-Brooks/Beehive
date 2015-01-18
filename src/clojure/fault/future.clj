@@ -34,6 +34,7 @@
       :pending? (identical? :pending (status (.getStatus promise)))
       :result (.getResult promise)
       :error (.getError promise)
+      :rejected? false
       default)))
 
 (deftype CLJRejectedFuture [reason]
@@ -49,6 +50,7 @@
   (valAt [_ key default]
     (case key
       :status :rejected
+      :rejected? true
       :rejected-reason reason
       default)))
 

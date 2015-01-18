@@ -32,10 +32,15 @@
           f (service/submit-action service (block-fn 64 latch) Long/MAX_VALUE)]
       (is (= :pending (:status f)))
       (is (not (realized? f)))
+      (is (:pending? f))
       (is (= :not-done (deref f 100 :not-done)))
       (.countDown latch)
       (is (= 64 @f))
       (is (= :success (:status f)))
+      (is (:success? f))
+      (is (not (:error? f)))
+      (is (not (:timed-out? f)))
+      (is (not (:rejected? f)))
       (is (nil? (:error f)))))
   (testing "Submitted action can return error"
     (let [exception (IOException.)
@@ -43,11 +48,19 @@
       (is (= exception @f))
       (is (= exception (:error f)))
       (is (nil? (:result f)))
+      (is (:error? f))
+      (is (not (:success? f)))
+      (is (not (:timed-out? f)))
+      (is (not (:rejected? f)))
       (is (= :error (:status f)))))
   (testing "Submitted action can timeout"
     (let [latch (CountDownLatch. 1)
           f (service/submit-action service (block-fn 1 latch) 50)]
       (is (= :timed-out @f))
+      (is (:timed-out? f))
+      (is (not (:success? f)))
+      (is (not (:error? f)))
+      (is (not (:rejected? f)))
       (is (= :timed-out (:status f)))
       (.countDown latch)
       (is (nil? (:result f)))
@@ -57,6 +70,10 @@
           _ (service/submit-action service (block-fn 1 latch) Long/MAX_VALUE)
           f (service/submit-action service (success-fn 1) Long/MAX_VALUE)]
       (is (= :max-concurrency-level-exceeded @f))
+      (is (:rejected? f))
+      (is (not (:timed-out? f)))
+      (is (not (:success? f)))
+      (is (not (:error? f)))
       (is (= :rejected (:status f)))
       (.countDown latch))))
 
