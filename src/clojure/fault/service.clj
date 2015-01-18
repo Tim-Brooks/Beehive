@@ -1,7 +1,13 @@
 (ns fault.service
   (:require [fault.future :as f])
   (:import (clojure.lang ILookup)
-           (fault BlockingExecutor ServiceExecutor ResilientAction ResilientFuture ResilientPromise RejectedActionException)
+           (fault BlockingExecutor
+                  ServiceExecutor
+                  ResilientAction
+                  ResilientFuture
+                  ResilientPromise
+                  RejectedActionException
+                  ResilientCallback)
            (fault.circuit CircuitBreaker BreakerConfig BreakerConfig$BreakerConfigBuilder)
            (fault.metrics ActionMetrics)))
 
@@ -11,8 +17,12 @@
   (reify ResilientAction
     (run [_] (action-fn))))
 
+(defn wrap-callback-fn [callback-fn]
+  (reify ResilientCallback
+    (run [_ promise] (callback-fn promise))))
+
 (defprotocol Service
-  (submit-action [this action-fn timeout-millis])
+  (submit-action [this action-fn timeout-millis] [this action-fn timeout-millis callback])
   (perform-action [this action-fn])
   (shutdown [this]))
 
@@ -61,11 +71,14 @@
 (deftype CLJService
   [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]
   Service
-  (submit-action [_ action-fn timeout-millis]
+  (submit-action [this action-fn timeout-millis]
+    (submit-action this action-fn timeout-millis nil))
+  (submit-action [_ action-fn timeout-millis callback]
     (try (f/->CLJResilientFuture
            (.promise ^ResilientFuture (.submitAction executor
-                                                     (wrap-action-fn action-fn)
-                                                     timeout-millis)))
+                                                     ^ResilientAction (wrap-action-fn action-fn)
+                                                     ^ResilientCallback (wrap-callback-fn callback)
+                                                     ^long (long timeout-millis))))
          (catch RejectedActionException e
            (f/rejected-action-future (.reason e)))))
   (perform-action [_ action-fn]
