@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Created by timbrooks on 12/23/14.
  */
-public class BlockingExecutor extends AbstractServiceExecutor implements ServiceExecutor {
+public class BlockingExecutor extends AbstractServiceExecutor {
 
     private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
     private final ExecutorService service;

@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * Created by timbrooks on 12/23/14.
  */
-public class AbstractServiceExecutor {
+public abstract class AbstractServiceExecutor implements ServiceExecutor {
     protected final ActionMetrics actionMetrics;
     protected final CircuitBreaker circuitBreaker;
     protected final UUID uuid = UUID.randomUUID();

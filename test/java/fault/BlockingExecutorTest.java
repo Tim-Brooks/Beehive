@@ -151,7 +151,7 @@ public class BlockingExecutorTest {
     }
 
     @Test
-    public void attachedCallbacksWillBeExecuted() throws Exception {
+    public void attachedCallbacksWillBeExecutedOnCompletion() throws Exception {
         ResilientPromise<ResilientPromise<String>> errorPromise = new MultipleWriterResilientPromise<>();
         ResilientPromise<ResilientPromise<String>> successPromise = new MultipleWriterResilientPromise<>();
         ResilientPromise<ResilientPromise<String>> timeOutPromise = new MultipleWriterResilientPromise<>();
@@ -174,8 +174,6 @@ public class BlockingExecutorTest {
         assertEquals(errorF.promise, errorPromise.getResult());
         assertEquals(successF.promise, successPromise.getResult());
         assertEquals(timeOutF.promise, timeOutPromise.getResult());
-
-
     }
 
     // @TODO Write tests for metrics. And tests that ensure metrics are updated even if a different service completes

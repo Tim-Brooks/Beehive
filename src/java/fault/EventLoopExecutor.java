@@ -17,7 +17,7 @@ import java.util.concurrent.Executors;
 /**
  * Created by timbrooks on 11/13/14.
  */
-public class EventLoopExecutor extends AbstractServiceExecutor implements ServiceExecutor {
+public class EventLoopExecutor extends AbstractServiceExecutor {
 
     private final Scheduler scheduler;
     private final ScheduleContext schedulingContext;
