@@ -19,10 +19,10 @@
 
 (defn wrap-callback-fn [callback-fn]
   (reify ResilientCallback
-    (run [_ promise] (callback-fn promise))))
+    (run [_ promise] (callback-fn (f/->CLJResilientFuture promise)))))
 
 (defprotocol Service
-  (submit-action [this action-fn timeout-millis] [this action-fn timeout-millis callback])
+  (submit-action [this action-fn timeout-millis] [this action-fn callback timeout-millis])
   (perform-action [this action-fn])
   (shutdown [this]))
 
@@ -72,8 +72,8 @@
   [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]
   Service
   (submit-action [this action-fn timeout-millis]
-    (submit-action this action-fn timeout-millis nil))
-  (submit-action [_ action-fn timeout-millis callback]
+    (submit-action this action-fn nil timeout-millis))
+  (submit-action [_ action-fn callback timeout-millis]
     (try (f/->CLJResilientFuture
            (.promise ^ResilientFuture (.submitAction executor
                                                      ^ResilientAction (wrap-action-fn action-fn)

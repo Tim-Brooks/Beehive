@@ -28,6 +28,10 @@
   (valAt [_ key default]
     (case key
       :status (status (.getStatus promise))
+      :success? (identical? :success (status (.getStatus promise)))
+      :timed-out? (identical? :timed-out (status (.getStatus promise)))
+      :error? (identical? :error (status (.getStatus promise)))
+      :pending? (identical? :pending (status (.getStatus promise)))
       :result (.getResult promise)
       :error (.getError promise)
       default)))

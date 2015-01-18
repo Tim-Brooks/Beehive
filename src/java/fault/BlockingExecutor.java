@@ -107,9 +107,9 @@ public class BlockingExecutor extends AbstractServiceExecutor implements Service
                 }
             });
             if (millisTimeout > MAX_TIMEOUT_MILLIS) {
-                timeoutQueue.offer(new ActionTimeout(promise, MAX_TIMEOUT_MILLIS, f));
+                timeoutQueue.offer(new ActionTimeout(promise, MAX_TIMEOUT_MILLIS, f, callback));
             } else {
-                timeoutQueue.offer(new ActionTimeout(promise, millisTimeout, f));
+                timeoutQueue.offer(new ActionTimeout(promise, millisTimeout, f, callback));
             }
         } catch (RejectedExecutionException e) {
             metricsQueue.add(RejectionReason.QUEUE_FULL);

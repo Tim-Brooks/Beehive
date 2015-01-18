@@ -7,7 +7,7 @@
 (def api-route (str "http://www.broadbandmap.gov/broadbandmap/"
                     "census/county/%s?format=json"))
 
-(def county-service (fault/service 5 30))
+(defonce county-service (fault/service 5 30))
 
 (defn lookup-state-action [county]
   (fn [] (-> (http/get (format api-route county) {:as :json})
@@ -15,19 +15,36 @@
              :Results
              :county)))
 
-(defn thing [in-channel out-channel]
+(defn hello [in-channel]
+  (go (loop []
+        (println "Success " (<! in-channel))
+        (recur))))
+
+(defn handle-error [err-channel]
+  (go (loop []
+        (println "Error " (<! err-channel))
+        (recur))))
+
+(defn thing [in-channel out-channel err-channel]
   (go
     (loop []
       (let [county (<! in-channel)]
-        (>! out-channel (service/submit-action county-service
-                                               (lookup-state-action county)
-                                               1000))
+        (service/submit-action county-service
+                               (lookup-state-action county)
+                               (fn [future]
+                                 (if (:success? future)
+                                   (>!! out-channel future)
+                                   (>!! err-channel future)))
+                               10)
         (recur)))))
 
-(defn run [county]
-  (let [in-channel (async/chan 1)
-        out-channel (async/chan 1)]
-    (>!! in-channel county)
-    (<!! out-channel)))
+(defn run []
+  (let [in-channel (async/chan 10)
+        out-channel (async/chan 10)
+        err-channel (async/chan 10)]
+    (thing in-channel out-channel err-channel)
+    (hello out-channel)
+    (handle-error err-channel)
+    in-channel))
 
 
