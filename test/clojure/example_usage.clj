@@ -6,8 +6,7 @@
             [fault.service :as service]))
 
 (def api-route (str "http://www.broadbandmap.gov/broadbandmap/"
-                    "census/county/%s?format=json")
-  )
+                    "census/county/%s?format=json"))
 
 (defonce service (atom nil))
 
@@ -40,13 +39,13 @@
                                      (lookup-state-action county)
                                      (fa/return-channels {:success out-channel
                                                           :failed err-channel})
-                                     (+ 5000 (rand-int 200)))]
+                                     (+ 850 (rand-int 200)))]
         (when (:rejected? f)
           (println (:rejected-reason f)))
         (recur)))))
 
 (defn run []
-  (reset! service (fault/service 10 30))
+  (reset! service (fault/service 10 90))
   (let [in-channel (async/chan 10)
         out-channel (async/chan 10)
         err-channel (async/chan 10)]
