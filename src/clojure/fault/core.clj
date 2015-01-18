@@ -3,6 +3,14 @@
 
 (set! *warn-on-reflection* true)
 
+(when
+  (try
+    (require '[clojure.core.async])
+    true
+    (catch Exception _
+      false))
+  (do (require '[fault.async :as async])))
+
 (defn service [pool-size max-concurrency]
   (s/service-executor pool-size max-concurrency))
 

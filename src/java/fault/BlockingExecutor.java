@@ -87,6 +87,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             if (callback != null) {
                                 callback.run(promise);
                             }
+                            semaphore.releasePermit();
                         } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise.getStatus());
                         }
@@ -97,11 +98,10 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             if (callback != null) {
                                 callback.run(promise);
                             }
+                            semaphore.releasePermit();
                         } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise.getStatus());
                         }
-                    } finally {
-                        semaphore.releasePermit();
                     }
                     return null;
                 }
@@ -196,6 +196,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             if (callback != null) {
                                 callback.run(promise);
                             }
+                            semaphore.releasePermit();
                         } else if (!uuid.equals(promise.getCompletedBy())) {
                             metricsQueue.offer(promise.getStatus());
                         }
