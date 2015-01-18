@@ -1,10 +1,12 @@
 package fault;
 
 import fault.utils.TestActions;
+import fault.utils.TestCallbacks;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -146,6 +148,34 @@ public class BlockingExecutorTest {
             assertEquals(exception, e.getCause());
         }
         assertEquals(Status.ERROR, future.getStatus());
+    }
+
+    @Test
+    public void attachedCallbacksWillBeExecuted() throws Exception {
+        ResilientPromise<ResilientPromise<String>> errorPromise = new MultipleWriterResilientPromise<>();
+        ResilientPromise<ResilientPromise<String>> successPromise = new MultipleWriterResilientPromise<>();
+        ResilientPromise<ResilientPromise<String>> timeOutPromise = new MultipleWriterResilientPromise<>();
+
+
+        CountDownLatch blockingLatch = new CountDownLatch(1);
+
+        ResilientFuture<String> errorF = blockingExecutor.submitAction(TestActions.erredAction(new IOException()),
+                TestCallbacks.completePromiseCallback(errorPromise), 100);
+        ResilientFuture<String> timeOutF = blockingExecutor.submitAction(TestActions.blockedAction(blockingLatch),
+                TestCallbacks.completePromiseCallback(timeOutPromise), 1);
+        ResilientFuture<String> successF = blockingExecutor.submitAction(TestActions.successAction(50, "Success"),
+                TestCallbacks.completePromiseCallback(successPromise), Long.MAX_VALUE);
+
+        errorPromise.await();
+        successPromise.await();
+        timeOutPromise.await();
+        blockingLatch.countDown();
+
+        assertEquals(errorF.promise, errorPromise.getResult());
+        assertEquals(successF.promise, successPromise.getResult());
+        assertEquals(timeOutF.promise, timeOutPromise.getResult());
+
+
     }
 
     // @TODO Write tests for metrics. And tests that ensure metrics are updated even if a different service completes
