@@ -222,9 +222,15 @@ public class BlockingExecutorTest {
         f.get();
         blockingExecutor.getCircuitBreaker().forceOpen();
 
-        try {
-            blockingExecutor.submitAction(TestActions.successAction(1), Long.MAX_VALUE);
-        } catch (RejectedActionException e) {}
+        for (int i = 0; i < 5; ++i) {
+            try {
+                blockingExecutor.submitAction(TestActions.successAction(1), Long.MAX_VALUE);
+            } catch (RejectedActionException e) {
+                if (e.reason == RejectionReason.CIRCUIT_OPEN) {
+                    break;
+                }
+            }
+        }
 
         ActionMetrics metrics = blockingExecutor.getActionMetrics();
         HashMap<Object, Integer> expectedCounts = new HashMap<>();
@@ -266,6 +272,6 @@ public class BlockingExecutorTest {
         assertEquals(0, metrics.getQueueFullRejectionsForTimePeriod(milliseconds));
     }
 
-    // @TODO Write tests for metrics. And tests that ensure metrics are updated even if a different service completes
-    // @TODO promise. Add circuit breaker tests. Add queue limit test? Is that possible?
+    // @TODO And tests that ensure metrics are updated even if a different service completes
+    // @TODO promise. Add circuit breaker tests.
 }
