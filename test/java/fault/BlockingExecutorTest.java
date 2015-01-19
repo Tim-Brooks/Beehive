@@ -245,8 +245,28 @@ public class BlockingExecutorTest {
     }
 
     @Test
-    public void metricsUpdatedEvenIfPromiseAlreadyCompleted() {
+    public void metricsUpdatedEvenIfPromiseAlreadyCompleted() throws Exception {
+        CountDownLatch blockingLatch = new CountDownLatch(1);
+        ResilientPromise<String> errP = new MultipleWriterResilientPromise<>();
+        ResilientPromise<String> timeoutP = new MultipleWriterResilientPromise<>();
+        ResilientPromise<String> successP = new MultipleWriterResilientPromise<>();
+        errP.deliverResult("Done");
+        timeoutP.deliverResult("Done");
+        successP.deliverResult("Done");
 
+        blockingExecutor.submitAction(TestActions.erredAction(new IOException()), errP, 100);
+        blockingExecutor.submitAction(TestActions.blockedAction(blockingLatch), timeoutP, 1);
+        blockingExecutor.submitAction(TestActions.successAction(50, "Success"), successP, Long.MAX_VALUE);
+
+        ActionMetrics metrics = blockingExecutor.getActionMetrics();
+        Map<Object, Integer> expectedCounts = new HashMap<>();
+        expectedCounts.put(Status.SUCCESS, 1);
+        expectedCounts.put(Status.ERROR, 1);
+        expectedCounts.put(Status.TIMED_OUT, 1);
+
+
+        assertMetrics(metrics, expectedCounts);
+        blockingLatch.countDown();
     }
 
     private void assertMetrics(ActionMetrics metrics, Map<Object, Integer> expectedCounts) throws Exception {
@@ -272,14 +292,13 @@ public class BlockingExecutorTest {
         }
 
         assertEquals(expectedErrors, metrics.getErrorsForTimePeriod(milliseconds));
-        assertEquals(expectedSuccesses, metrics.getSuccessesForTimePeriod(milliseconds));
         assertEquals(expectedTimeouts, metrics.getTimeoutsForTimePeriod(milliseconds));
+        assertEquals(expectedSuccesses, metrics.getSuccessesForTimePeriod(milliseconds));
         assertEquals(expectedFailures, metrics.getFailuresForTimePeriod(milliseconds));
         assertEquals(expectedMaxConcurrency, metrics.getMaxConcurrencyRejectionsForTimePeriod(milliseconds));
         assertEquals(expectedCircuitOpen, metrics.getCircuitOpenedRejectionsForTimePeriod(milliseconds));
         assertEquals(0, metrics.getQueueFullRejectionsForTimePeriod(milliseconds));
     }
 
-    // @TODO And tests that ensure metrics are updated even if a different service completes
-    // @TODO promise. Add circuit breaker tests.
+    // @TODO Add circuit breaker tests.
 }

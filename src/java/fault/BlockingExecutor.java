@@ -83,22 +83,24 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                         T result = action.run();
                         if (promise.deliverResult(result)) {
                             promise.setCompletedBy(uuid);
-                            metricsQueue.offer(promise.getStatus());
+                            metricsQueue.offer(Status.SUCCESS);
                             if (callback != null) {
                                 callback.run(promise);
                             }
                         } else if (!uuid.equals(promise.getCompletedBy())) {
-                            metricsQueue.offer(promise.getStatus());
+                            metricsQueue.offer(Status.SUCCESS);
                         }
+                    } catch (InterruptedException e) {
+                        return null;
                     } catch (Exception e) {
                         if (promise.deliverError(e)) {
                             promise.setCompletedBy(uuid);
-                            metricsQueue.offer(promise.getStatus());
+                            metricsQueue.offer(Status.ERROR);
                             if (callback != null) {
                                 callback.run(promise);
                             }
                         } else if (!uuid.equals(promise.getCompletedBy())) {
-                            metricsQueue.offer(promise.getStatus());
+                            metricsQueue.offer(Status.ERROR);
                         }
                     } finally {
                         semaphore.releasePermit(permit);
@@ -191,7 +193,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                         if (promise.setTimedOut()) {
                             promise.setCompletedBy(uuid);
                             timeout.future.cancel(true);
-                            actionMetrics.reportActionResult(promise.getStatus());
+                            metricsQueue.offer(Status.TIMED_OUT);
                             circuitBreaker.informBreakerOfResult(promise.isSuccessful());
 
                             @SuppressWarnings("unchecked")
@@ -201,7 +203,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             }
                         } else if (!uuid.equals(promise.getCompletedBy())) {
                             timeout.future.cancel(true);
-                            metricsQueue.offer(promise.getStatus());
+                            metricsQueue.offer(Status.TIMED_OUT);
                         }
                         semaphore.releasePermit(timeout.permit);
 
