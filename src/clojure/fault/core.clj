@@ -9,7 +9,7 @@
     true
     (catch Exception _
       false))
-  (do (require '[fault.async :as async])))
+  (do (require '[fault.async])))
 
 (defn service [pool-size max-concurrency]
   (s/service-executor pool-size max-concurrency))

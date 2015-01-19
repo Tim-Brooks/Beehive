@@ -9,9 +9,9 @@ import java.util.UUID;
  * Created by timbrooks on 12/23/14.
  */
 public abstract class AbstractServiceExecutor implements ServiceExecutor {
-    protected final ActionMetrics actionMetrics;
-    protected final CircuitBreaker circuitBreaker;
-    protected final UUID uuid = UUID.randomUUID();
+    final ActionMetrics actionMetrics;
+    final CircuitBreaker circuitBreaker;
+    final UUID uuid = UUID.randomUUID();
 
     public AbstractServiceExecutor(CircuitBreaker circuitBreaker, ActionMetrics actionMetrics) {
         this.circuitBreaker = circuitBreaker;

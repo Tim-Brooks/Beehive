@@ -222,12 +222,15 @@ public class BlockingExecutorTest {
         f.get();
         blockingExecutor.getCircuitBreaker().forceOpen();
 
+        int maxConcurrencyErrors = 1;
         for (int i = 0; i < 5; ++i) {
             try {
                 blockingExecutor.submitAction(TestActions.successAction(1), Long.MAX_VALUE);
             } catch (RejectedActionException e) {
                 if (e.reason == RejectionReason.CIRCUIT_OPEN) {
                     break;
+                } else {
+                    maxConcurrencyErrors++;
                 }
             }
         }
@@ -236,9 +239,14 @@ public class BlockingExecutorTest {
         HashMap<Object, Integer> expectedCounts = new HashMap<>();
         expectedCounts.put(Status.SUCCESS, 1);
         expectedCounts.put(RejectionReason.CIRCUIT_OPEN, 1);
-        expectedCounts.put(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED, 1);
+        expectedCounts.put(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED, maxConcurrencyErrors);
 
         assertMetrics(metrics, expectedCounts);
+    }
+
+    @Test
+    public void metricsUpdatedEvenIfPromiseAlreadyCompleted() {
+
     }
 
     private void assertMetrics(ActionMetrics metrics, Map<Object, Integer> expectedCounts) throws Exception {

@@ -10,10 +10,10 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public abstract class AbstractResilientPromise<T> implements ResilientPromise<T> {
     protected T result;
-    protected Throwable error;
-    protected AtomicReference<Status> status = new AtomicReference<>(Status.PENDING);
+    Throwable error;
+    final AtomicReference<Status> status = new AtomicReference<>(Status.PENDING);
     // TODO: Does this act as a memory barrier?
-    protected CountDownLatch latch = new CountDownLatch(1);
+    final CountDownLatch latch = new CountDownLatch(1);
     private UUID completingServiceUUID;
 
     @Override

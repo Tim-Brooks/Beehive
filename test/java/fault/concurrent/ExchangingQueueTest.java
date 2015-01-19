@@ -90,8 +90,7 @@ public class ExchangingQueueTest {
         List<Integer> received = new ArrayList<>();
 
         while (count != receivedCount) {
-            Integer poll = null;
-            poll = exchangingQueue.blockingPoll();
+            Integer poll = exchangingQueue.blockingPoll();
             received.add(poll);
             ++receivedCount;
         }

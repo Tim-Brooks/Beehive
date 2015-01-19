@@ -63,6 +63,7 @@ public class EventLoopExecutor extends AbstractServiceExecutor {
         return submitAction(action, promise, null, millisTimeout);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise,
                                                ResilientCallback<T> callback, long millisTimeout) {

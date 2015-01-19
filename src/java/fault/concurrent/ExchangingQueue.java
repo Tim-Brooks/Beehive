@@ -11,8 +11,8 @@ public class ExchangingQueue<T> {
     private final T[] queue;
     private final int capacity;
     private final int mask;
-    private AtomicInteger head = new AtomicInteger(0);
-    private AtomicInteger tail = new AtomicInteger(0);
+    private final AtomicInteger head = new AtomicInteger(0);
+    private final AtomicInteger tail = new AtomicInteger(0);
     private volatile Thread waiter = null;
 
     @SuppressWarnings("unchecked")

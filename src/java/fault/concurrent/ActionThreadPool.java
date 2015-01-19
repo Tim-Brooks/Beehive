@@ -15,10 +15,8 @@ public class ActionThreadPool implements Executor {
 
     private final NavigableSet<ThreadManager> pool;
     private final ThreadLocalRandom random = ThreadLocalRandom.current();
-    private final String actionName;
 
     public ActionThreadPool(String actionName, int threadCount) {
-        this.actionName = actionName;
         if (threadCount < 1) {
             throw new IllegalArgumentException("Cannot have fewer than 1 thread");
         }
@@ -78,7 +76,7 @@ public class ActionThreadPool implements Executor {
                 @Override
                 public void run() {
                     for (; ; ) {
-                        Runnable runnable = null;
+                        Runnable runnable;
                         try {
                             runnable = queue.blockingPoll();
                         } catch (InterruptedException e) {

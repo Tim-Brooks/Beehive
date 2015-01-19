@@ -3,12 +3,9 @@ package fault.circuit;
 import fault.metrics.ActionMetrics;
 import fault.utils.TimeProvider;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Created by timbrooks on 11/5/14.
@@ -22,8 +19,8 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     private final TimeProvider timeProvider;
     private final ActionMetrics actionMetrics;
     private final AtomicInteger state = new AtomicInteger(0);
-    private AtomicLong lastTestedTime = new AtomicLong(0);
-    private AtomicReference<BreakerConfig> breakerConfig;
+    private final AtomicLong lastTestedTime = new AtomicLong(0);
+    private final AtomicReference<BreakerConfig> breakerConfig;
 
     public DefaultCircuitBreaker(ActionMetrics actionMetrics, BreakerConfig breakerConfig) {
         this(actionMetrics, breakerConfig, new TimeProvider());
@@ -75,13 +72,13 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     }
 
     @Override
-    public void setBreakerConfig(BreakerConfig breakerConfig) {
-        this.breakerConfig.set(breakerConfig);
+    public BreakerConfig getBreakerConfig() {
+        return breakerConfig.get();
     }
 
     @Override
-    public BreakerConfig getBreakerConfig() {
-        return breakerConfig.get();
+    public void setBreakerConfig(BreakerConfig breakerConfig) {
+        this.breakerConfig.set(breakerConfig);
     }
 
     @Override

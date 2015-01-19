@@ -70,7 +70,7 @@ public class EventLoopExecutorTest {
     @Test
     public void testScheduleActionIsSubmittedIfCircuitAllowsRequest() {
         when(circuitBreaker.allowAction()).thenReturn(true);
-        ResilientFuture<Object> future = serviceExecutor.submitAction(resilientAction, 1000);
+        serviceExecutor.submitAction(resilientAction, 1000);
 
         verify(toSchedule).offer(messageCaptor.capture());
 

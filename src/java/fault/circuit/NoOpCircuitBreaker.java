@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Created by timbrooks on 11/5/14.
  */
 public class NoOpCircuitBreaker implements CircuitBreaker {
-    private AtomicBoolean circuitOpen = new AtomicBoolean(false);
+    private final AtomicBoolean circuitOpen = new AtomicBoolean(false);
 
     @Override
     public boolean isOpen() {
