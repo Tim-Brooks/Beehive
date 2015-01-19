@@ -91,6 +91,9 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             metricsQueue.offer(Status.SUCCESS);
                         }
                     } catch (InterruptedException e) {
+                        // This needs to be documented. Or create a work around. The reason for ignoring this
+                        // exception is to prevent the metrics from being updated twice in the scenario where: the
+                        // action timed-out. But the promise was already completed.
                         return null;
                     } catch (Exception e) {
                         if (promise.deliverError(e)) {
