@@ -1,5 +1,6 @@
 package fault;
 
+import fault.metrics.ActionMetrics;
 import fault.utils.TestActions;
 import fault.utils.TestCallbacks;
 import org.junit.After;
@@ -7,6 +8,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -174,6 +178,92 @@ public class BlockingExecutorTest {
         assertEquals(errorF.promise, errorPromise.getResult());
         assertEquals(successF.promise, successPromise.getResult());
         assertEquals(timeOutF.promise, timeOutPromise.getResult());
+    }
+
+    @Test
+    public void resultMetricsUpdated() throws Exception {
+        CountDownLatch blockingLatch = new CountDownLatch(1);
+
+        ResilientFuture<String> errorF = blockingExecutor.submitAction(TestActions.erredAction(new IOException()), 100);
+        ResilientFuture<String> timeOutF = blockingExecutor.submitAction(TestActions.blockedAction(blockingLatch), 1);
+        ResilientFuture<String> successF = blockingExecutor.submitAction(TestActions.successAction(50, "Success"),
+                Long.MAX_VALUE);
+
+        for (ResilientFuture<String> f : Arrays.asList(errorF, timeOutF, successF)) {
+            try {
+                f.get();
+                f.get();
+                f.get();
+            } catch (ExecutionException e) {
+            }
+        }
+
+        ActionMetrics metrics = blockingExecutor.getActionMetrics();
+        Map<Object, Integer> expectedCounts = new HashMap<>();
+        expectedCounts.put(Status.SUCCESS, 1);
+        expectedCounts.put(Status.ERROR, 1);
+        expectedCounts.put(Status.TIMED_OUT, 1);
+
+        assertMetrics(metrics, expectedCounts);
+    }
+
+    @Test
+    public void rejectedMetricsUpdated() throws Exception {
+        blockingExecutor = new BlockingExecutor(1, 1);
+        CountDownLatch latch = new CountDownLatch(1);
+        ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.blockedAction(latch), Long.MAX_VALUE);
+
+        try {
+            blockingExecutor.submitAction(TestActions.successAction(1), Long.MAX_VALUE);
+        } catch (RejectedActionException e) {
+        }
+
+        latch.countDown();
+        f.get();
+        blockingExecutor.getCircuitBreaker().forceOpen();
+
+        try {
+            blockingExecutor.submitAction(TestActions.successAction(1), Long.MAX_VALUE);
+        } catch (RejectedActionException e) {}
+
+        ActionMetrics metrics = blockingExecutor.getActionMetrics();
+        HashMap<Object, Integer> expectedCounts = new HashMap<>();
+        expectedCounts.put(Status.SUCCESS, 1);
+        expectedCounts.put(RejectionReason.CIRCUIT_OPEN, 1);
+        expectedCounts.put(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED, 1);
+
+        assertMetrics(metrics, expectedCounts);
+    }
+
+    private void assertMetrics(ActionMetrics metrics, Map<Object, Integer> expectedCounts) throws Exception {
+        int milliseconds = 5000;
+
+        int expectedErrors = expectedCounts.get(Status.ERROR) == null ? 0 : expectedCounts.get(Status.ERROR);
+        int expectedSuccesses = expectedCounts.get(Status.SUCCESS) == null ? 0 : expectedCounts.get(Status.SUCCESS);
+        int expectedTimeouts = expectedCounts.get(Status.TIMED_OUT) == null ? 0 : expectedCounts.get(Status.TIMED_OUT);
+        int expectedMaxConcurrency = expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED) == null ? 0 :
+                expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+        int expectedCircuitOpen = expectedCounts.get(RejectionReason.CIRCUIT_OPEN) == null ? 0 : expectedCounts.get
+                (RejectionReason.CIRCUIT_OPEN);
+        int expectedFailures = expectedErrors + expectedTimeouts;
+        for (int i = 0; i < 10; ++i) {
+            Thread.sleep(5);
+            if (expectedErrors == metrics.getErrorsForTimePeriod(milliseconds) && expectedSuccesses == metrics
+                    .getSuccessesForTimePeriod(milliseconds) && expectedFailures == metrics.getFailuresForTimePeriod
+                    (milliseconds) && expectedTimeouts == metrics.getTimeoutsForTimePeriod(milliseconds) &&
+                    expectedCircuitOpen == metrics.getCircuitOpenedRejectionsForTimePeriod(milliseconds) &&
+                    expectedMaxConcurrency == metrics.getMaxConcurrencyRejectionsForTimePeriod(milliseconds)) {
+                break;
+            }
+        }
+
+        assertEquals(expectedErrors, metrics.getErrorsForTimePeriod(milliseconds));
+        assertEquals(expectedSuccesses, metrics.getSuccessesForTimePeriod(milliseconds));
+        assertEquals(expectedTimeouts, metrics.getTimeoutsForTimePeriod(milliseconds));
+        assertEquals(expectedFailures, metrics.getFailuresForTimePeriod(milliseconds));
+        assertEquals(expectedMaxConcurrency, metrics.getMaxConcurrencyRejectionsForTimePeriod(milliseconds));
+        assertEquals(expectedCircuitOpen, metrics.getCircuitOpenedRejectionsForTimePeriod(milliseconds));
+        assertEquals(0, metrics.getQueueFullRejectionsForTimePeriod(milliseconds));
     }
 
     // @TODO Write tests for metrics. And tests that ensure metrics are updated even if a different service completes
