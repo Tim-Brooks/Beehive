@@ -7,7 +7,6 @@ import fault.metrics.ActionMetrics;
 import fault.metrics.SingleWriterActionMetrics;
 
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * Created by timbrooks on 12/23/14.
@@ -50,7 +49,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         }
         this.semaphore = new Semaphore(concurrencyLevel);
         this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS,
-                new ArrayBlockingQueue<Runnable>(concurrencyLevel * 2), new ServiceThreadFactory());
+                new ArrayBlockingQueue<Runnable>(concurrencyLevel * 2), new ServiceThreadFactory(name));
         startTimeoutAndMetrics();
     }
 
@@ -249,13 +248,4 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         }
     }
 
-    private class ServiceThreadFactory implements ThreadFactory {
-
-        public final AtomicInteger count = new AtomicInteger(0);
-
-        @Override
-        public Thread newThread(Runnable r) {
-            return new Thread(r, name + "-" + count.getAndIncrement());
-        }
-    }
 }
