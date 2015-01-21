@@ -1,7 +1,7 @@
 (ns fault.http-kit
   (:require [org.httpkit.client :as client]
             [fault.service :as service])
-  (:import (fault HttpKitExecutor)))
+  (:import (fault HttpKitExecutor ResilientAction)))
 
 (set! *warn-on-reflection* true)
 
@@ -9,10 +9,10 @@
 
 (defn request [^HttpKitExecutor service request-map callback]
   (let [modified-map (-> request-map
-                         (assoc :worker-pool (.callbackExecutor service)))]
-    (client/request request-map callback)))
-
-(defn thing []
-  (service/submit-action
-    service
-    (fn [] (client/get "http://www.google.com")) 300))
+                         (assoc :worker-pool (.callbackExecutor service))
+                         (assoc :client (.client service)))]
+    (.submitAction service
+                   (reify ResilientAction
+                     (run [_]
+                       (client/request modified-map callback)))
+                   0)))
