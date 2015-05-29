@@ -1,6 +1,7 @@
 package fault;
 
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -9,7 +10,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Semaphore {
 
     private final AtomicInteger permitsRemaining;
-    private final ConcurrentHashMap<Permit, Boolean> permitHolders = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Permit, Boolean> permitHolders = new ConcurrentHashMap<>();
 
     public Semaphore(int concurrencyLevel) {
         permitsRemaining = new AtomicInteger(concurrencyLevel);
@@ -36,5 +37,6 @@ public class Semaphore {
         }
     }
 
-    final class Permit{}
+    final class Permit {
+    }
 }

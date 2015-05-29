@@ -9,26 +9,26 @@ import java.util.UUID;
  * Created by timbrooks on 12/22/14.
  */
 public interface ServiceExecutor {
-    public static long MAX_TIMEOUT_MILLIS = 1000 * 60 * 60 * 24;
+    long MAX_TIMEOUT_MILLIS = 1000 * 60 * 60 * 24;
 
-    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, long millisTimeout);
+    <T> ResilientFuture<T> submitAction(ResilientAction<T> action, long millisTimeout);
 
-    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientCallback<T> callback, long
+    <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientCallback<T> callback, long
             millisTimeout);
 
-    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise, long
+    <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise, long
             millisTimeout);
 
-    public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise,
-                                               ResilientCallback<T> callback, long millisTimeout);
+    <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientPromise<T> promise,
+                                        ResilientCallback<T> callback, long millisTimeout);
 
-    public <T> ResilientPromise<T> performAction(ResilientAction<T> action);
+    <T> ResilientPromise<T> performAction(ResilientAction<T> action);
 
-    public ActionMetrics getActionMetrics();
+    ActionMetrics getActionMetrics();
 
-    public CircuitBreaker getCircuitBreaker();
+    CircuitBreaker getCircuitBreaker();
 
-    public UUID getExecutorUUID();
+    UUID getExecutorUUID();
 
     void shutdown();
 }

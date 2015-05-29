@@ -5,5 +5,5 @@ package fault;
  */
 public interface ResilientCallback<T> {
 
-    public void run(ResilientPromise<T> resultPromise);
+    void run(ResilientPromise<T> resultPromise);
 }

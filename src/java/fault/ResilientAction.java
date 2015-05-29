@@ -5,5 +5,5 @@ package fault;
  */
 public interface ResilientAction<T> {
 
-    public T run() throws Exception;
+    T run() throws Exception;
 }

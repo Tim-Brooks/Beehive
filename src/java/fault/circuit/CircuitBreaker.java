@@ -5,17 +5,17 @@ package fault.circuit;
  */
 public interface CircuitBreaker {
 
-    public boolean isOpen();
+    boolean isOpen();
 
-    public boolean allowAction();
+    boolean allowAction();
 
-    public void informBreakerOfResult(boolean successful);
+    void informBreakerOfResult(boolean successful);
 
-    public void setBreakerConfig(BreakerConfig breakerConfig);
+    void setBreakerConfig(BreakerConfig breakerConfig);
 
-    public BreakerConfig getBreakerConfig();
+    BreakerConfig getBreakerConfig();
 
-    public void forceOpen();
+    void forceOpen();
 
-    public void forceClosed();
+    void forceClosed();
 }
