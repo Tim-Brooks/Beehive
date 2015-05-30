@@ -34,7 +34,4 @@ public interface ResilientPromise<T> {
 
     boolean isTimedOut();
 
-    UUID getCompletedBy();
-
-    void setCompletedBy(UUID executorUUID);
 }

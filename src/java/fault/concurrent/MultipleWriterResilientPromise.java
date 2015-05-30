@@ -12,6 +12,9 @@ public class MultipleWriterResilientPromise<T> extends AbstractResilientPromise<
         if (status.get() == Status.PENDING) {
             if (status.compareAndSet(Status.PENDING, Status.SUCCESS)) {
                 this.result = result;
+                if (wrappedPromise != null) {
+                    wrappedPromise.deliverResult(result);
+                }
                 latch.countDown();
                 return true;
             }
@@ -24,6 +27,9 @@ public class MultipleWriterResilientPromise<T> extends AbstractResilientPromise<
         if (status.get() == Status.PENDING) {
             if (status.compareAndSet(Status.PENDING, Status.ERROR)) {
                 this.error = error;
+                if (wrappedPromise != null) {
+                    wrappedPromise.deliverError(error);
+                }
                 latch.countDown();
                 return true;
             }
@@ -35,6 +41,9 @@ public class MultipleWriterResilientPromise<T> extends AbstractResilientPromise<
     public boolean setTimedOut() {
         if (status.get() == Status.PENDING) {
             if (status.compareAndSet(Status.PENDING, Status.TIMED_OUT)) {
+                if (wrappedPromise != null) {
+                    wrappedPromise.setTimedOut();
+                }
                 latch.countDown();
                 return true;
             }

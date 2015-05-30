@@ -19,7 +19,6 @@ public class BlockingExecutor extends AbstractServiceExecutor {
 
     private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
     private final ExecutorService service;
-    private final ExecutorService managingService = Executors.newFixedThreadPool(2);
     private final BlockingQueue<Enum<?>> metricsQueue = new LinkedBlockingQueue<>();
     private final TimeoutService timeoutService = TimeoutService.defaultTimeoutService;
     private final String name;
@@ -59,7 +58,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
 
     @Override
     public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, long millisTimeout) {
-        return submitAction(action, new MultipleWriterResilientPromise<T>(), millisTimeout);
+        return submitAction(action, (ResilientPromise<T>) null, millisTimeout);
     }
 
     @Override
@@ -71,55 +70,45 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     @Override
     public <T> ResilientFuture<T> submitAction(ResilientAction<T> action, ResilientCallback<T> callback, long
             millisTimeout) {
-        return submitAction(action, new MultipleWriterResilientPromise<T>(), callback, millisTimeout);
+        return submitAction(action, null, callback, millisTimeout);
     }
 
     @Override
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                final ResilientCallback<T> callback, long millisTimeout) {
         final ExecutorSemaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
+        final AbstractResilientPromise<T> internalPromise = new MultipleWriterResilientPromise<>();
+        if (promise != null) {
+            internalPromise.wrapPromise(promise);
+        }
         try {
             final Future<Void> f = service.submit(new Callable<Void>() {
                 @Override
                 public Void call() {
                     try {
                         T result = action.run();
-                        if (promise.deliverResult(result)) {
-                            promise.setCompletedBy(uuid);
-                            metricsQueue.offer(Status.SUCCESS);
-                            if (callback != null) {
-                                callback.run(promise);
-                            }
-                        } else if (!uuid.equals(promise.getCompletedBy())) {
-                            metricsQueue.offer(Status.SUCCESS);
-                        }
+                        internalPromise.deliverResult(result);
                     } catch (InterruptedException e) {
-                        // This is a timeout
-
-                        // This needs to be documented. Or create a work around. The reason for ignoring this
-                        // exception is to prevent the metrics from being updated twice in the scenario where: the
-                        // action timed-out. But the promise was already completed.
+                        Thread.interrupted();
                         return null;
                     } catch (Exception e) {
-                        if (promise.deliverError(e)) {
-                            promise.setCompletedBy(uuid);
-                            metricsQueue.offer(Status.ERROR);
-                            if (callback != null) {
-                                callback.run(promise);
-                            }
-                        } else if (!uuid.equals(promise.getCompletedBy())) {
-                            metricsQueue.offer(Status.ERROR);
-                        }
+                        internalPromise.deliverError(e);
                     } finally {
+                        metricsQueue.offer(internalPromise.getStatus());
+                        if (callback != null) {
+                            callback.run(promise == null ? internalPromise : promise);
+                        }
+
                         semaphore.releasePermit(permit);
                     }
                     return null;
                 }
             });
+
             if (millisTimeout > MAX_TIMEOUT_MILLIS) {
-                timeoutService.scheduleTimeout(new NewActionTimeout(MAX_TIMEOUT_MILLIS, promise, f));
+                timeoutService.scheduleTimeout(new NewActionTimeout(MAX_TIMEOUT_MILLIS, internalPromise, f));
             } else {
-                timeoutService.scheduleTimeout(new NewActionTimeout(millisTimeout, promise, f));
+                timeoutService.scheduleTimeout(new NewActionTimeout(millisTimeout, internalPromise, f));
             }
         } catch (RejectedExecutionException e) {
             metricsQueue.add(RejectionReason.QUEUE_FULL);
@@ -127,7 +116,12 @@ public class BlockingExecutor extends AbstractServiceExecutor {
             throw new RejectedActionException(RejectionReason.QUEUE_FULL);
         }
 
-        return new ResilientFuture<>(promise);
+        if (promise != null) {
+            return new ResilientFuture<>(promise);
+        } else {
+            return new ResilientFuture<>(internalPromise);
+        }
+
     }
 
     @Override
@@ -191,8 +185,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
             }
         });
 
-        // TODO Share timeout thread and option to shutdown.
-        metrics.setName("Metrics thread");
+        metrics.setName(name + "-metrics-thread");
         metrics.start();
     }
 

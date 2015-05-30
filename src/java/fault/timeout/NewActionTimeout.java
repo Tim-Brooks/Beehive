@@ -15,7 +15,8 @@ public class NewActionTimeout implements Delayed {
     public final Future<Void> future;
     public final ResilientPromise<?> promise;
 
-    public NewActionTimeout(long millisRelativeTimeout, ResilientPromise<?> promise, Future<Void> future) {
+    public NewActionTimeout(long millisRelativeTimeout, ResilientPromise<?> promise, Future<Void>
+            future) {
         this.millisAbsoluteTimeout = millisRelativeTimeout + System.currentTimeMillis();
         this.promise = promise;
         this.future = future;

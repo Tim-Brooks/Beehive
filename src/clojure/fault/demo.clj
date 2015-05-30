@@ -1,6 +1,7 @@
 (ns fault.demo
   (:require [fault.core :as c]
-            [fault.future :as f]))
+            [fault.future :as f])
+  (:import (java.util Random)))
 
 (defn thing [x]
   (* x x))
@@ -23,7 +24,8 @@
 (defn submit []
   (c/submit-action s (fn []
                        (let [{:keys [number]} {:number {:k :r :4 :d}}]
-                         (Thread/sleep 100)
+                         (doseq [i (range 100000000000)]
+                           (.nextInt (Random.)))
                          {:hello (my-divide number 9)
                           :x (mapv #(* number %) [1 2 3])}))
-                   2))
+                   1))

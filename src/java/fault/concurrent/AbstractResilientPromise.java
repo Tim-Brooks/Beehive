@@ -2,7 +2,6 @@ package fault.concurrent;
 
 import fault.Status;
 
-import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -15,7 +14,7 @@ public abstract class AbstractResilientPromise<T> implements ResilientPromise<T>
     volatile Throwable error;
     final AtomicReference<Status> status = new AtomicReference<>(Status.PENDING);
     final CountDownLatch latch = new CountDownLatch(1);
-    private volatile UUID completingServiceUUID;
+    ResilientPromise<T> wrappedPromise;
 
     @Override
     public void await() throws InterruptedException {
@@ -68,13 +67,8 @@ public abstract class AbstractResilientPromise<T> implements ResilientPromise<T>
         return status.get() == Status.TIMED_OUT;
     }
 
-    @Override
-    public void setCompletedBy(UUID uuid) {
-        this.completingServiceUUID = uuid;
+    public void wrapPromise(ResilientPromise<T> promise) {
+        wrappedPromise = promise;
     }
 
-    @Override
-    public UUID getCompletedBy() {
-        return completingServiceUUID;
-    }
 }

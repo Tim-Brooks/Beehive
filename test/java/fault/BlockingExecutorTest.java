@@ -112,7 +112,6 @@ public class BlockingExecutorTest {
 
         assertEquals("Same Promise", promise.awaitResult());
         assertEquals(promise, f.promise);
-        assertEquals(blockingExecutor.getExecutorUUID(), promise.getCompletedBy());
     }
 
     @Test
@@ -128,7 +127,6 @@ public class BlockingExecutorTest {
         for (int i = 0; i < 10; ++i) {
             Thread.sleep(5);
             assertEquals("CompleteOnThisThread", promise.awaitResult());
-            assertNull(promise.getCompletedBy());
         }
     }
 
