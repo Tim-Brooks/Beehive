@@ -185,6 +185,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
             }
         });
 
+        // TODO Share timeout thread and option to shutdown.
         metrics.setName("Metrics thread");
         metrics.start();
 
