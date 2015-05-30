@@ -1,6 +1,8 @@
 package fault;
 
 import fault.circuit.CircuitBreaker;
+import fault.concurrent.ResilientFuture;
+import fault.concurrent.ResilientPromise;
 import fault.metrics.ActionMetrics;
 
 import java.util.UUID;

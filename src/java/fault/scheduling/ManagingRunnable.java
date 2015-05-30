@@ -2,6 +2,8 @@ package fault.scheduling;
 
 import fault.*;
 import fault.circuit.CircuitBreaker;
+import fault.concurrent.ResilientPromise;
+import fault.concurrent.SingleWriterResilientPromise;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.ActionMetrics;

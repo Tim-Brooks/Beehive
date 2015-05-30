@@ -1,5 +1,8 @@
 package fault;
 
+import fault.concurrent.MultipleWriterResilientPromise;
+import fault.concurrent.ResilientFuture;
+import fault.concurrent.ResilientPromise;
 import fault.metrics.ActionMetrics;
 import fault.utils.TestActions;
 import fault.utils.TestCallbacks;

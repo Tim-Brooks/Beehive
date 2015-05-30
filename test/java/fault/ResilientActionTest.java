@@ -1,5 +1,6 @@
 package fault;
 
+import fault.concurrent.ResilientFuture;
 import fault.metrics.ActionMetrics;
 import org.junit.After;
 import org.junit.Before;

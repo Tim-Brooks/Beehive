@@ -1,8 +1,7 @@
 package fault.scheduling;
 
-import fault.ActionCallable;
 import fault.ActionTimeoutException;
-import fault.ResilientPromise;
+import fault.concurrent.ResilientPromise;
 import fault.Status;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;

@@ -1,4 +1,6 @@
-package fault;
+package fault.concurrent;
+
+import fault.Status;
 
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;

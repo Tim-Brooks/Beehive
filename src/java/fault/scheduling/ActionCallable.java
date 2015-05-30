@@ -1,5 +1,6 @@
-package fault;
+package fault.scheduling;
 
+import fault.ResilientAction;
 import fault.messages.ResultMessage;
 
 import java.util.concurrent.Callable;

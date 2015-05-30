@@ -1,6 +1,6 @@
 package fault.scheduling;
 
-import fault.ResilientPromise;
+import fault.concurrent.ResilientPromise;
 import fault.Status;
 import fault.messages.ResultMessage;
 

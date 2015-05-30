@@ -1,4 +1,6 @@
-package fault;
+package fault.concurrent;
+
+import fault.Status;
 
 /**
  * Created by timbrooks on 12/22/14.

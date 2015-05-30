@@ -1,7 +1,7 @@
 package fault.messages;
 
 import fault.ResilientAction;
-import fault.ResilientPromise;
+import fault.concurrent.ResilientPromise;
 
 /**
  * Created by timbrooks on 11/16/14.

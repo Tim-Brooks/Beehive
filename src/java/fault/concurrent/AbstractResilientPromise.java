@@ -1,4 +1,6 @@
-package fault;
+package fault.concurrent;
+
+import fault.Status;
 
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;

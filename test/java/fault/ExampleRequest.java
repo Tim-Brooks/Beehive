@@ -1,5 +1,7 @@
 package fault;
 
+import fault.concurrent.ResilientFuture;
+
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;

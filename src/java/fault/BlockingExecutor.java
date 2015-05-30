@@ -3,6 +3,10 @@ package fault;
 import fault.circuit.BreakerConfig;
 import fault.circuit.CircuitBreaker;
 import fault.circuit.DefaultCircuitBreaker;
+import fault.concurrent.MultipleWriterResilientPromise;
+import fault.concurrent.ResilientFuture;
+import fault.concurrent.ResilientPromise;
+import fault.concurrent.SingleWriterResilientPromise;
 import fault.metrics.ActionMetrics;
 import fault.metrics.SingleWriterActionMetrics;
 
@@ -20,7 +24,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<Enum<?>> metricsQueue = new LinkedBlockingQueue<>();
     private final String name;
-    private final Semaphore semaphore;
+    private final fault.concurrent.Semaphore semaphore;
 
     public BlockingExecutor(int poolSize, int concurrencyLevel) {
         this(poolSize, concurrencyLevel, null);
@@ -48,7 +52,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         } else {
             this.name = name;
         }
-        this.semaphore = new Semaphore(concurrencyLevel);
+        this.semaphore = new fault.concurrent.Semaphore(concurrencyLevel);
         this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS,
                 new ArrayBlockingQueue<Runnable>(concurrencyLevel * 2), new ServiceThreadFactory());
         startTimeoutAndMetrics();
@@ -74,7 +78,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     @Override
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                final ResilientCallback<T> callback, long millisTimeout) {
-        final Semaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
+        final fault.concurrent.Semaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
         try {
             final Future<Void> f = service.submit(new Callable<Void>() {
                 @Override
@@ -128,7 +132,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     @Override
     public <T> ResilientPromise<T> performAction(final ResilientAction<T> action) {
         ResilientPromise<T> promise = new SingleWriterResilientPromise<>();
-        Semaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
+        fault.concurrent.Semaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
         try {
             T result = action.run();
             promise.deliverResult(result);
@@ -150,8 +154,8 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         managingService.shutdown();
     }
 
-    private Semaphore.Permit acquirePermitOrRejectIfActionNotAllowed() {
-        Semaphore.Permit permit = semaphore.acquirePermit();
+    private fault.concurrent.Semaphore.Permit acquirePermitOrRejectIfActionNotAllowed() {
+        fault.concurrent.Semaphore.Permit permit = semaphore.acquirePermit();
         if (permit == null) {
             metricsQueue.add(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             throw new RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
@@ -228,12 +232,12 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     private class ActionTimeout implements Delayed {
 
         private final long millisAbsoluteTimeout;
-        private final Semaphore.Permit permit;
+        private final fault.concurrent.Semaphore.Permit permit;
         private final ResilientPromise<?> promise;
         private final ResilientCallback<?> callback;
         private final Future<Void> future;
 
-        public ActionTimeout(Semaphore.Permit permit, ResilientPromise<?> promise, long millisRelativeTimeout,
+        public ActionTimeout(fault.concurrent.Semaphore.Permit permit, ResilientPromise<?> promise, long millisRelativeTimeout,
                              Future<Void> future, ResilientCallback<?> callback) {
             this.permit = permit;
             this.promise = promise;
