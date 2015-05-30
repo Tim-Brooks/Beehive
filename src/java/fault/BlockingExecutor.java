@@ -6,7 +6,8 @@ import fault.circuit.DefaultCircuitBreaker;
 import fault.concurrent.*;
 import fault.metrics.ActionMetrics;
 import fault.metrics.SingleWriterActionMetrics;
-import fault.timeout.ActionTimeout;
+import fault.timeout.NewActionTimeout;
+import fault.timeout.TimeoutService;
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -19,8 +20,8 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
     private final ExecutorService service;
     private final ExecutorService managingService = Executors.newFixedThreadPool(2);
-    private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<Enum<?>> metricsQueue = new LinkedBlockingQueue<>();
+    private final TimeoutService timeoutService = TimeoutService.defaultTimeoutService;
     private final String name;
     private final ExecutorSemaphore semaphore;
 
@@ -53,7 +54,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         this.semaphore = new ExecutorSemaphore(concurrencyLevel);
         this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS,
                 new ArrayBlockingQueue<Runnable>(concurrencyLevel * 2), new ServiceThreadFactory());
-        startTimeoutAndMetrics();
+        startMetrics();
     }
 
     @Override
@@ -116,9 +117,9 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                 }
             });
             if (millisTimeout > MAX_TIMEOUT_MILLIS) {
-                timeoutQueue.offer(new ActionTimeout(permit, promise, MAX_TIMEOUT_MILLIS, f, callback));
+                timeoutService.scheduleTimeout(new NewActionTimeout(MAX_TIMEOUT_MILLIS, promise, f));
             } else {
-                timeoutQueue.offer(new ActionTimeout(permit, promise, millisTimeout, f, callback));
+                timeoutService.scheduleTimeout(new NewActionTimeout(millisTimeout, promise, f));
             }
         } catch (RejectedExecutionException e) {
             metricsQueue.add(RejectionReason.QUEUE_FULL);
@@ -150,8 +151,9 @@ public class BlockingExecutor extends AbstractServiceExecutor {
 
     @Override
     public void shutdown() {
+        // Need to shutdown metrics and timeout
+
         service.shutdown();
-        managingService.shutdown();
     }
 
     private ExecutorSemaphore.Permit acquirePermitOrRejectIfActionNotAllowed() {
@@ -168,7 +170,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         return permit;
     }
 
-    private void startTimeoutAndMetrics() {
+    private void startMetrics() {
         Thread metrics = new Thread(new Runnable() {
             @Override
             public void run() {
@@ -192,41 +194,6 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         // TODO Share timeout thread and option to shutdown.
         metrics.setName("Metrics thread");
         metrics.start();
-
-        Thread timeouts = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                for (; ; ) {
-                    try {
-                        ActionTimeout timeout = timeoutQueue.take();
-                        @SuppressWarnings("unchecked")
-                        ResilientPromise<Object> promise = (ResilientPromise<Object>) timeout.promise;
-                        if (promise.setTimedOut()) {
-                            promise.setCompletedBy(uuid);
-                            timeout.future.cancel(true);
-                            metricsQueue.offer(Status.TIMED_OUT);
-                            circuitBreaker.informBreakerOfResult(promise.isSuccessful());
-
-                            @SuppressWarnings("unchecked")
-                            ResilientCallback<Object> callback = (ResilientCallback<Object>) timeout.callback;
-                            if (callback != null) {
-                                callback.run(promise);
-                            }
-                        } else if (!uuid.equals(promise.getCompletedBy())) {
-                            timeout.future.cancel(true);
-                            metricsQueue.offer(Status.TIMED_OUT);
-                        }
-                        semaphore.releasePermit(timeout.permit);
-
-                    } catch (InterruptedException e) {
-                        break;
-                    }
-                }
-            }
-        });
-        timeouts.setName("Timeout thread");
-
-        timeouts.start();
     }
 
     private class ServiceThreadFactory implements ThreadFactory {
