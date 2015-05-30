@@ -11,12 +11,11 @@ import java.util.concurrent.atomic.AtomicReference;
  * Created by timbrooks on 12/22/14.
  */
 public abstract class AbstractResilientPromise<T> implements ResilientPromise<T> {
-    protected T result;
-    Throwable error;
+    protected volatile T result;
+    volatile Throwable error;
     final AtomicReference<Status> status = new AtomicReference<>(Status.PENDING);
-    // TODO: Does this act as a memory barrier?
     final CountDownLatch latch = new CountDownLatch(1);
-    private UUID completingServiceUUID;
+    private volatile UUID completingServiceUUID;
 
     @Override
     public void await() throws InterruptedException {

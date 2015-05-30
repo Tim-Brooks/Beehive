@@ -1,5 +1,6 @@
 (ns fault.future
-  (:import (fault ResilientPromise Status RejectionReason)
+  (:import (fault Status RejectionReason)
+           (fault.concurrent ResilientPromise)
            (clojure.lang IDeref IBlockingDeref IPending ILookup)))
 
 (set! *warn-on-reflection* true)

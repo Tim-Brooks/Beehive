@@ -7,12 +7,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Created by timbrooks on 1/12/15.
  */
-public class Semaphore {
+public class ExecutorSemaphore {
 
     private final AtomicInteger permitsRemaining;
     private final ConcurrentMap<Permit, Boolean> permitHolders = new ConcurrentHashMap<>();
 
-    public Semaphore(int concurrencyLevel) {
+    public ExecutorSemaphore(int concurrencyLevel) {
         permitsRemaining = new AtomicInteger(concurrencyLevel);
     }
 
@@ -37,6 +37,6 @@ public class Semaphore {
         }
     }
 
-    final class Permit {
+    public final class Permit {
     }
 }

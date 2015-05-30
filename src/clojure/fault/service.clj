@@ -4,10 +4,9 @@
            (fault BlockingExecutor
                   ServiceExecutor
                   ResilientAction
-                  ResilientFuture
-                  ResilientPromise
                   RejectedActionException
                   ResilientCallback)
+           (fault.concurrent ResilientFuture ResilientPromise)
            (fault.circuit CircuitBreaker BreakerConfig BreakerConfig$BreakerConfigBuilder)
            (fault.metrics ActionMetrics)))
 

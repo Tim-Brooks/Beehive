@@ -9,7 +9,7 @@ public class SingleWriterResilientPromise<T> extends AbstractResilientPromise<T>
     @Override
     public boolean deliverResult(T result) {
         this.result = result;
-        status.lazySet(Status.SUCCESS);
+        status.set(Status.SUCCESS);
         latch.countDown();
         return true;
     }
@@ -17,14 +17,14 @@ public class SingleWriterResilientPromise<T> extends AbstractResilientPromise<T>
     @Override
     public boolean deliverError(Throwable error) {
         this.error = error;
-        status.lazySet(Status.ERROR);
+        status.set(Status.ERROR);
         latch.countDown();
         return true;
     }
 
     @Override
     public boolean setTimedOut() {
-        status.lazySet(Status.TIMED_OUT);
+        status.set(Status.TIMED_OUT);
         latch.countDown();
         return true;
     }

@@ -3,12 +3,10 @@ package fault;
 import fault.circuit.BreakerConfig;
 import fault.circuit.CircuitBreaker;
 import fault.circuit.DefaultCircuitBreaker;
-import fault.concurrent.MultipleWriterResilientPromise;
-import fault.concurrent.ResilientFuture;
-import fault.concurrent.ResilientPromise;
-import fault.concurrent.SingleWriterResilientPromise;
+import fault.concurrent.*;
 import fault.metrics.ActionMetrics;
 import fault.metrics.SingleWriterActionMetrics;
+import fault.timeout.ActionTimeout;
 
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -24,7 +22,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final BlockingQueue<Enum<?>> metricsQueue = new LinkedBlockingQueue<>();
     private final String name;
-    private final fault.concurrent.Semaphore semaphore;
+    private final ExecutorSemaphore semaphore;
 
     public BlockingExecutor(int poolSize, int concurrencyLevel) {
         this(poolSize, concurrencyLevel, null);
@@ -52,7 +50,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         } else {
             this.name = name;
         }
-        this.semaphore = new fault.concurrent.Semaphore(concurrencyLevel);
+        this.semaphore = new ExecutorSemaphore(concurrencyLevel);
         this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS,
                 new ArrayBlockingQueue<Runnable>(concurrencyLevel * 2), new ServiceThreadFactory());
         startTimeoutAndMetrics();
@@ -78,7 +76,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     @Override
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                final ResilientCallback<T> callback, long millisTimeout) {
-        final fault.concurrent.Semaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
+        final ExecutorSemaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
         try {
             final Future<Void> f = service.submit(new Callable<Void>() {
                 @Override
@@ -95,6 +93,8 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             metricsQueue.offer(Status.SUCCESS);
                         }
                     } catch (InterruptedException e) {
+                        // This is a timeout
+
                         // This needs to be documented. Or create a work around. The reason for ignoring this
                         // exception is to prevent the metrics from being updated twice in the scenario where: the
                         // action timed-out. But the promise was already completed.
@@ -132,7 +132,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     @Override
     public <T> ResilientPromise<T> performAction(final ResilientAction<T> action) {
         ResilientPromise<T> promise = new SingleWriterResilientPromise<>();
-        fault.concurrent.Semaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
+        ExecutorSemaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
         try {
             T result = action.run();
             promise.deliverResult(result);
@@ -154,8 +154,8 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         managingService.shutdown();
     }
 
-    private fault.concurrent.Semaphore.Permit acquirePermitOrRejectIfActionNotAllowed() {
-        fault.concurrent.Semaphore.Permit permit = semaphore.acquirePermit();
+    private ExecutorSemaphore.Permit acquirePermitOrRejectIfActionNotAllowed() {
+        ExecutorSemaphore.Permit permit = semaphore.acquirePermit();
         if (permit == null) {
             metricsQueue.add(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             throw new RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
@@ -227,37 +227,6 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         timeouts.setName("Timeout thread");
 
         timeouts.start();
-    }
-
-    private class ActionTimeout implements Delayed {
-
-        private final long millisAbsoluteTimeout;
-        private final fault.concurrent.Semaphore.Permit permit;
-        private final ResilientPromise<?> promise;
-        private final ResilientCallback<?> callback;
-        private final Future<Void> future;
-
-        public ActionTimeout(fault.concurrent.Semaphore.Permit permit, ResilientPromise<?> promise, long millisRelativeTimeout,
-                             Future<Void> future, ResilientCallback<?> callback) {
-            this.permit = permit;
-            this.promise = promise;
-            this.callback = callback;
-            this.millisAbsoluteTimeout = millisRelativeTimeout + System.currentTimeMillis();
-            this.future = future;
-        }
-
-        @Override
-        public long getDelay(TimeUnit unit) {
-            return unit.convert(millisAbsoluteTimeout - System.currentTimeMillis(), TimeUnit.MILLISECONDS);
-        }
-
-        @Override
-        public int compareTo(Delayed o) {
-            if (o instanceof ActionTimeout) {
-                return Long.compare(millisAbsoluteTimeout, ((ActionTimeout) o).millisAbsoluteTimeout);
-            }
-            return Long.compare(getDelay(TimeUnit.MILLISECONDS), o.getDelay(TimeUnit.MILLISECONDS));
-        }
     }
 
     private class ServiceThreadFactory implements ThreadFactory {

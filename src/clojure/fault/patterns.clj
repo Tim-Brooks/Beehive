@@ -1,10 +1,8 @@
 (ns fault.patterns
   (:require [fault.service :as service]
             [fault.future :as future])
-  (:import (fault ServiceExecutor
-                  MultipleWriterResilientPromise
-                  ResilientPromise
-                  ResilientAction RejectedActionException)
+  (:import (fault ServiceExecutor ResilientAction RejectedActionException)
+           (fault.concurrent MultipleWriterResilientPromise ResilientPromise)
            (java.util ArrayList)))
 
 (set! *warn-on-reflection* true)

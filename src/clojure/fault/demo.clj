@@ -23,7 +23,7 @@
 (defn submit []
   (c/submit-action s (fn []
                        (let [{:keys [number]} {:number {:k :r :4 :d}}]
-                         (Thread/sleep 10)
+                         (Thread/sleep 100)
                          {:hello (my-divide number 9)
                           :x (mapv #(* number %) [1 2 3])}))
                    2))
