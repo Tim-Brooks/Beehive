@@ -21,7 +21,9 @@
       (assoc :no :yes)))
 
 (defn submit []
-  (c/perform-action s (fn []
-                        (let [{:keys [number]} {:number {:k :r :4 :d}}]
-                          {:hello (my-divide number 9)
-                           :x (map #(* number %) [1 2 3])}))))
+  (c/submit-action s (fn []
+                       (let [{:keys [number]} {:number {:k :r :4 :d}}]
+                         (Thread/sleep 10)
+                         {:hello (my-divide number 9)
+                          :x (mapv #(* number %) [1 2 3])}))
+                   2))

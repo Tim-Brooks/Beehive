@@ -32,7 +32,7 @@ public class Semaphore {
     }
 
     public void releasePermit(Permit permit) {
-        if (permitHolders.remove(permit)) {
+        if (permitHolders.remove(permit) != null) {
             this.permitsRemaining.incrementAndGet();
         }
     }

@@ -165,7 +165,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     }
 
     private void startTimeoutAndMetrics() {
-        managingService.submit(new Runnable() {
+        Thread metrics = new Thread(new Runnable() {
             @Override
             public void run() {
                 for (; ; ) {
@@ -185,7 +185,10 @@ public class BlockingExecutor extends AbstractServiceExecutor {
             }
         });
 
-        managingService.submit(new Runnable() {
+        metrics.setName("Metrics thread");
+        metrics.start();
+
+        Thread timeouts = new Thread(new Runnable() {
             @Override
             public void run() {
                 for (; ; ) {
@@ -216,6 +219,9 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                 }
             }
         });
+        timeouts.setName("Timeout thread");
+
+        timeouts.start();
     }
 
     private class ActionTimeout implements Delayed {

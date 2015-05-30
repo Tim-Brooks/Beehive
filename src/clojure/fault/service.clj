@@ -81,10 +81,10 @@
                     (.submitAction executor
                                    ^ResilientAction (wrap-action-fn action-fn)
                                    ^ResilientCallback (wrap-callback-fn callback)
-                                   ^long (long timeout-millis))
+                                   (long timeout-millis))
                     (.submitAction executor
                                    ^ResilientAction (wrap-action-fn action-fn)
-                                   ^long (long timeout-millis)))))
+                                   (long timeout-millis)))))
       (catch RejectedActionException e
         (f/rejected-action-future (.reason e)))))
   (perform-action [_ action-fn]
