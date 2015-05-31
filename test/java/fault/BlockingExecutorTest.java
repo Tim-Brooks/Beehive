@@ -1,9 +1,13 @@
 package fault;
 
+import fault.circuit.BreakerConfig;
+import fault.circuit.CircuitBreaker;
+import fault.circuit.DefaultCircuitBreaker;
 import fault.concurrent.MultipleWriterResilientPromise;
 import fault.concurrent.ResilientFuture;
 import fault.concurrent.ResilientPromise;
 import fault.metrics.ActionMetrics;
+import fault.metrics.SingleWriterActionMetrics;
 import fault.utils.TestActions;
 import fault.utils.TestCallbacks;
 import org.junit.After;
@@ -11,10 +15,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
@@ -301,5 +302,54 @@ public class BlockingExecutorTest {
         assertEquals(0, metrics.getQueueFullRejectionsForTimePeriod(milliseconds));
     }
 
-    // @TODO Add circuit breaker tests.
+    @Test
+    public void circuitBreaker() throws Exception {
+        BreakerConfig.BreakerConfigBuilder builder = new BreakerConfig.BreakerConfigBuilder();
+        builder.timePeriodInMillis = 10000;
+        builder.failureThreshold = 5;
+        builder.timeToPauseMillis = 50;
+
+        ActionMetrics metrics = new SingleWriterActionMetrics(3600);
+        CircuitBreaker breaker = new DefaultCircuitBreaker(metrics, builder.build());
+        blockingExecutor = new BlockingExecutor(1, 100, "test", metrics, breaker);
+
+        List<ResilientFuture<String>> fs = new ArrayList<>();
+        for (int i = 0; i < 6; ++i) {
+            fs.add(blockingExecutor.submitAction(TestActions.erredAction(new RuntimeException()), Long.MAX_VALUE));
+        }
+
+        for (ResilientFuture<String> f : fs) {
+            try {
+                f.get();
+            } catch (ExecutionException e) {
+            }
+        }
+
+        try {
+            blockingExecutor.submitAction(TestActions.successAction(0), 100);
+            fail("Should have been rejected due to open circuit.");
+        } catch (RejectedActionException e) {
+            assertEquals(RejectionReason.CIRCUIT_OPEN, e.reason);
+        }
+
+        Thread.sleep(100);
+
+        ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.successAction(0, "Result"), 100);
+        assertEquals("Result", f.get());
+
+        ResilientFuture<String> fe = blockingExecutor.submitAction(TestActions.erredAction(new RuntimeException()), Long.MAX_VALUE);
+        try {
+            fe.get();
+        } catch (ExecutionException e) {
+        }
+
+        Thread.sleep(10);
+
+        try {
+            blockingExecutor.submitAction(TestActions.successAction(0), 100);
+            fail("Should have been rejected due to open circuit.");
+        } catch (RejectedActionException e) {
+            assertEquals(RejectionReason.CIRCUIT_OPEN, e.reason);
+        }
+    }
 }

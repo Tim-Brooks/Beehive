@@ -28,7 +28,9 @@ public class TestActions {
         return new ResilientAction<String>() {
             @Override
             public String run() throws Exception {
-                Thread.sleep(waitTime);
+                if (waitTime != 0) {
+                    Thread.sleep(waitTime);
+                }
                 return result;
             }
         };
