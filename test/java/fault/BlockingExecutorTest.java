@@ -325,6 +325,8 @@ public class BlockingExecutorTest {
             }
         }
 
+        Thread.sleep(10);
+
         try {
             blockingExecutor.submitAction(TestActions.successAction(0), 100);
             fail("Should have been rejected due to open circuit.");
