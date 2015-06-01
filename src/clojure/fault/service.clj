@@ -7,7 +7,10 @@
                   RejectedActionException
                   ResilientCallback)
            (fault.concurrent ResilientFuture ResilientPromise)
-           (fault.circuit CircuitBreaker BreakerConfig BreakerConfig$BreakerConfigBuilder)
+           (fault.circuit CircuitBreaker
+                          BreakerConfig
+                          BreakerConfig$BreakerConfigBuilder
+                          NoOpCircuitBreaker)
            (fault.metrics ActionMetrics)))
 
 (set! *warn-on-reflection* true)
@@ -16,7 +19,7 @@
   (reify ResilientAction
     (run [_] (action-fn))))
 
-(defn wrap-callback-fn [callback-fn]
+(defn- wrap-callback-fn [callback-fn]
   (reify ResilientCallback
     (run [_ promise] (callback-fn (f/->CLJResilientFuture promise)))))
 
@@ -120,6 +123,17 @@
 
 (defn service-executor [name pool-size max-concurrency]
   (let [executor (BlockingExecutor. pool-size max-concurrency name)]
+    (->CLJService executor
+                  (->CLJMetrics (.getActionMetrics executor))
+                  (->CLJBreaker (.getCircuitBreaker executor)))))
+
+(defn executor-with-no-opt-breaker
+  [name pool-size max-concurrency]
+  (let [^CircuitBreaker breaker (NoOpCircuitBreaker.)
+        executor (BlockingExecutor. (int pool-size)
+                                    (int max-concurrency)
+                                    ^String name
+                                    breaker)]
     (->CLJService executor
                   (->CLJMetrics (.getActionMetrics executor))
                   (->CLJBreaker (.getCircuitBreaker executor)))))

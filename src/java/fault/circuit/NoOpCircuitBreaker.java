@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * Created by timbrooks on 11/5/14.
  */
 public class NoOpCircuitBreaker implements CircuitBreaker {
+    private static final BreakerConfig config = new BreakerConfig(Integer.MAX_VALUE, 0, 0);
     private final AtomicBoolean circuitOpen = new AtomicBoolean(false);
 
     @Override
@@ -24,7 +25,7 @@ public class NoOpCircuitBreaker implements CircuitBreaker {
 
     @Override
     public BreakerConfig getBreakerConfig() {
-        return null;
+        return config;
     }
 
     @Override

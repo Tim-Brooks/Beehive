@@ -11,7 +11,8 @@
       false))
   (do (require '[fault.async])))
 
-(defn service [name pool-size max-concurrency]
+(defn service
+  [name pool-size max-concurrency & {:keys [breaker] :or {breaker {}}}]
   (s/service-executor name pool-size max-concurrency))
 
 (defn submit-action [service f time-out-ms]
