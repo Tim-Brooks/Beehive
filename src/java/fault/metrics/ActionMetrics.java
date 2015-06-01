@@ -24,6 +24,4 @@ public interface ActionMetrics {
     int getQueueFullRejectionsForTimePeriod(int milliseconds);
 
     int getMaxConcurrencyRejectionsForTimePeriod(int milliseconds);
-
-    int getSecondsTracked();
 }

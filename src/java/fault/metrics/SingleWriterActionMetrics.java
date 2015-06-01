@@ -99,11 +99,6 @@ public class SingleWriterActionMetrics implements ActionMetrics {
     }
 
     @Override
-    public int getSecondsTracked() {
-        return totalSlots;
-    }
-
-    @Override
     public void reportActionResult(Status status) {
         int currentSlotNumber = slotNumber.get();
         int slotsToAdvance = slotsToAdvance();

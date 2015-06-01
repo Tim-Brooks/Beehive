@@ -47,11 +47,11 @@
                      :failure-threshold (.failureThreshold config)
                      :time-to-pause-millis (.timeToPauseMillis config)})})))
 
-(deftype CLJMetrics [^ActionMetrics metrics]
+(deftype CLJMetrics [^ActionMetrics metrics seconds-tracked]
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
-    (let [millis (* 1000 (.getSecondsTracked metrics))]
+    (let [millis (* 1000 seconds-tracked)]
       (case key
         :failures (.getFailuresForTimePeriod metrics millis)
         :errors (.getErrorsForTimePeriod metrics millis)
@@ -64,7 +64,7 @@
         default)))
   Object
   (toString [this]
-    (let [millis (* 1000 (.getSecondsTracked metrics))]
+    (let [millis (* 1000 seconds-tracked)]
       (str {:failures (.getFailuresForTimePeriod metrics millis)
             :errors (.getErrorsForTimePeriod metrics millis)
             :successes (.getSuccessesForTimePeriod metrics millis)
@@ -128,7 +128,7 @@
                                     ^String
                                     name metrics)]
     (->CLJService executor
-                  (->CLJMetrics (.getActionMetrics executor))
+                  (->CLJMetrics (.getActionMetrics executor) seconds)
                   (->CLJBreaker (.getCircuitBreaker executor)))))
 
 (defn executor-with-no-opt-breaker
@@ -141,5 +141,5 @@
                                     metrics
                                     breaker)]
     (->CLJService executor
-                  (->CLJMetrics (.getActionMetrics executor))
+                  (->CLJMetrics (.getActionMetrics executor) seconds)
                   (->CLJBreaker (.getCircuitBreaker executor)))))
