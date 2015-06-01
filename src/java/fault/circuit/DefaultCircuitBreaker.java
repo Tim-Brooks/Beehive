@@ -1,7 +1,7 @@
 package fault.circuit;
 
 import fault.metrics.ActionMetrics;
-import fault.utils.TimeProvider;
+import fault.utils.SystemTime;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -16,18 +16,18 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     private static final int OPEN = 1;
     private static final int FORCED_OPEN = 2;
 
-    private final TimeProvider timeProvider;
+    private final SystemTime systemTime;
     private final ActionMetrics actionMetrics;
     private final AtomicInteger state = new AtomicInteger(0);
     private final AtomicLong lastTestedTime = new AtomicLong(0);
     private final AtomicReference<BreakerConfig> breakerConfig;
 
     public DefaultCircuitBreaker(ActionMetrics actionMetrics, BreakerConfig breakerConfig) {
-        this(actionMetrics, breakerConfig, new TimeProvider());
+        this(actionMetrics, breakerConfig, new SystemTime());
     }
 
-    public DefaultCircuitBreaker(ActionMetrics actionMetrics, BreakerConfig breakerConfig, TimeProvider timeProvider) {
-        this.timeProvider = timeProvider;
+    public DefaultCircuitBreaker(ActionMetrics actionMetrics, BreakerConfig breakerConfig, SystemTime systemTime) {
+        this.systemTime = systemTime;
         this.actionMetrics = actionMetrics;
         this.breakerConfig = new AtomicReference<>(breakerConfig);
     }
@@ -42,7 +42,7 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
         int state = this.state.get();
         if (state == OPEN) {
             long timeToPauseMillis = breakerConfig.get().timeToPauseMillis;
-            long currentTime = timeProvider.currentTimeMillis();
+            long currentTime = systemTime.currentTimeMillis();
             // This potentially allows a couple of tests through. Should think about this decision
             if (currentTime < timeToPauseMillis + lastTestedTime.get()) {
                 return false;
@@ -64,7 +64,7 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
                 BreakerConfig config = this.breakerConfig.get();
                 int failuresForTimePeriod = actionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis);
                 if (config.failureThreshold < failuresForTimePeriod) {
-                    lastTestedTime.set(timeProvider.currentTimeMillis());
+                    lastTestedTime.set(systemTime.currentTimeMillis());
                     state.compareAndSet(CLOSED, OPEN);
                 }
             }

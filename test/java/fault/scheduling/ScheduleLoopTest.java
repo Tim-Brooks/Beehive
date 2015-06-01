@@ -7,7 +7,7 @@ import fault.concurrent.SingleWriterResilientPromise;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.ActionMetrics;
-import fault.utils.TimeProvider;
+import fault.utils.SystemTime;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -51,7 +51,7 @@ public class ScheduleLoopTest {
 
     private ResilientPromise<Object> promise;
     @Mock
-    private TimeProvider timeProvider;
+    private SystemTime systemTime;
 
     private ScheduleContext context;
 
@@ -93,13 +93,13 @@ public class ScheduleLoopTest {
     public void testTimeoutsSetByLoop() throws Exception {
         setContext(1);
 
-        when(timeProvider.currentTimeMillis()).thenReturn(5L);
+        when(systemTime.currentTimeMillis()).thenReturn(5L);
         when(toScheduleQueue.poll()).thenReturn(new ScheduleMessage<>(action, promise, 10L, 10L));
         ScheduleLoop.runLoop(context);
 
         verify(executorService).submit(any(ResilientTask.class));
 
-        when(timeProvider.currentTimeMillis()).thenReturn(11L);
+        when(systemTime.currentTimeMillis()).thenReturn(11L);
         when(toScheduleQueue.poll()).thenReturn(null);
         ScheduleLoop.runLoop(context);
 
@@ -172,7 +172,7 @@ public class ScheduleLoopTest {
         return new ScheduleContext.ScheduleContextBuilder().setPoolSize(threadNum).setCircuitBreaker(circuitBreaker)
                 .setActionMetrics(actionMetrics).setToScheduleQueue(toScheduleQueue).setToReturnQueue(toReturnQueue)
                 .setExecutorService(executorService).setTaskMap(new HashMap<ResultMessage<Object>,
-                        ResilientTask<Object>>()).setTimeProvider(timeProvider);
+                        ResilientTask<Object>>()).setSystemTime(systemTime);
 
     }
 

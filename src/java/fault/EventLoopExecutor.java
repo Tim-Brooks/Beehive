@@ -76,7 +76,7 @@ public class EventLoopExecutor extends AbstractServiceExecutor {
         if (!circuitBreaker.allowAction()) {
             throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }
-        long absoluteTimeout = millisTimeout + 1 + schedulingContext.timeProvider.currentTimeMillis();
+        long absoluteTimeout = millisTimeout + 1 + schedulingContext.systemTime.currentTimeMillis();
 
         ScheduleMessage<T> e = new ScheduleMessage<>(action, promise, millisTimeout, absoluteTimeout);
         schedulingContext.toScheduleQueue.offer((ScheduleMessage<Object>) e);

@@ -1,7 +1,7 @@
 package fault.circuit;
 
 import fault.metrics.ActionMetrics;
-import fault.utils.TimeProvider;
+import fault.utils.SystemTime;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -21,7 +21,7 @@ public class DefaultCircuitBreakerTest {
     @Mock
     private ActionMetrics actionMetrics;
     @Mock
-    private TimeProvider timeProvider;
+    private SystemTime systemTime;
 
     private CircuitBreaker circuitBreaker;
 
@@ -114,20 +114,20 @@ public class DefaultCircuitBreakerTest {
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(failureThreshold)
                 .timePeriodInMillis(timePeriodInMillis).timeToPauseMillis(1000).build();
 
-        circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig, timeProvider);
+        circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig, systemTime);
 
         assertFalse(circuitBreaker.isOpen());
         assertTrue(circuitBreaker.allowAction());
 
         when(actionMetrics.getFailuresForTimePeriod(timePeriodInMillis)).thenReturn(11);
-        when(timeProvider.currentTimeMillis()).thenReturn(0L);
+        when(systemTime.currentTimeMillis()).thenReturn(0L);
         circuitBreaker.informBreakerOfResult(false);
 
-        when(timeProvider.currentTimeMillis()).thenReturn(999L);
+        when(systemTime.currentTimeMillis()).thenReturn(999L);
         assertFalse(circuitBreaker.allowAction());
         assertTrue(circuitBreaker.isOpen());
 
-        when(timeProvider.currentTimeMillis()).thenReturn(1001L);
+        when(systemTime.currentTimeMillis()).thenReturn(1001L);
         assertTrue(circuitBreaker.allowAction());
         assertTrue(circuitBreaker.isOpen());
 
@@ -140,14 +140,14 @@ public class DefaultCircuitBreakerTest {
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(failureThreshold)
                 .timePeriodInMillis(timePeriodInMillis).timeToPauseMillis(1000).build();
 
-        circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig, timeProvider);
+        circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig, systemTime);
 
         assertFalse(circuitBreaker.isOpen());
         assertTrue(circuitBreaker.allowAction());
 
         circuitBreaker.forceOpen();
 
-        when(timeProvider.currentTimeMillis()).thenReturn(1001L);
+        when(systemTime.currentTimeMillis()).thenReturn(1001L);
         assertFalse(circuitBreaker.allowAction());
         assertTrue(circuitBreaker.isOpen());
 

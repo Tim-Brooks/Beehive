@@ -2,7 +2,7 @@ package fault.metrics;
 
 import fault.RejectionReason;
 import fault.Status;
-import fault.utils.TimeProvider;
+import fault.utils.SystemTime;
 
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerArray;
@@ -20,16 +20,16 @@ public class SingleWriterActionMetrics implements ActionMetrics {
     private final AtomicIntegerArray maxConcurrencyMetrics;
     private final AtomicIntegerArray circuitOpenMetrics;
     private final AtomicIntegerArray queueFullMetrics;
-    private final TimeProvider timeProvider;
+    private final SystemTime systemTime;
     private final AtomicLong advanceSlotTimeInMillis;
     private final AtomicInteger slotNumber;
 
     public SingleWriterActionMetrics(int secondsToTrack) {
-        this(secondsToTrack, new TimeProvider());
+        this(secondsToTrack, new SystemTime());
     }
 
-    public SingleWriterActionMetrics(int secondsToTrack, TimeProvider timeProvider) {
-        this.timeProvider = timeProvider;
+    public SingleWriterActionMetrics(int secondsToTrack, SystemTime systemTime) {
+        this.systemTime = systemTime;
         this.totalSlots = secondsToTrack;
         this.errorMetrics = new AtomicIntegerArray(totalSlots);
         this.successMetrics = new AtomicIntegerArray(totalSlots);
@@ -38,7 +38,7 @@ public class SingleWriterActionMetrics implements ActionMetrics {
         this.circuitOpenMetrics = new AtomicIntegerArray(totalSlots);
         this.queueFullMetrics = new AtomicIntegerArray(totalSlots);
         this.slotNumber = new AtomicInteger(0);
-        this.advanceSlotTimeInMillis = new AtomicLong(timeProvider.currentTimeMillis() + 1000L);
+        this.advanceSlotTimeInMillis = new AtomicLong(systemTime.currentTimeMillis() + 1000L);
     }
 
     @Override
@@ -207,7 +207,7 @@ public class SingleWriterActionMetrics implements ActionMetrics {
     }
 
     private int slotsToAdvance() {
-        long currentTimestamp = timeProvider.currentTimeMillis();
+        long currentTimestamp = systemTime.currentTimeMillis();
         if (currentTimestamp < advanceSlotTimeInMillis.get()) {
             return 0;
         }

@@ -24,7 +24,7 @@ public class TimeoutService {
     }
 
     public static void triggerTimeouts(ScheduleContext scheduleContext) {
-        long now = scheduleContext.timeProvider.currentTimeMillis();
+        long now = scheduleContext.systemTime.currentTimeMillis();
         SortedMap<Long, List<ResultMessage<Object>>> toCancel = scheduleContext.scheduled.headMap(now);
         for (Map.Entry<Long, List<ResultMessage<Object>>> entry : toCancel.entrySet()) {
             List<ResultMessage<Object>> toTimeout = entry.getValue();

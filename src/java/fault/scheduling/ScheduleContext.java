@@ -4,7 +4,7 @@ import fault.circuit.CircuitBreaker;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.ActionMetrics;
-import fault.utils.TimeProvider;
+import fault.utils.SystemTime;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -22,14 +22,14 @@ public class ScheduleContext {
     public final ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue;
     public final ExecutorService executorService;
     public final Map<ResultMessage<Object>, ResilientTask<Object>> taskMap;
-    public final TimeProvider timeProvider;
+    public final SystemTime systemTime;
     public SortedMap<Long, List<ResultMessage<Object>>> scheduled;
 
     public ScheduleContext(int poolSize, CircuitBreaker circuitBreaker, ActionMetrics actionMetrics,
                            ConcurrentLinkedQueue<ScheduleMessage<Object>> toScheduleQueue,
                            ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue, ExecutorService
                                    executorService, SortedMap<Long, List<ResultMessage<Object>>> scheduled,
-                           Map<ResultMessage<Object>, ResilientTask<Object>> taskMap, TimeProvider timeProvider) {
+                           Map<ResultMessage<Object>, ResilientTask<Object>> taskMap, SystemTime systemTime) {
         this.poolSize = poolSize;
         this.circuitBreaker = circuitBreaker;
         this.actionMetrics = actionMetrics;
@@ -38,7 +38,7 @@ public class ScheduleContext {
         this.executorService = executorService;
         this.scheduled = scheduled;
         this.taskMap = taskMap;
-        this.timeProvider = timeProvider;
+        this.systemTime = systemTime;
     }
 
     public static class ScheduleContextBuilder {
@@ -50,7 +50,7 @@ public class ScheduleContext {
         private ConcurrentLinkedQueue<ResultMessage<Object>> toReturnQueue = new ConcurrentLinkedQueue<>();
         private SortedMap<Long, List<ResultMessage<Object>>> scheduled = new TreeMap<>();
         private Map<ResultMessage<Object>, ResilientTask<Object>> taskMap = new HashMap<>();
-        private TimeProvider timeProvider = new TimeProvider();
+        private SystemTime systemTime = new SystemTime();
 
         public ScheduleContextBuilder setPoolSize(int poolSize) {
             this.poolSize = poolSize;
@@ -93,14 +93,14 @@ public class ScheduleContext {
             return this;
         }
 
-        public ScheduleContextBuilder setTimeProvider(TimeProvider timeProvider) {
-            this.timeProvider = timeProvider;
+        public ScheduleContextBuilder setSystemTime(SystemTime systemTime) {
+            this.systemTime = systemTime;
             return this;
         }
 
         public ScheduleContext build() {
             return new ScheduleContext(poolSize, circuitBreaker, actionMetrics, toScheduleQueue, toReturnQueue,
-                    executorService, scheduled, taskMap, timeProvider);
+                    executorService, scheduled, taskMap, systemTime);
         }
     }
 }
