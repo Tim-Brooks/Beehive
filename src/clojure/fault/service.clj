@@ -68,7 +68,11 @@
       (str {:failures (.getFailuresForTimePeriod metrics millis)
             :errors (.getErrorsForTimePeriod metrics millis)
             :successes (.getSuccessesForTimePeriod metrics millis)
-            :timeouts (.getTimeoutsForTimePeriod metrics millis)}))))
+            :timeouts (.getTimeoutsForTimePeriod metrics millis)
+            :circuit-open (.getCircuitOpenedRejectionsForTimePeriod metrics millis)
+            :queue-full (.getQueueFullRejectionsForTimePeriod metrics millis)
+            :max-concurrency-level-exceeded (.getMaxConcurrencyRejectionsForTimePeriod
+                                              metrics millis)}))))
 
 (deftype CLJService
   [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]

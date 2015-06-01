@@ -19,6 +19,22 @@
     (s/executor-with-no-opt-breaker name pool-size max-concurrency metrics)
     (s/service-executor name pool-size max-concurrency metrics)))
 
+(defn metrics [{:keys [metrics]} service]
+  (let [{:keys [failures
+                errors
+                successes
+                timeouts
+                circuit-open
+                queue-full
+                max-concurrency-level-exceeded]} metrics]
+    {:failures failures
+     :errors errors
+     :successes successes
+     :timeouts timeouts
+     :circuit-open circuit-open
+     :queue-full queue-full
+     :max-concurrency-level-exceeded max-concurrency-level-exceeded}))
+
 (defn submit-action [service f time-out-ms]
   (s/submit-action service f time-out-ms))
 
