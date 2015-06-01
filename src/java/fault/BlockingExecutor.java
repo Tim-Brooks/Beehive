@@ -6,7 +6,7 @@ import fault.circuit.DefaultCircuitBreaker;
 import fault.concurrent.*;
 import fault.metrics.ActionMetrics;
 import fault.metrics.SingleWriterActionMetrics;
-import fault.timeout.NewActionTimeout;
+import fault.timeout.ActionTimeout;
 import fault.timeout.TimeoutService;
 
 import java.util.concurrent.*;
@@ -76,7 +76,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     @Override
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                final ResilientCallback<T> callback, long millisTimeout) {
-        final ExecutorSemaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
+        acquirePermitOrRejectIfActionNotAllowed();
         final AbstractResilientPromise<T> internalPromise = new MultipleWriterResilientPromise<>();
         if (promise != null) {
             internalPromise.wrapPromise(promise);
@@ -90,7 +90,6 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                         internalPromise.deliverResult(result);
                     } catch (InterruptedException e) {
                         Thread.interrupted();
-                        return null;
                     } catch (Exception e) {
                         internalPromise.deliverError(e);
                     } finally {
@@ -99,20 +98,20 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                             callback.run(promise == null ? internalPromise : promise);
                         }
 
-                        semaphore.releasePermit(permit);
+                        semaphore.releasePermit();
                     }
                     return null;
                 }
             });
 
             if (millisTimeout > MAX_TIMEOUT_MILLIS) {
-                timeoutService.scheduleTimeout(new NewActionTimeout(MAX_TIMEOUT_MILLIS, internalPromise, f));
+                timeoutService.scheduleTimeout(new ActionTimeout(MAX_TIMEOUT_MILLIS, internalPromise, f));
             } else {
-                timeoutService.scheduleTimeout(new NewActionTimeout(millisTimeout, internalPromise, f));
+                timeoutService.scheduleTimeout(new ActionTimeout(millisTimeout, internalPromise, f));
             }
         } catch (RejectedExecutionException e) {
             metricsQueue.add(RejectionReason.QUEUE_FULL);
-            semaphore.releasePermit(permit);
+            semaphore.releasePermit();
             throw new RejectedActionException(RejectionReason.QUEUE_FULL);
         }
 
@@ -127,7 +126,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     @Override
     public <T> ResilientPromise<T> performAction(final ResilientAction<T> action) {
         ResilientPromise<T> promise = new SingleWriterResilientPromise<>();
-        ExecutorSemaphore.Permit permit = acquirePermitOrRejectIfActionNotAllowed();
+        acquirePermitOrRejectIfActionNotAllowed();
         try {
             T result = action.run();
             promise.deliverResult(result);
@@ -138,7 +137,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         }
 
         metricsQueue.offer(promise.getStatus());
-        semaphore.releasePermit(permit);
+        semaphore.releasePermit();
 
         return promise;
     }
@@ -150,18 +149,17 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         service.shutdown();
     }
 
-    private ExecutorSemaphore.Permit acquirePermitOrRejectIfActionNotAllowed() {
-        ExecutorSemaphore.Permit permit = semaphore.acquirePermit();
-        if (permit == null) {
+    private void acquirePermitOrRejectIfActionNotAllowed() {
+        boolean isPermitAcquired = semaphore.acquirePermit();
+        if (!isPermitAcquired) {
             metricsQueue.add(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             throw new RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         }
         if (!circuitBreaker.allowAction()) {
             metricsQueue.add(RejectionReason.CIRCUIT_OPEN);
-            semaphore.releasePermit(permit);
+            semaphore.releasePermit();
             throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }
-        return permit;
     }
 
     private void startMetrics() {

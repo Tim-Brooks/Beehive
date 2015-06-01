@@ -1,8 +1,6 @@
 package fault.timeout;
 
-import fault.ResilientCallback;
 import fault.concurrent.ResilientPromise;
-import fault.concurrent.ExecutorSemaphore;
 
 import java.util.concurrent.Delayed;
 import java.util.concurrent.Future;
@@ -14,17 +12,13 @@ import java.util.concurrent.TimeUnit;
 public class ActionTimeout implements Delayed {
 
     public final long millisAbsoluteTimeout;
-    public final ExecutorSemaphore.Permit permit;
-    public final ResilientPromise<?> promise;
-    public final ResilientCallback<?> callback;
     public final Future<Void> future;
+    public final ResilientPromise<?> promise;
 
-    public ActionTimeout(ExecutorSemaphore.Permit permit, ResilientPromise<?> promise, long millisRelativeTimeout,
-                         Future<Void> future, ResilientCallback<?> callback) {
-        this.permit = permit;
-        this.promise = promise;
-        this.callback = callback;
+    public ActionTimeout(long millisRelativeTimeout, ResilientPromise<?> promise, Future<Void>
+            future) {
         this.millisAbsoluteTimeout = millisRelativeTimeout + System.currentTimeMillis();
+        this.promise = promise;
         this.future = future;
     }
 

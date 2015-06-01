@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class TimeoutService {
 
     public static final TimeoutService defaultTimeoutService = new TimeoutService("default");
-    private final DelayQueue<NewActionTimeout> timeoutQueue = new DelayQueue<>();
+    private final DelayQueue<ActionTimeout> timeoutQueue = new DelayQueue<>();
     private final Thread timeoutThread;
     private AtomicBoolean isStarted = new AtomicBoolean(false);
 
@@ -20,7 +20,7 @@ public class TimeoutService {
         this.timeoutThread.setName(name + "-timeout-thread");
     }
 
-    public void scheduleTimeout(NewActionTimeout timeout) {
+    public void scheduleTimeout(ActionTimeout timeout) {
         if (!isStarted.get()) {
             startThread();
         }
@@ -39,7 +39,7 @@ public class TimeoutService {
             public void run() {
                 for (; ; ) {
                     try {
-                        NewActionTimeout timeout = timeoutQueue.take();
+                        ActionTimeout timeout = timeoutQueue.take();
                         @SuppressWarnings("unchecked")
                         ResilientPromise<Object> promise = (ResilientPromise<Object>) timeout.promise;
                         if (promise.setTimedOut()) {
