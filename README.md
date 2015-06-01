@@ -1,10 +1,10 @@
 # fault
 
-A Clojure library designed to ... well, that part is up to you.
+A Clojure library to manage access to services.
 
 ## Usage
 
-FIXME
+This library is pre-alpha. Api is subject to change.
 
 ## License
 
