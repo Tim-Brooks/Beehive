@@ -19,7 +19,7 @@
     (s/executor-with-no-opt-breaker name pool-size max-concurrency metrics)
     (s/service-executor name pool-size max-concurrency metrics)))
 
-(defn metrics [{:keys [metrics]} service]
+(defn metrics [{:keys [metrics]}]
   (let [{:keys [failures
                 errors
                 successes
