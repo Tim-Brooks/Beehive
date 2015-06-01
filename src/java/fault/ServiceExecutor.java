@@ -30,7 +30,5 @@ public interface ServiceExecutor {
 
     CircuitBreaker getCircuitBreaker();
 
-    UUID getExecutorUUID();
-
     void shutdown();
 }

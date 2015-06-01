@@ -11,7 +11,6 @@ import java.util.UUID;
 public abstract class AbstractServiceExecutor implements ServiceExecutor {
     final ActionMetrics actionMetrics;
     final CircuitBreaker circuitBreaker;
-    final UUID uuid = UUID.randomUUID();
 
     public AbstractServiceExecutor(CircuitBreaker circuitBreaker, ActionMetrics actionMetrics) {
         this.circuitBreaker = circuitBreaker;
@@ -26,7 +25,4 @@ public abstract class AbstractServiceExecutor implements ServiceExecutor {
         return circuitBreaker;
     }
 
-    public UUID getExecutorUUID() {
-        return uuid;
-    }
 }

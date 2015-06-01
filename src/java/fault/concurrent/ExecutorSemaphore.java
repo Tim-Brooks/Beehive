@@ -17,8 +17,8 @@ public class ExecutorSemaphore {
     }
 
     public Permit acquirePermit() {
-        int permitsRemaining = this.permitsRemaining.get();
         for (; ; ) {
+            int permitsRemaining = this.permitsRemaining.get();
             if (permitsRemaining > 0) {
                 if (this.permitsRemaining.compareAndSet(permitsRemaining, permitsRemaining - 1)) {
                     Permit permit = new Permit();

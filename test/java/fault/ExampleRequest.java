@@ -18,7 +18,6 @@ import java.util.concurrent.Executors;
 public class ExampleRequest implements Runnable {
 
     private final ServiceExecutor serviceExecutor;
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
 
     public ExampleRequest(ServiceExecutor serviceExecutor) {
         this.serviceExecutor = serviceExecutor;
@@ -45,40 +44,23 @@ public class ExampleRequest implements Runnable {
                     }, 10);
                     futures.add(result);
                 } catch (RuntimeException e) {
-//                    System.out.println("Broken");
+                    try {
+                        Thread.sleep(10);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
                 }
             }
-
-//        Future<Object> result = executorService.submit(new Callable<Object>() {
-//            @Override
-//            public Object call() throws Exception {
-//                String result = null;
-//                InputStream response = new URL("http://localhost:6001/").openStream();
-//                BufferedReader reader = new BufferedReader(new InputStreamReader(response));
-//                result = reader.readLine();
-//                return result;
-//            }
-//        });
 
             long start = System.currentTimeMillis();
             for (ResilientFuture<String> result : futures) {
                 try {
                     result.get();
-//                Thread.sleep(1);
-//            result.get(10L, TimeUnit.MILLISECONDS);
                 } catch (Exception e) {
 //            e.printStackTrace();
                 }
             }
 
-//            if (result.status != Status.SUCCESS) {
-//                System.out.println(System.currentTimeMillis() - start);
-//                System.out.println(result.error);
-//            }
-//        if (result.isError()) {
-//            System.out.println(result.error.getMessage());
-//        }
-//        System.out.println("Is Done " + result.isDone());
         }
     }
 }
