@@ -45,7 +45,7 @@
         (recur)))))
 
 (defn run []
-  (reset! service (fault/service 10 90))
+  (reset! service (fault/service "example" 10 90))
   (let [in-channel (async/chan 10)
         out-channel (async/chan 10)
         err-channel (async/chan 10)]

@@ -37,6 +37,10 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                 .BreakerConfigBuilder().failureThreshold(20).timePeriodInMillis(5000).build()));
     }
 
+    public BlockingExecutor(int poolSize, int concurrencyLevel, String name, CircuitBreaker breaker) {
+        this(poolSize, concurrencyLevel, name, new SingleWriterActionMetrics(3600), breaker);
+    }
+
     public BlockingExecutor(int poolSize, int concurrencyLevel, String name, ActionMetrics actionMetrics, CircuitBreaker
             circuitBreaker) {
         super(circuitBreaker, actionMetrics);

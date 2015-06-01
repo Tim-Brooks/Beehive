@@ -334,7 +334,7 @@ public class BlockingExecutorTest {
             assertEquals(RejectionReason.CIRCUIT_OPEN, e.reason);
         }
 
-        Thread.sleep(100);
+        Thread.sleep(150);
 
         ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.successAction(0, "Result"), 100);
         assertEquals("Result", f.get());

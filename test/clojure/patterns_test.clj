@@ -12,9 +12,9 @@
 (def service3 nil)
 
 (defn- start-and-stop [f]
-  (alter-var-root #'service1 (fn [_] (fault/service 1 1)))
-  (alter-var-root #'service2 (fn [_] (fault/service 1 1)))
-  (alter-var-root #'service3 (fn [_] (fault/service 1 1)))
+  (alter-var-root #'service1 (fn [_] (fault/service "1" 1 1)))
+  (alter-var-root #'service2 (fn [_] (fault/service "2" 1 1)))
+  (alter-var-root #'service3 (fn [_] (fault/service "3" 1 1)))
   (f)
   (service/shutdown service1)
   (service/shutdown service2)

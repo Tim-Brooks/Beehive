@@ -10,7 +10,7 @@
 (def service nil)
 
 (defn- start-and-stop [f]
-  (alter-var-root #'service (fn [_] (fault/service 1 1)))
+  (alter-var-root #'service (fn [_] (fault/service "" 1 1)))
   (f)
   (service/shutdown service))
 
@@ -79,7 +79,7 @@
 
 (deftest metrics-test
   (testing "Testing that metrics are updated with result of action"
-    (let [metrics-service (fault/service 1 100)
+    (let [metrics-service (fault/service "test" 1 100)
           latch (CountDownLatch. 1)]
       @(service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
       @(service/submit-action metrics-service (error-fn (IOException.)) Long/MAX_VALUE)
@@ -90,7 +90,7 @@
       (is (= 1 (-> metrics-service :metrics :errors)))
       (is (= 2 (-> metrics-service :metrics :failures)))))
   (testing "Testing that rejection reasons are updated"
-    (let [metrics-service (fault/service 1 1)
+    (let [metrics-service (fault/service "test" 1 1)
           latch (CountDownLatch. 1)]
       (service/open-circuit! metrics-service)
       @(service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
