@@ -10,7 +10,7 @@
     (= Status/PENDING status-enum) :pending
     (= Status/SUCCESS status-enum) :success
     (= Status/ERROR status-enum) :error
-    (= Status/TIMED_OUT status-enum) :timed-out))
+    (= Status/TIMED_OUT status-enum) :timeout))
 
 (deftype CLJResilientFuture [^ResilientPromise promise]
   IDeref
@@ -30,7 +30,7 @@
     (case key
       :status (status (.getStatus promise))
       :success? (identical? :success (status (.getStatus promise)))
-      :timed-out? (identical? :timed-out (status (.getStatus promise)))
+      :timeout? (identical? :timeout (status (.getStatus promise)))
       :error? (identical? :error (status (.getStatus promise)))
       :pending? (identical? :pending (status (.getStatus promise)))
       :result (.getResult promise)
