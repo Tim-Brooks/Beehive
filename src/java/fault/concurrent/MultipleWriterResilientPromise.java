@@ -40,7 +40,7 @@ public class MultipleWriterResilientPromise<T> extends AbstractResilientPromise<
     @Override
     public boolean setTimedOut() {
         if (status.get() == Status.PENDING) {
-            if (status.compareAndSet(Status.PENDING, Status.TIMED_OUT)) {
+            if (status.compareAndSet(Status.PENDING, Status.TIMEOUT)) {
                 if (wrappedPromise != null) {
                     wrappedPromise.setTimedOut();
                 }

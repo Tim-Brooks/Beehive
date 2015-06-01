@@ -103,7 +103,7 @@ public class ScheduleLoopTest {
         when(toScheduleQueue.poll()).thenReturn(null);
         ScheduleLoop.runLoop(context);
 
-        verify(actionMetrics).reportActionResult(Status.TIMED_OUT);
+        verify(actionMetrics).reportActionResult(Status.TIMEOUT);
         verify(circuitBreaker).informBreakerOfResult(false);
         assertTrue(promise.isTimedOut());
     }

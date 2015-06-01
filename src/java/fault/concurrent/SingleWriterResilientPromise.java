@@ -24,7 +24,7 @@ public class SingleWriterResilientPromise<T> extends AbstractResilientPromise<T>
 
     @Override
     public boolean setTimedOut() {
-        status.set(Status.TIMED_OUT);
+        status.set(Status.TIMEOUT);
         latch.countDown();
         return true;
     }

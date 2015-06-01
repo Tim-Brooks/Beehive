@@ -54,7 +54,7 @@ public class SingleWriterActionMetricsTest {
         when(systemTime.currentTimeMillis()).thenReturn(1000L, 1000L, 1000L);
 
         actionMetrics.reportActionResult(Status.ERROR);
-        actionMetrics.reportActionResult(Status.TIMED_OUT);
+        actionMetrics.reportActionResult(Status.TIMEOUT);
 
         assertEquals(0, actionMetrics.getSuccessesForTimePeriod(1000));
     }
@@ -94,7 +94,7 @@ public class SingleWriterActionMetricsTest {
             }
             if (random.nextBoolean()) {
                 when(systemTime.currentTimeMillis()).thenReturn(500L);
-                actionMetrics.reportActionResult(Status.TIMED_OUT);
+                actionMetrics.reportActionResult(Status.TIMEOUT);
                 ++timeoutCount;
             }
             if (random.nextBoolean()) {
@@ -130,7 +130,7 @@ public class SingleWriterActionMetricsTest {
             when(systemTime.currentTimeMillis()).thenReturn(timestamp, timestamp, timestamp);
             actionMetrics.reportActionResult(Status.ERROR);
             actionMetrics.reportActionResult(Status.SUCCESS);
-            actionMetrics.reportActionResult(Status.TIMED_OUT);
+            actionMetrics.reportActionResult(Status.TIMEOUT);
             actionMetrics.reportRejectionAction(RejectionReason.CIRCUIT_OPEN);
             actionMetrics.reportRejectionAction(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             actionMetrics.reportRejectionAction(RejectionReason.QUEUE_FULL);
@@ -158,7 +158,7 @@ public class SingleWriterActionMetricsTest {
             when(systemTime.currentTimeMillis()).thenReturn(timestamp, timestamp, timestamp);
             actionMetrics.reportActionResult(Status.ERROR);
             actionMetrics.reportActionResult(Status.SUCCESS);
-            actionMetrics.reportActionResult(Status.TIMED_OUT);
+            actionMetrics.reportActionResult(Status.TIMEOUT);
             actionMetrics.reportRejectionAction(RejectionReason.CIRCUIT_OPEN);
             actionMetrics.reportRejectionAction(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             actionMetrics.reportRejectionAction(RejectionReason.QUEUE_FULL);
@@ -167,7 +167,7 @@ public class SingleWriterActionMetricsTest {
         when(systemTime.currentTimeMillis()).thenReturn(1005000L);
         actionMetrics.reportActionResult(Status.ERROR);
         actionMetrics.reportActionResult(Status.SUCCESS);
-        actionMetrics.reportActionResult(Status.TIMED_OUT);
+        actionMetrics.reportActionResult(Status.TIMEOUT);
         actionMetrics.reportRejectionAction(RejectionReason.CIRCUIT_OPEN);
         actionMetrics.reportRejectionAction(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         actionMetrics.reportRejectionAction(RejectionReason.QUEUE_FULL);

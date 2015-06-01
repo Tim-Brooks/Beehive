@@ -64,7 +64,7 @@ public abstract class AbstractResilientPromise<T> implements ResilientPromise<T>
 
     @Override
     public boolean isTimedOut() {
-        return status.get() == Status.TIMED_OUT;
+        return status.get() == Status.TIMEOUT;
     }
 
     public void wrapPromise(ResilientPromise<T> promise) {

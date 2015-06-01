@@ -137,7 +137,7 @@ public class BlockingExecutorTest {
                 (1)), 1);
 
         assertNull(future.get());
-        assertEquals(Status.TIMED_OUT, future.getStatus());
+        assertEquals(Status.TIMEOUT, future.getStatus());
     }
 
     @Test
@@ -204,7 +204,7 @@ public class BlockingExecutorTest {
         Map<Object, Integer> expectedCounts = new HashMap<>();
         expectedCounts.put(Status.SUCCESS, 1);
         expectedCounts.put(Status.ERROR, 1);
-        expectedCounts.put(Status.TIMED_OUT, 1);
+        expectedCounts.put(Status.TIMEOUT, 1);
 
         assertMetrics(metrics, expectedCounts);
     }
@@ -264,7 +264,7 @@ public class BlockingExecutorTest {
         Map<Object, Integer> expectedCounts = new HashMap<>();
         expectedCounts.put(Status.SUCCESS, 1);
         expectedCounts.put(Status.ERROR, 1);
-        expectedCounts.put(Status.TIMED_OUT, 1);
+        expectedCounts.put(Status.TIMEOUT, 1);
 
 
         assertMetrics(metrics, expectedCounts);
@@ -276,7 +276,7 @@ public class BlockingExecutorTest {
 
         int expectedErrors = expectedCounts.get(Status.ERROR) == null ? 0 : expectedCounts.get(Status.ERROR);
         int expectedSuccesses = expectedCounts.get(Status.SUCCESS) == null ? 0 : expectedCounts.get(Status.SUCCESS);
-        int expectedTimeouts = expectedCounts.get(Status.TIMED_OUT) == null ? 0 : expectedCounts.get(Status.TIMED_OUT);
+        int expectedTimeouts = expectedCounts.get(Status.TIMEOUT) == null ? 0 : expectedCounts.get(Status.TIMEOUT);
         int expectedMaxConcurrency = expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED) == null ? 0 :
                 expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         int expectedCircuitOpen = expectedCounts.get(RejectionReason.CIRCUIT_OPEN) == null ? 0 : expectedCounts.get

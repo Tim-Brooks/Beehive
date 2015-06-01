@@ -42,7 +42,7 @@ public class TimeoutService {
     }
 
     public static void handleSyncTimeout(ScheduleContext scheduleContext) {
-        scheduleContext.actionMetrics.reportActionResult(Status.TIMED_OUT);
+        scheduleContext.actionMetrics.reportActionResult(Status.TIMEOUT);
         scheduleContext.circuitBreaker.informBreakerOfResult(false);
     }
 

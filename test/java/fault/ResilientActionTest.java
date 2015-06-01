@@ -65,7 +65,7 @@ public class ResilientActionTest {
         ResilientFuture<String> future = serviceExecutor.submitAction(timeoutAction, 25);
 
         assertNull(future.get());
-        assertEquals(Status.TIMED_OUT, future.getStatus());
+        assertEquals(Status.TIMEOUT, future.getStatus());
 
         testMetricsResult(0, 0, 1);
     }
@@ -103,7 +103,7 @@ public class ResilientActionTest {
                     assertEquals("Success-" + successesRealized, result);
                     ++successesRealized;
                 } else {
-                    assertEquals(Status.TIMED_OUT, future.getStatus());
+                    assertEquals(Status.TIMEOUT, future.getStatus());
                     assertNull(result);
                     ++timeoutsRealized;
                 }

@@ -204,7 +204,7 @@ public class ManagingRunnable implements Runnable {
     }
 
     private void handleSyncTimeout() {
-        actionMetrics.reportActionResult(Status.TIMED_OUT);
+        actionMetrics.reportActionResult(Status.TIMEOUT);
         circuitBreaker.informBreakerOfResult(false);
     }
 

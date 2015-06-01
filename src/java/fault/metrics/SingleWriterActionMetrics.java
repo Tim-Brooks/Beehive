@@ -112,7 +112,7 @@ public class SingleWriterActionMetrics implements ActionMetrics {
             case ERROR:
                 metrics = this.errorMetrics;
                 break;
-            case TIMED_OUT:
+            case TIMEOUT:
                 metrics = this.timeoutMetrics;
                 break;
             default:
