@@ -123,7 +123,6 @@ public class MultiWriterActionMetricsTest {
             new Thread(new Runnable() {
                 @Override
                 public void run() {
-                    long start = System.nanoTime();
                     for (int j = 0; j < 100; ++j) {
                         metrics.incrementMetric(Metric.SUCCESS);
                         metrics.incrementMetric(Metric.ERROR);
@@ -132,7 +131,6 @@ public class MultiWriterActionMetricsTest {
                         metrics.incrementMetric(Metric.QUEUE_FULL);
                         metrics.incrementMetric(Metric.CIRCUIT_OPEN);
                     }
-                    System.out.println(System.nanoTime() - start);
                     latch.countDown();
                 }
             }).start();
