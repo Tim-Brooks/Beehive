@@ -58,12 +58,10 @@ public class MultiWriterActionMetrics implements NewActionMetrics {
         } else if (seconds <= 0) {
             String message = String.format("Seconds must be greater than 0. [Argument: %s]", seconds);
             throw new IllegalArgumentException(message);
-        } else if (seconds == totalSlots) {
-            --seconds;
         }
 
         int currentSecond = currentSecond();
-        int startSecond = currentSecond - seconds;
+        int startSecond = 1 + currentSecond - seconds;
         int adjustedStartSecond = startSecond >= 0 ? startSecond : 0;
 
         int totalEvents = 0;

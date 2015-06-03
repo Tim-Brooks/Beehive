@@ -41,4 +41,33 @@ public class MultiWriterActionMetricsTest {
         assertEquals(0, metrics.getMetricForTimePeriod(Metric.SUCCESS, 1));
     }
 
+    @Test
+    public void testMetricsTrackingTwoSeconds() {
+        when(systemTime.currentTimeMillis()).thenReturn(0L);
+        this.metrics = new MultiWriterActionMetrics(2, systemTime);
+
+        when(systemTime.currentTimeMillis()).thenReturn(1L);
+        metrics.incrementMetric(Metric.ERROR);
+        when(systemTime.currentTimeMillis()).thenReturn(2L);
+        metrics.incrementMetric(Metric.ERROR);
+
+        when(systemTime.currentTimeMillis()).thenReturn(999L);
+        assertEquals(2, metrics.getMetricForTimePeriod(Metric.ERROR, 1));
+
+        when(systemTime.currentTimeMillis()).thenReturn(999L);
+        assertEquals(2, metrics.getMetricForTimePeriod(Metric.ERROR, 2));
+
+        when(systemTime.currentTimeMillis()).thenReturn(1000L);
+        assertEquals(0, metrics.getMetricForTimePeriod(Metric.ERROR, 1));
+
+        when(systemTime.currentTimeMillis()).thenReturn(1000L);
+        assertEquals(2, metrics.getMetricForTimePeriod(Metric.ERROR, 2));
+
+        when(systemTime.currentTimeMillis()).thenReturn(2000L);
+        assertEquals(0, metrics.getMetricForTimePeriod(Metric.ERROR, 1));
+
+        when(systemTime.currentTimeMillis()).thenReturn(2000L);
+        assertEquals(0, metrics.getMetricForTimePeriod(Metric.ERROR, 2));
+    }
+
 }
