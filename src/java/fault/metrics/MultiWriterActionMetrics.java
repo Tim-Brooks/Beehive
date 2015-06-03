@@ -15,6 +15,7 @@ public class MultiWriterActionMetrics {
     private final SystemTime systemTime;
     private final AtomicLong advanceSlotTimeInMillis;
     private final int totalSlots;
+    private final long startTime;
     private AtomicInteger slotNumber = new AtomicInteger(0);
 
     public MultiWriterActionMetrics(int secondsToTrack) {
@@ -22,6 +23,7 @@ public class MultiWriterActionMetrics {
     }
 
     public MultiWriterActionMetrics(int secondsToTrack, SystemTime systemTime) {
+        this.startTime = systemTime.currentTimeMillis();
         this.totalSlots = secondsToTrack;
         this.metrics = new AtomicReferenceArray<>(secondsToTrack);
         this.systemTime = systemTime;
@@ -29,12 +31,9 @@ public class MultiWriterActionMetrics {
     }
 
     public void incrementMetric(Metric metric) {
-        int newSlot = -1;
-        while (newSlot == -1) {
-            int currentSlotNumber = slotNumber.get();
-            newSlot = advanceToCurrentSlot(currentSlotNumber, slotsToAdvance());
-        }
-        metrics.get(newSlot).incrementMetric(metric);
+        int currentSlot = currentSlot();
+
+        metrics.get(currentSlot).incrementMetric(metric);
     }
 
     public int getFailuresForTimePeriod(Metric metric, long milliseconds) {
@@ -67,14 +66,8 @@ public class MultiWriterActionMetrics {
         }
     }
 
-    private int slotsToAdvance() {
-        long currentTimestamp = systemTime.currentTimeMillis();
-        if (currentTimestamp < advanceSlotTimeInMillis.get()) {
-            return 0;
-        }
-
-        long advanceSlotTimeInMillis = this.advanceSlotTimeInMillis.get();
-        return 1 + (int) ((currentTimestamp - advanceSlotTimeInMillis) / 1000);
+    private int currentSlot() {
+        return (int) ((systemTime.currentTimeMillis() - startTime) % totalSlots) / 1000;
     }
 
 }
