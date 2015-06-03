@@ -51,7 +51,6 @@ public class MultiWriterActionMetrics implements NewActionMetrics {
 
     @Override
     public int getMetricForTimePeriod(Metric metric, int seconds) {
-        System.out.println(metrics);
         if (seconds > totalSlots) {
             String message = String.format("Seconds greater than seconds tracked: [Tracked: %s, Argument: %s]",
                     totalSlots, seconds);
@@ -59,6 +58,8 @@ public class MultiWriterActionMetrics implements NewActionMetrics {
         } else if (seconds <= 0) {
             String message = String.format("Seconds must be greater than 0. [Argument: %s]", seconds);
             throw new IllegalArgumentException(message);
+        } else if (seconds == totalSlots) {
+            --seconds;
         }
 
         int currentSecond = currentSecond();

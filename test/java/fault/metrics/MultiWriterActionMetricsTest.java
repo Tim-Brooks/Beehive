@@ -6,6 +6,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
 /**
@@ -21,21 +22,23 @@ public class MultiWriterActionMetricsTest {
     @Before
     public void setUp() {
         MockitoAnnotations.initMocks(this);
-
-        when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new MultiWriterActionMetrics(1, systemTime);
     }
 
     @Test
-    public void testMetrics() {
+    public void testMetricsEdgeScenario() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        metrics.incrementMetric(Metric.ERROR);
+        this.metrics = new MultiWriterActionMetrics(1, systemTime);
 
-        when(systemTime.currentTimeMillis()).thenReturn(1000L);
+        when(systemTime.currentTimeMillis()).thenReturn(1L);
+        metrics.incrementMetric(Metric.SUCCESS);
+        when(systemTime.currentTimeMillis()).thenReturn(2L);
         metrics.incrementMetric(Metric.SUCCESS);
 
-        when(systemTime.currentTimeMillis()).thenReturn(10L);
-        metrics.getMetricForTimePeriod(Metric.ERROR, 1);
+        when(systemTime.currentTimeMillis()).thenReturn(999L);
+        assertEquals(2, metrics.getMetricForTimePeriod(Metric.SUCCESS, 1));
+
+        when(systemTime.currentTimeMillis()).thenReturn(1000L);
+        assertEquals(0, metrics.getMetricForTimePeriod(Metric.SUCCESS, 1));
     }
 
 }

@@ -76,6 +76,7 @@ public class Second {
                 ", circuitOpen=" + circuitOpen +
                 ", queueFull=" + queueFull +
                 ", maxConcurrencyExceeded=" + maxConcurrencyExceeded +
+                ", second=" + second +
                 '}';
     }
 }
