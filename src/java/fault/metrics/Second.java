@@ -13,6 +13,11 @@ public class Second {
     private final LongAdder circuitOpen = new LongAdder();
     private final LongAdder queueFull = new LongAdder();
     private final LongAdder maxConcurrencyExceeded = new LongAdder();
+    private final long second;
+
+    public Second(long second) {
+        this.second = second;
+    }
 
     public void incrementMetric(Metric metric) {
         switch (metric) {
@@ -56,6 +61,10 @@ public class Second {
             default:
                 throw new RuntimeException("Unknown metric: " + metric);
         }
+    }
+
+    public long getSecond() {
+        return second;
     }
 
     @Override

@@ -2,8 +2,6 @@ package fault.metrics;
 
 import fault.utils.SystemTime;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
 /**
@@ -13,10 +11,8 @@ public class MultiWriterActionMetrics implements NewActionMetrics {
 
     private final AtomicReferenceArray<Second> metrics;
     private final SystemTime systemTime;
-    private final AtomicLong advanceSlotTimeInMillis;
     private final int totalSlots;
     private final long startTime;
-    private AtomicInteger slotNumber = new AtomicInteger(0);
 
     public MultiWriterActionMetrics(int secondsToTrack) {
         this(secondsToTrack, new SystemTime());
@@ -26,88 +22,63 @@ public class MultiWriterActionMetrics implements NewActionMetrics {
         this.startTime = systemTime.currentTimeMillis();
         this.totalSlots = secondsToTrack;
         this.metrics = new AtomicReferenceArray<>(secondsToTrack);
-        this.metrics.set(0, new Second());
         this.systemTime = systemTime;
-        this.advanceSlotTimeInMillis = new AtomicLong(systemTime.currentTimeMillis() + 1000L);
+
+        for (int i = 0; i < secondsToTrack; ++i) {
+            metrics.set(i, new Second(i));
+        }
     }
 
     @Override
     public void incrementMetric(Metric metric) {
-        int currentSlot = currentSlot();
+        int currentSecond = currentSecond();
+        int currentSlot = currentSecond % totalSlots;
         for (; ; ) {
-            int previousSlotNumber = slotNumber.get();
-            if (currentSlot == previousSlotNumber) {
-                metrics.get(currentSlot).incrementMetric(metric);
+            Second second = metrics.get(currentSlot);
+            if (second.getSecond() == currentSecond) {
+                second.incrementMetric(metric);
                 break;
             } else {
-                if (slotNumber.compareAndSet(previousSlotNumber, currentSlot)) {
-                    // How do we set new without losing data?
-                    metrics.set(currentSlot, new Second());
-
-                    metrics.get(currentSlot).incrementMetric(metric);
-                    // Clearly does not work right now. Current slot is normalized. Metrics set is not normalized.
-                    for (int i = previousSlotNumber + 1; i <= currentSlot; ++i) {
-                        if (i < totalSlots) {
-                            this.metrics.set(i, null);
-                        } else {
-                            this.metrics.set(i - totalSlots, null);
-                        }
-                    }
+                Second newSecond = new Second(currentSecond);
+                if (metrics.compareAndSet(currentSlot, second, newSecond)) {
+                    newSecond.incrementMetric(metric);
                     break;
                 }
-
             }
         }
 
     }
 
     @Override
-    public int getMetricForTimePeriod(Metric metric, long milliseconds) {
-        int seconds = (int) milliseconds / 1000;
-        int currentTimeSlot = currentSlot();
-        int mostRecentSlot = slotNumber.get();
-
-        int difference = seconds - (currentTimeSlot - mostRecentSlot);
-
-        int totalEvents = 0;
-        for (int i = mostRecentSlot - difference; i <= mostRecentSlot; ++i) {
-            if (i < 0) {
-                totalEvents = totalEvents + metrics.get(totalSlots + i).getMetric(metric).intValue();
-            } else {
-                totalEvents = totalEvents + metrics.get(i).getMetric(metric).intValue();
-            }
+    public int getMetricForTimePeriod(Metric metric, int seconds) {
+        System.out.println(metrics);
+        if (seconds > totalSlots) {
+            String message = String.format("Seconds greater than seconds tracked: [Tracked: %s, Argument: %s]",
+                    totalSlots, seconds);
+            throw new IllegalArgumentException(message);
+        } else if (seconds <= 0) {
+            String message = String.format("Seconds must be greater than 0. [Argument: %s]", seconds);
+            throw new IllegalArgumentException(message);
         }
 
+        int currentSecond = currentSecond();
+        int startSecond = currentSecond - seconds;
+        int adjustedStartSecond = startSecond >= 0 ? startSecond : 0;
+
+        int totalEvents = 0;
+        for (int i = adjustedStartSecond; i <= currentSecond; ++i) {
+            int slot = i % totalSlots;
+            Second second = metrics.get(slot);
+            if (second.getSecond() == i) {
+                totalEvents = totalEvents + second.getMetric(metric).intValue();
+            }
+        }
 
         return totalEvents;
     }
 
-    // Unsure if this is correct
-    private int advanceToCurrentSlot(int currentSlotNumber, int slotsToAdvance) {
-        if (slotsToAdvance == 0) {
-            return currentSlotNumber;
-        } else {
-            int newSlot = slotsToAdvance + currentSlotNumber;
-            int adjustedSlot = newSlot % totalSlots;
-            if (slotNumber.compareAndSet(currentSlotNumber, adjustedSlot)) {
-                // This presents a lot of races with changing the slotNumber. Mabye time should be the slotnumber?
-                this.advanceSlotTimeInMillis.set(advanceSlotTimeInMillis.get() + (1000 * slotsToAdvance));
-                for (int i = currentSlotNumber + 1; i <= newSlot; ++i) {
-                    if (i < totalSlots) {
-                        this.metrics.set(i, null);
-                    } else {
-                        this.metrics.set(i - totalSlots, null);
-                    }
-                }
-                return adjustedSlot;
-            } else {
-                return -1;
-            }
-        }
-    }
-
-    private int currentSlot() {
-        return (int) ((systemTime.currentTimeMillis() - startTime) % (totalSlots * 1000)) / 1000;
+    private int currentSecond() {
+        return (int) ((systemTime.currentTimeMillis() - startTime) / 1000);
     }
 
 }

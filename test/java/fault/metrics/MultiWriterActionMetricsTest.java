@@ -35,7 +35,7 @@ public class MultiWriterActionMetricsTest {
         metrics.incrementMetric(Metric.SUCCESS);
 
         when(systemTime.currentTimeMillis()).thenReturn(10L);
-        metrics.getMetricForTimePeriod(Metric.ERROR, 1000);
+        metrics.getMetricForTimePeriod(Metric.ERROR, 1);
     }
 
 }

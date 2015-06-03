@@ -41,7 +41,7 @@ public class CodahaleMetrics implements NewActionMetrics {
     }
 
     @Override
-    public int getMetricForTimePeriod(Metric metric, long milliseconds) {
+    public int getMetricForTimePeriod(Metric metric, int seconds) {
         double value;
         switch (metric) {
             case SUCCESS:
