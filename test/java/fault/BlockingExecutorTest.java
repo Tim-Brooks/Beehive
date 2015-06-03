@@ -69,15 +69,18 @@ public class BlockingExecutorTest {
         for (int i = 0; i < iterations; ++i) {
             ResilientFuture<String> future = blockingExecutor.submitAction(TestActions.successAction(1), 500);
             future.get();
-            for (int j = 0; j < 5; ++j) {
+            int j = 0;
+            while (true) {
                 try {
                     blockingExecutor.performAction(TestActions.successAction(1));
                     break;
                 } catch (RejectedActionException e) {
-                    if (j == 4) {
-                        throw e;
+                    Thread.sleep(5);
+                    if (j == 20) {
+                        fail("Continue to receive action rejects.");
                     }
                 }
+                ++j;
             }
         }
     }
@@ -278,33 +281,25 @@ public class BlockingExecutorTest {
         timeoutLatch.countDown();
     }
 
-    private void assertMetrics(ActionMetrics metrics, Map<Object, Integer> expectedCounts) throws Exception {
-        int milliseconds = 5;
+    @Test
+    public void semaphoreReleasedDespiteCallbackException() throws InterruptedException {
+        blockingExecutor = new BlockingExecutor(1, 1, "test");
+        blockingExecutor.submitAction(TestActions.successAction(0), TestCallbacks.exceptionCallback(""), Long.MAX_VALUE);
 
-        int expectedErrors = expectedCounts.get(Status.ERROR) == null ? 0 : expectedCounts.get(Status.ERROR);
-        int expectedSuccesses = expectedCounts.get(Status.SUCCESS) == null ? 0 : expectedCounts.get(Status.SUCCESS);
-        int expectedTimeouts = expectedCounts.get(Status.TIMEOUT) == null ? 0 : expectedCounts.get(Status.TIMEOUT);
-        int expectedMaxConcurrency = expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED) == null ? 0 :
-                expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
-        int expectedCircuitOpen = expectedCounts.get(RejectionReason.CIRCUIT_OPEN) == null ? 0 : expectedCounts.get
-                (RejectionReason.CIRCUIT_OPEN);
-        for (int i = 0; i < 20; ++i) {
-            Thread.sleep(5);
-            if (expectedErrors == metrics.getMetricForTimePeriod(Metric.ERROR, milliseconds)
-                    && expectedSuccesses == metrics.getMetricForTimePeriod(Metric.SUCCESS, milliseconds)
-                    && expectedTimeouts == metrics.getMetricForTimePeriod(Metric.TIMEOUT, milliseconds)
-                    && expectedCircuitOpen == metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds)
-                    && expectedMaxConcurrency == metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds)) {
+        int i = 0;
+        while (true) {
+            try {
+                blockingExecutor.performAction(TestActions.successAction(0));
                 break;
+            } catch (RejectedActionException e) {
+                Thread.sleep(5);
+                if (i == 20) {
+                    fail("Continue to receive action rejects.");
+                }
             }
+            ++i;
         }
 
-        assertEquals(expectedErrors, metrics.getMetricForTimePeriod(Metric.ERROR, milliseconds));
-        assertEquals(expectedTimeouts, metrics.getMetricForTimePeriod(Metric.TIMEOUT, milliseconds));
-        assertEquals(expectedSuccesses, metrics.getMetricForTimePeriod(Metric.SUCCESS, milliseconds));
-        assertEquals(expectedMaxConcurrency, metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds));
-        assertEquals(expectedCircuitOpen, metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds));
-        assertEquals(0, metrics.getMetricForTimePeriod(Metric.QUEUE_FULL, milliseconds));
     }
 
     @Test
@@ -358,5 +353,34 @@ public class BlockingExecutorTest {
         } catch (RejectedActionException e) {
             assertEquals(RejectionReason.CIRCUIT_OPEN, e.reason);
         }
+    }
+
+    private void assertMetrics(ActionMetrics metrics, Map<Object, Integer> expectedCounts) throws Exception {
+        int milliseconds = 5;
+
+        int expectedErrors = expectedCounts.get(Status.ERROR) == null ? 0 : expectedCounts.get(Status.ERROR);
+        int expectedSuccesses = expectedCounts.get(Status.SUCCESS) == null ? 0 : expectedCounts.get(Status.SUCCESS);
+        int expectedTimeouts = expectedCounts.get(Status.TIMEOUT) == null ? 0 : expectedCounts.get(Status.TIMEOUT);
+        int expectedMaxConcurrency = expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED) == null ? 0 :
+                expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+        int expectedCircuitOpen = expectedCounts.get(RejectionReason.CIRCUIT_OPEN) == null ? 0 : expectedCounts.get
+                (RejectionReason.CIRCUIT_OPEN);
+        for (int i = 0; i < 20; ++i) {
+            Thread.sleep(5);
+            if (expectedErrors == metrics.getMetricForTimePeriod(Metric.ERROR, milliseconds)
+                    && expectedSuccesses == metrics.getMetricForTimePeriod(Metric.SUCCESS, milliseconds)
+                    && expectedTimeouts == metrics.getMetricForTimePeriod(Metric.TIMEOUT, milliseconds)
+                    && expectedCircuitOpen == metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds)
+                    && expectedMaxConcurrency == metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds)) {
+                break;
+            }
+        }
+
+        assertEquals(expectedErrors, metrics.getMetricForTimePeriod(Metric.ERROR, milliseconds));
+        assertEquals(expectedTimeouts, metrics.getMetricForTimePeriod(Metric.TIMEOUT, milliseconds));
+        assertEquals(expectedSuccesses, metrics.getMetricForTimePeriod(Metric.SUCCESS, milliseconds));
+        assertEquals(expectedMaxConcurrency, metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds));
+        assertEquals(expectedCircuitOpen, metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds));
+        assertEquals(0, metrics.getMetricForTimePeriod(Metric.QUEUE_FULL, milliseconds));
     }
 }

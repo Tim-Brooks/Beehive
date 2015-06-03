@@ -28,4 +28,13 @@ public class TestCallbacks {
             }
         };
     }
+
+    public static <T> ResilientCallback<T> exceptionCallback(T type) {
+        return new ResilientCallback<T>() {
+            @Override
+            public void run(ResilientPromise<T> resultPromise) {
+                throw new RuntimeException("Boom");
+            }
+        };
+    }
 }

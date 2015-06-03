@@ -5,8 +5,8 @@ import fault.circuit.CircuitBreaker;
 import fault.circuit.DefaultCircuitBreaker;
 import fault.concurrent.*;
 import fault.metrics.ActionMetrics;
-import fault.metrics.Metric;
 import fault.metrics.DefaultActionMetrics;
+import fault.metrics.Metric;
 import fault.timeout.ActionTimeout;
 import fault.timeout.TimeoutService;
 
@@ -98,13 +98,13 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                     } finally {
                         actionMetrics.incrementMetric(Metric.statusToMetric(internalPromise.getStatus()));
                         circuitBreaker.informBreakerOfResult(internalPromise.isSuccessful());
-
-                        // Use Callback to guarantee test stuff
-                        if (callback != null) {
-                            callback.run(promise == null ? internalPromise : promise);
+                        try {
+                            if (callback != null) {
+                                callback.run(promise == null ? internalPromise : promise);
+                            }
+                        } finally {
+                            semaphore.releasePermit();
                         }
-
-                        semaphore.releasePermit();
                     }
                     return null;
                 }
