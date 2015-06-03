@@ -7,8 +7,8 @@ import fault.concurrent.MultipleWriterResilientPromise;
 import fault.concurrent.ResilientFuture;
 import fault.concurrent.ResilientPromise;
 import fault.metrics.ActionMetrics;
-import fault.metrics.Metric;
 import fault.metrics.DefaultActionMetrics;
+import fault.metrics.Metric;
 import fault.utils.TestActions;
 import fault.utils.TestCallbacks;
 import org.junit.After;
@@ -185,12 +185,16 @@ public class BlockingExecutorTest {
 
     @Test
     public void resultMetricsUpdated() throws Exception {
-        CountDownLatch blockingLatch = new CountDownLatch(1);
+        CountDownLatch timeoutLatch = new CountDownLatch(1);
+        CountDownLatch blockingLatch = new CountDownLatch(3);
 
-        ResilientFuture<String> errorF = blockingExecutor.submitAction(TestActions.erredAction(new IOException()), 100);
-        ResilientFuture<String> timeOutF = blockingExecutor.submitAction(TestActions.blockedAction(blockingLatch), 1);
+        ResilientCallback<String> countdownCallback = TestCallbacks.latchedPromise("", blockingLatch);
+        ResilientFuture<String> errorF = blockingExecutor.submitAction(TestActions.erredAction(new IOException()),
+                countdownCallback, 100);
+        ResilientFuture<String> timeOutF = blockingExecutor.submitAction(TestActions.blockedAction(timeoutLatch),
+                countdownCallback, 1);
         ResilientFuture<String> successF = blockingExecutor.submitAction(TestActions.successAction(50, "Success"),
-                Long.MAX_VALUE);
+                countdownCallback, Long.MAX_VALUE);
 
         for (ResilientFuture<String> f : Arrays.asList(errorF, timeOutF, successF)) {
             try {
@@ -206,6 +210,8 @@ public class BlockingExecutorTest {
         expectedCounts.put(Status.SUCCESS, 1);
         expectedCounts.put(Status.ERROR, 1);
         expectedCounts.put(Status.TIMEOUT, 1);
+
+        blockingLatch.await();
 
         assertMetrics(metrics, expectedCounts);
     }
@@ -249,7 +255,7 @@ public class BlockingExecutorTest {
 
     @Test
     public void metricsUpdatedEvenIfPromiseAlreadyCompleted() throws Exception {
-        CountDownLatch blockingLatch = new CountDownLatch(1);
+        CountDownLatch timeoutLatch = new CountDownLatch(1);
         ResilientPromise<String> errP = new MultipleWriterResilientPromise<>();
         ResilientPromise<String> timeoutP = new MultipleWriterResilientPromise<>();
         ResilientPromise<String> successP = new MultipleWriterResilientPromise<>();
@@ -258,7 +264,7 @@ public class BlockingExecutorTest {
         successP.deliverResult("Done");
 
         blockingExecutor.submitAction(TestActions.erredAction(new IOException()), errP, 100);
-        blockingExecutor.submitAction(TestActions.blockedAction(blockingLatch), timeoutP, 1);
+        blockingExecutor.submitAction(TestActions.blockedAction(timeoutLatch), timeoutP, 1);
         blockingExecutor.submitAction(TestActions.successAction(50, "Success"), successP, Long.MAX_VALUE);
 
         ActionMetrics metrics = blockingExecutor.getActionMetrics();
@@ -269,7 +275,7 @@ public class BlockingExecutorTest {
 
 
         assertMetrics(metrics, expectedCounts);
-        blockingLatch.countDown();
+        timeoutLatch.countDown();
     }
 
     private void assertMetrics(ActionMetrics metrics, Map<Object, Integer> expectedCounts) throws Exception {
