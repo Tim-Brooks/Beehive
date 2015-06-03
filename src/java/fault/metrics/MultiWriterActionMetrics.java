@@ -32,8 +32,21 @@ public class MultiWriterActionMetrics {
 
     public void incrementMetric(Metric metric) {
         int currentSlot = currentSlot();
+        for (; ; ) {
+            int previousSlotNumber = slotNumber.get();
+            if (currentSlot == previousSlotNumber) {
+                metrics.get(currentSlot).incrementMetric(metric);
+                break;
+            } else {
+                if (slotNumber.compareAndSet(previousSlotNumber, currentSlot)) {
+                    metrics.get(currentSlot).incrementMetric(metric);
+                    // Null out stuff
+                    break;
+                }
 
-        metrics.get(currentSlot).incrementMetric(metric);
+            }
+        }
+
     }
 
     public int getFailuresForTimePeriod(Metric metric, long milliseconds) {
