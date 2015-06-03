@@ -6,6 +6,8 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.concurrent.CountDownLatch;
+
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
@@ -68,6 +70,73 @@ public class MultiWriterActionMetricsTest {
 
         when(systemTime.currentTimeMillis()).thenReturn(2000L);
         assertEquals(0, metrics.getMetricForTimePeriod(Metric.ERROR, 2));
+    }
+
+    @Test
+    public void concurrentTest() throws Exception {
+        when(systemTime.currentTimeMillis()).thenReturn(1500L);
+        this.metrics = new MultiWriterActionMetrics(5, systemTime);
+
+        when(systemTime.currentTimeMillis()).thenReturn(1980L);
+        fireThreads(metrics, 10);
+
+        when(systemTime.currentTimeMillis()).thenReturn(2620L);
+        fireThreads(metrics, 10);
+
+        when(systemTime.currentTimeMillis()).thenReturn(3500L);
+        fireThreads(metrics, 10);
+
+        when(systemTime.currentTimeMillis()).thenReturn(4820L);
+        fireThreads(metrics, 10);
+
+        when(systemTime.currentTimeMillis()).thenReturn(5600L);
+        fireThreads(metrics, 10);
+
+        when(systemTime.currentTimeMillis()).thenReturn(6000L);
+        assertEquals(5000, this.metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, 5));
+        assertEquals(5000, this.metrics.getMetricForTimePeriod(Metric.SUCCESS, 5));
+        assertEquals(5000, this.metrics.getMetricForTimePeriod(Metric.ERROR, 5));
+        assertEquals(5000, this.metrics.getMetricForTimePeriod(Metric.TIMEOUT, 5));
+        assertEquals(5000, this.metrics.getMetricForTimePeriod(Metric.QUEUE_FULL, 5));
+        assertEquals(5000, this.metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 5));
+
+        assertEquals(1000, this.metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, 1));
+        assertEquals(1000, this.metrics.getMetricForTimePeriod(Metric.SUCCESS, 1));
+        assertEquals(1000, this.metrics.getMetricForTimePeriod(Metric.ERROR, 1));
+        assertEquals(1000, this.metrics.getMetricForTimePeriod(Metric.TIMEOUT, 1));
+        assertEquals(1000, this.metrics.getMetricForTimePeriod(Metric.QUEUE_FULL, 1));
+        assertEquals(1000, this.metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 1));
+
+        when(systemTime.currentTimeMillis()).thenReturn(6500L);
+        assertEquals(4000, this.metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, 5));
+        assertEquals(4000, this.metrics.getMetricForTimePeriod(Metric.SUCCESS, 5));
+        assertEquals(4000, this.metrics.getMetricForTimePeriod(Metric.ERROR, 5));
+        assertEquals(4000, this.metrics.getMetricForTimePeriod(Metric.TIMEOUT, 5));
+        assertEquals(4000, this.metrics.getMetricForTimePeriod(Metric.QUEUE_FULL, 5));
+        assertEquals(4000, this.metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 5));
+    }
+
+    private void fireThreads(final NewActionMetrics metrics, int num) throws InterruptedException {
+        final CountDownLatch latch = new CountDownLatch(num);
+
+        for (int i = 0; i < num; ++i) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (int j = 0; j < 100; ++j) {
+                        metrics.incrementMetric(Metric.SUCCESS);
+                        metrics.incrementMetric(Metric.ERROR);
+                        metrics.incrementMetric(Metric.TIMEOUT);
+                        metrics.incrementMetric(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+                        metrics.incrementMetric(Metric.QUEUE_FULL);
+                        metrics.incrementMetric(Metric.CIRCUIT_OPEN);
+                    }
+                    latch.countDown();
+                }
+            }).start();
+        }
+
+        latch.await();
     }
 
 }
