@@ -73,6 +73,23 @@ public class MultiWriterActionMetricsTest {
     }
 
     @Test
+    public void testMultipleWraps() {
+        when(systemTime.currentTimeMillis()).thenReturn(0L);
+        this.metrics = new MultiWriterActionMetrics(10, systemTime);
+
+        when(systemTime.currentTimeMillis()).thenReturn(8000L);
+        metrics.incrementMetric(Metric.ERROR);
+
+        when(systemTime.currentTimeMillis()).thenReturn(20000L);
+        metrics.incrementMetric(Metric.SUCCESS);
+
+        when(systemTime.currentTimeMillis()).thenReturn(21000L);
+        assertEquals(0, metrics.getMetricForTimePeriod(Metric.ERROR, 1));
+        assertEquals(0, metrics.getMetricForTimePeriod(Metric.SUCCESS, 1));
+        assertEquals(1, metrics.getMetricForTimePeriod(Metric.SUCCESS, 2));
+    }
+
+    @Test
     public void concurrentTest() throws Exception {
         when(systemTime.currentTimeMillis()).thenReturn(1500L);
         this.metrics = new MultiWriterActionMetrics(5, systemTime);
