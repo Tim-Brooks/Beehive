@@ -1,7 +1,7 @@
 package fault;
 
 import fault.metrics.Metric;
-import fault.metrics.MultiWriterActionMetrics;
+import fault.metrics.DefaultActionMetrics;
 import fault.metrics.ActionMetrics;
 
 import java.util.concurrent.CountDownLatch;
@@ -13,7 +13,7 @@ public class MetricsExample {
 
     public static void main(String[] args) {
 
-        MultiWriterActionMetrics metrics = new MultiWriterActionMetrics(60);
+        DefaultActionMetrics metrics = new DefaultActionMetrics(60);
 
 //        CodahaleMetrics metrics = new CodahaleMetrics();
         try {

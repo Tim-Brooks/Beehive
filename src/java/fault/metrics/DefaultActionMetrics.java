@@ -7,18 +7,18 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 /**
  * Created by timbrooks on 6/1/15.
  */
-public class MultiWriterActionMetrics implements ActionMetrics {
+public class DefaultActionMetrics implements ActionMetrics {
 
     private final AtomicReferenceArray<Second> metrics;
     private final SystemTime systemTime;
     private final int totalSlots;
     private final long startTime;
 
-    public MultiWriterActionMetrics(int secondsToTrack) {
+    public DefaultActionMetrics(int secondsToTrack) {
         this(secondsToTrack, new SystemTime());
     }
 
-    public MultiWriterActionMetrics(int secondsToTrack, SystemTime systemTime) {
+    public DefaultActionMetrics(int secondsToTrack, SystemTime systemTime) {
         this.startTime = systemTime.currentTimeMillis();
         this.totalSlots = secondsToTrack;
         this.metrics = new AtomicReferenceArray<>(secondsToTrack);

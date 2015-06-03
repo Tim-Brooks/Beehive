@@ -6,7 +6,7 @@ import fault.circuit.DefaultCircuitBreaker;
 import fault.concurrent.*;
 import fault.metrics.ActionMetrics;
 import fault.metrics.Metric;
-import fault.metrics.MultiWriterActionMetrics;
+import fault.metrics.DefaultActionMetrics;
 import fault.timeout.ActionTimeout;
 import fault.timeout.TimeoutService;
 
@@ -29,7 +29,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     }
 
     public BlockingExecutor(int poolSize, int concurrencyLevel, String name) {
-        this(poolSize, concurrencyLevel, name, new MultiWriterActionMetrics(3600));
+        this(poolSize, concurrencyLevel, name, new DefaultActionMetrics(3600));
     }
 
     public BlockingExecutor(int poolSize, int concurrencyLevel, String name, ActionMetrics actionMetrics) {
@@ -38,7 +38,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     }
 
     public BlockingExecutor(int poolSize, int concurrencyLevel, String name, CircuitBreaker breaker) {
-        this(poolSize, concurrencyLevel, name, new MultiWriterActionMetrics(3600), breaker);
+        this(poolSize, concurrencyLevel, name, new DefaultActionMetrics(3600), breaker);
     }
 
     public BlockingExecutor(int poolSize, int concurrencyLevel, String name, ActionMetrics actionMetrics, CircuitBreaker

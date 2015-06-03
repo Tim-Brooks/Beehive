@@ -8,7 +8,7 @@ import fault.concurrent.ResilientFuture;
 import fault.concurrent.ResilientPromise;
 import fault.metrics.ActionMetrics;
 import fault.metrics.Metric;
-import fault.metrics.MultiWriterActionMetrics;
+import fault.metrics.DefaultActionMetrics;
 import fault.utils.TestActions;
 import fault.utils.TestCallbacks;
 import org.junit.After;
@@ -308,7 +308,7 @@ public class BlockingExecutorTest {
         builder.failureThreshold = 5;
         builder.timeToPauseMillis = 50;
 
-        ActionMetrics metrics = new MultiWriterActionMetrics(3600);
+        ActionMetrics metrics = new DefaultActionMetrics(3600);
         CircuitBreaker breaker = new DefaultCircuitBreaker(metrics, builder.build());
         blockingExecutor = new BlockingExecutor(1, 100, "test", metrics, breaker);
 

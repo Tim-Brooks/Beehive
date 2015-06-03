@@ -4,7 +4,7 @@ import fault.circuit.BreakerConfig;
 import fault.circuit.DefaultCircuitBreaker;
 import fault.metrics.ActionMetrics;
 import fault.metrics.Metric;
-import fault.metrics.MultiWriterActionMetrics;
+import fault.metrics.DefaultActionMetrics;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +15,7 @@ import java.util.List;
 public class Example {
 
     public static void main(String[] args) {
-        ActionMetrics actionMetrics = new MultiWriterActionMetrics(3600);
+        ActionMetrics actionMetrics = new DefaultActionMetrics(3600);
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
                 .failureThreshold(100).timeToPauseMillis(2000).build();
 //        EventLoopExecutor serviceExecutor = new EventLoopExecutor(15, actionMetrics, new DefaultCircuitBreaker

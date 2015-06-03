@@ -11,7 +11,7 @@
                           BreakerConfig
                           BreakerConfig$BreakerConfigBuilder
                           NoOpCircuitBreaker)
-           (fault.metrics ActionMetrics MultiWriterActionMetrics Metric)))
+           (fault.metrics ActionMetrics DefaultActionMetrics Metric)))
 
 (set! *warn-on-reflection* true)
 
@@ -134,7 +134,7 @@
   (.forceOpen ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
 (defn service-executor [name pool-size max-concurrency {:keys [seconds]}]
-  (let [metrics (MultiWriterActionMetrics. seconds)
+  (let [metrics (DefaultActionMetrics. seconds)
         executor (BlockingExecutor. (int pool-size)
                                     (int max-concurrency)
                                     ^String
@@ -146,7 +146,7 @@
 (defn executor-with-no-opt-breaker
   [name pool-size max-concurrency {:keys [seconds]}]
   (let [breaker (NoOpCircuitBreaker.)
-        metrics (MultiWriterActionMetrics. seconds)
+        metrics (DefaultActionMetrics. seconds)
         executor (BlockingExecutor. (int pool-size)
                                     (int max-concurrency)
                                     ^String name

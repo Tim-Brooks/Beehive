@@ -14,12 +14,12 @@ import static org.mockito.Mockito.when;
 /**
  * Created by timbrooks on 6/3/15.
  */
-public class MultiWriterActionMetricsTest {
+public class DefaultActionMetricsTest {
 
     @Mock
     private SystemTime systemTime;
 
-    private MultiWriterActionMetrics metrics;
+    private DefaultActionMetrics metrics;
 
     @Before
     public void setUp() {
@@ -29,7 +29,7 @@ public class MultiWriterActionMetricsTest {
     @Test
     public void testMetricsEdgeScenario() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new MultiWriterActionMetrics(1, systemTime);
+        this.metrics = new DefaultActionMetrics(1, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1L);
         metrics.incrementMetric(Metric.SUCCESS);
@@ -46,7 +46,7 @@ public class MultiWriterActionMetricsTest {
     @Test
     public void testMetricsTrackingTwoSeconds() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new MultiWriterActionMetrics(2, systemTime);
+        this.metrics = new DefaultActionMetrics(2, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1L);
         metrics.incrementMetric(Metric.ERROR);
@@ -75,7 +75,7 @@ public class MultiWriterActionMetricsTest {
     @Test
     public void testMultipleWraps() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new MultiWriterActionMetrics(10, systemTime);
+        this.metrics = new DefaultActionMetrics(10, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(8000L);
         metrics.incrementMetric(Metric.ERROR);
@@ -92,7 +92,7 @@ public class MultiWriterActionMetricsTest {
     @Test
     public void concurrentTest() throws Exception {
         when(systemTime.currentTimeMillis()).thenReturn(1500L);
-        this.metrics = new MultiWriterActionMetrics(5, systemTime);
+        this.metrics = new DefaultActionMetrics(5, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1980L);
         fireThreads(metrics, 10);
