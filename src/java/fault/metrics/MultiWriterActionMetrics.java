@@ -29,22 +29,30 @@ public class MultiWriterActionMetrics {
     }
 
     public void incrementMetric(Metric metric) {
-        int currentSlotNumber = slotNumber.get();
-        int slotsToAdvance = slotsToAdvance();
-
-
+        int newSlot = -1;
+        while (newSlot == -1) {
+            int currentSlotNumber = slotNumber.get();
+            newSlot = advanceToCurrentSlot(currentSlotNumber, slotsToAdvance());
+        }
+        metrics.get(newSlot).incrementMetric(metric);
     }
 
     public int getFailuresForTimePeriod(Metric metric, long milliseconds) {
+
+
         return 0;
     }
 
     // Unsure if this is correct
     private int advanceToCurrentSlot(int currentSlotNumber, int slotsToAdvance) {
-        if (slotsToAdvance != 0) {
+        if (slotsToAdvance == 0) {
+            return currentSlotNumber;
+        } else {
             int newSlot = slotsToAdvance + currentSlotNumber;
             int adjustedSlot = newSlot % totalSlots;
             if (slotNumber.compareAndSet(currentSlotNumber, adjustedSlot)) {
+                // This presents a lot of races with changing the slotNumber. Mabye time should be the slotnumber?
+                this.advanceSlotTimeInMillis.set(advanceSlotTimeInMillis.get() + (1000 * slotsToAdvance));
                 for (int i = currentSlotNumber + 1; i <= newSlot; ++i) {
                     if (i < totalSlots) {
                         this.metrics.set(i, null);
@@ -52,13 +60,11 @@ public class MultiWriterActionMetrics {
                         this.metrics.set(i - totalSlots, null);
                     }
                 }
-                this.advanceSlotTimeInMillis.set(advanceSlotTimeInMillis.get() + (1000 * slotsToAdvance));
                 return adjustedSlot;
             } else {
                 return -1;
             }
         }
-        return currentSlotNumber;
     }
 
     private int slotsToAdvance() {
