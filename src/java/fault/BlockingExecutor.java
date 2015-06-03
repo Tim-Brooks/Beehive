@@ -98,6 +98,8 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                     } finally {
                         actionMetrics.incrementMetric(Metric.statusToMetric(internalPromise.getStatus()));
                         circuitBreaker.informBreakerOfResult(internalPromise.isSuccessful());
+
+                        // Use Callback to guarantee test stuff
                         if (callback != null) {
                             callback.run(promise == null ? internalPromise : promise);
                         }

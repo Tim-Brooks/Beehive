@@ -18,8 +18,6 @@ public class Example {
         ActionMetrics actionMetrics = new DefaultActionMetrics(3600);
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
                 .failureThreshold(100).timeToPauseMillis(2000).build();
-//        EventLoopExecutor serviceExecutor = new EventLoopExecutor(15, actionMetrics, new DefaultCircuitBreaker
-//                (actionMetrics, breakerConfig), Executors.newFixedThreadPool(15));
         BlockingExecutor serviceExecutor = new BlockingExecutor(25, 120, "Test", actionMetrics, new
                 DefaultCircuitBreaker
                 (actionMetrics, breakerConfig));
