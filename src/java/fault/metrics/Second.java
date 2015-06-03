@@ -38,4 +38,35 @@ public class Second {
                 throw new RuntimeException("Unknown metric: " + metric);
         }
     }
+
+    public LongAdder getMetric(Metric metric) {
+        switch (metric) {
+            case SUCCESS:
+                return successes;
+            case ERROR:
+                return errors;
+            case TIMEOUT:
+                return timeouts;
+            case CIRCUIT_OPEN:
+                return circuitOpen;
+            case QUEUE_FULL:
+                return queueFull;
+            case MAX_CONCURRENCY_LEVEL_EXCEEDED:
+                return maxConcurrencyExceeded;
+            default:
+                throw new RuntimeException("Unknown metric: " + metric);
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "Second{" +
+                "successes=" + successes +
+                ", errors=" + errors +
+                ", timeouts=" + timeouts +
+                ", circuitOpen=" + circuitOpen +
+                ", queueFull=" + queueFull +
+                ", maxConcurrencyExceeded=" + maxConcurrencyExceeded +
+                '}';
+    }
 }

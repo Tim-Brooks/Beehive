@@ -57,7 +57,7 @@ public class Example {
                 System.out.println("Permit " + actionMetrics.getMaxConcurrencyRejectionsForTimePeriod(1000));
                 System.out.println("Permit " + actionMetrics.getQueueFullRejectionsForTimePeriod(1000));
 //                System.out.println("Success2 " + actionMetrics2.getSuccessesForTimePeriod(5000));
-//                System.out.println("Failures2 " + actionMetrics2.getFailuresForTimePeriod(5000));
+//                System.out.println("Failures2 " + actionMetrics2.getMetricForTimePeriod(5000));
             }
         } catch (InterruptedException e) {
             e.printStackTrace();
