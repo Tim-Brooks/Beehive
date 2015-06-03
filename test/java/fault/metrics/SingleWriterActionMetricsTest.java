@@ -181,4 +181,23 @@ public class SingleWriterActionMetricsTest {
         assertEquals(2, actionMetrics.getCircuitOpenedRejectionsForTimePeriod(6000));
 
     }
+
+    @Test
+    public void testMultiWrappingBuffer() {
+        when(systemTime.currentTimeMillis()).thenReturn(2000000L);
+        actionMetrics.reportActionResult(Status.ERROR);
+
+        when(systemTime.currentTimeMillis()).thenReturn(2001000L);
+        actionMetrics.reportActionResult(Status.ERROR);
+
+        when(systemTime.currentTimeMillis()).thenReturn(2002000L);
+        actionMetrics.reportActionResult(Status.ERROR);
+
+        when(systemTime.currentTimeMillis()).thenReturn(2003000L);
+        assertEquals(1, actionMetrics.getErrorsForTimePeriod(1000));
+        when(systemTime.currentTimeMillis()).thenReturn(2003000L);
+        assertEquals(2, actionMetrics.getErrorsForTimePeriod(2000));
+        when(systemTime.currentTimeMillis()).thenReturn(2003000L);
+        assertEquals(3, actionMetrics.getErrorsForTimePeriod(3000));
+    }
 }

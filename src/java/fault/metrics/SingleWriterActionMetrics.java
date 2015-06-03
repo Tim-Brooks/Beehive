@@ -184,7 +184,7 @@ public class SingleWriterActionMetrics implements ActionMetrics {
                     queueFullMetrics.lazySet(i, 0);
                     maxConcurrencyMetrics.lazySet(i, 0);
                 } else {
-                    int adjustedSlot = i - totalSlots;
+                    int adjustedSlot = i % totalSlots;
                     errorMetrics.lazySet(adjustedSlot, 0);
                     successMetrics.lazySet(adjustedSlot, 0);
                     timeoutMetrics.lazySet(adjustedSlot, 0);
@@ -193,7 +193,7 @@ public class SingleWriterActionMetrics implements ActionMetrics {
                     maxConcurrencyMetrics.lazySet(adjustedSlot, 0);
                 }
             }
-            int adjustedNewSlot = newSlot < totalSlots ? newSlot : newSlot - totalSlots;
+            int adjustedNewSlot = newSlot < totalSlots ? newSlot : newSlot % totalSlots;
             this.slotNumber.lazySet(adjustedNewSlot);
             this.advanceSlotTimeInMillis.lazySet(advanceSlotTimeInMillis.get() + (1000 * slotsToAdvance));
             return adjustedNewSlot;
