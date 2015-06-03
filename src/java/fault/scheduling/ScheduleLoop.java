@@ -1,10 +1,11 @@
 package fault.scheduling;
 
 import fault.ActionTimeoutException;
-import fault.concurrent.ResilientPromise;
 import fault.Status;
+import fault.concurrent.ResilientPromise;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
+import fault.metrics.Metric;
 
 import java.util.concurrent.FutureTask;
 
@@ -69,11 +70,11 @@ public class ScheduleLoop {
 
     private static void handleSyncResult(ScheduleContext scheduleContext, ResultMessage<Object> result) {
         if (result.result != null) {
-            scheduleContext.actionMetrics.reportActionResult(Status.SUCCESS);
+            scheduleContext.actionMetrics.incrementMetric(Metric.statusToMetric(Status.SUCCESS));
         } else if (result.exception instanceof ActionTimeoutException) {
             TimeoutService.handleSyncTimeout(scheduleContext);
         } else {
-            scheduleContext.actionMetrics.reportActionResult(Status.ERROR);
+            scheduleContext.actionMetrics.incrementMetric(Metric.statusToMetric(Status.ERROR));
         }
 
     }
@@ -89,7 +90,7 @@ public class ScheduleLoop {
                 promise.deliverError(result.exception);
 
             }
-            scheduleContext.actionMetrics.reportActionResult(promise.getStatus());
+            scheduleContext.actionMetrics.incrementMetric(Metric.statusToMetric(promise.getStatus()));
             scheduleContext.circuitBreaker.informBreakerOfResult(result.exception == null);
         }
     }

@@ -5,7 +5,7 @@ import com.codahale.metrics.Meter;
 /**
  * Created by timbrooks on 6/3/15.
  */
-public class CodahaleMetrics implements NewActionMetrics {
+public class CodahaleMetrics implements ActionMetrics {
 
     private Meter successes = new Meter();
     private Meter errors = new Meter();

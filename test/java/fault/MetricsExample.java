@@ -2,7 +2,7 @@ package fault;
 
 import fault.metrics.Metric;
 import fault.metrics.MultiWriterActionMetrics;
-import fault.metrics.NewActionMetrics;
+import fault.metrics.ActionMetrics;
 
 import java.util.concurrent.CountDownLatch;
 
@@ -32,7 +32,7 @@ public class MetricsExample {
 
     }
 
-    private static void fireThreads(final NewActionMetrics metrics, int num) throws InterruptedException {
+    private static void fireThreads(final ActionMetrics metrics, int num) throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(num);
 
         for (int i = 0; i < num; ++i) {

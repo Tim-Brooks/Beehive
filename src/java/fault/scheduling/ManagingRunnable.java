@@ -1,12 +1,14 @@
 package fault.scheduling;
 
-import fault.*;
+import fault.ActionTimeoutException;
+import fault.ResilientAction;
 import fault.circuit.CircuitBreaker;
 import fault.concurrent.ResilientPromise;
 import fault.concurrent.SingleWriterResilientPromise;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.ActionMetrics;
+import fault.metrics.Metric;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -148,11 +150,11 @@ public class ManagingRunnable implements Runnable {
     private void handleSyncResult(SortedMap<Long, List<ResultMessage<Object>>> scheduled, ResultMessage<Object>
             result) {
         if (result.result != null) {
-            actionMetrics.reportActionResult(Status.SUCCESS);
+            actionMetrics.incrementMetric(Metric.SUCCESS);
         } else if (result.exception instanceof ActionTimeoutException) {
             scheduleTimeout(scheduled, System.currentTimeMillis() - 1, result);
         } else {
-            actionMetrics.reportActionResult(Status.ERROR);
+            actionMetrics.incrementMetric(Metric.ERROR);
         }
 
     }
@@ -169,7 +171,7 @@ public class ManagingRunnable implements Runnable {
                 promise.deliverError(result.exception);
 
             }
-            actionMetrics.reportActionResult(promise.getStatus());
+            actionMetrics.incrementMetric(Metric.statusToMetric(promise.getStatus()));
             circuitBreaker.informBreakerOfResult(result.exception == null);
         }
     }
@@ -204,7 +206,7 @@ public class ManagingRunnable implements Runnable {
     }
 
     private void handleSyncTimeout() {
-        actionMetrics.reportActionResult(Status.TIMEOUT);
+        actionMetrics.incrementMetric(Metric.TIMEOUT);
         circuitBreaker.informBreakerOfResult(false);
     }
 
@@ -216,7 +218,7 @@ public class ManagingRunnable implements Runnable {
             if (!promise.isDone()) {
                 promise.setTimedOut();
                 task.cancel(true);
-                actionMetrics.reportActionResult(promise.getStatus());
+                actionMetrics.incrementMetric(Metric.statusToMetric(promise.getStatus()));
                 circuitBreaker.informBreakerOfResult(false);
             }
         }

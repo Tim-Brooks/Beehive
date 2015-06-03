@@ -3,8 +3,6 @@ package fault;
 import fault.circuit.CircuitBreaker;
 import fault.metrics.ActionMetrics;
 
-import java.util.UUID;
-
 /**
  * Created by timbrooks on 12/23/14.
  */

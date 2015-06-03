@@ -133,7 +133,7 @@ public class MultiWriterActionMetricsTest {
         assertEquals(4000, this.metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 5));
     }
 
-    private void fireThreads(final NewActionMetrics metrics, int num) throws InterruptedException {
+    private void fireThreads(final ActionMetrics metrics, int num) throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(num);
 
         for (int i = 0; i < num; ++i) {

@@ -1,6 +1,7 @@
 package fault.circuit;
 
 import fault.metrics.ActionMetrics;
+import fault.metrics.Metric;
 import fault.utils.SystemTime;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -62,7 +63,10 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
         } else {
             if (state.get() == CLOSED) {
                 BreakerConfig config = this.breakerConfig.get();
-                int failuresForTimePeriod = actionMetrics.getFailuresForTimePeriod(config.timePeriodInMillis);
+                int timePeriod = config.timePeriodInMillis / 1000;
+                int errorsForTimePeriod = actionMetrics.getMetricForTimePeriod(Metric.ERROR, timePeriod);
+                int timeoutsForTimePeriod = actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, timePeriod);
+                int failuresForTimePeriod = errorsForTimePeriod + timeoutsForTimePeriod;
                 if (config.failureThreshold < failuresForTimePeriod) {
                     lastTestedTime.set(systemTime.currentTimeMillis());
                     state.compareAndSet(CLOSED, OPEN);

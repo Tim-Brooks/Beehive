@@ -9,7 +9,7 @@ import fault.concurrent.SingleWriterResilientPromise;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.ActionMetrics;
-import fault.metrics.SingleWriterActionMetrics;
+import fault.metrics.MultiWriterActionMetrics;
 import fault.scheduling.ScheduleContext;
 import fault.scheduling.Scheduler;
 
@@ -26,7 +26,7 @@ public class EventLoopExecutor extends AbstractServiceExecutor {
     private final ScheduleContext schedulingContext;
 
     public EventLoopExecutor(int poolSize) {
-        this(poolSize, new SingleWriterActionMetrics(3600));
+        this(poolSize, new MultiWriterActionMetrics(3600));
     }
 
     public EventLoopExecutor(int poolSize, ActionMetrics actionMetrics) {

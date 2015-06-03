@@ -2,11 +2,12 @@ package fault;
 
 import fault.circuit.BreakerConfig;
 import fault.circuit.DefaultCircuitBreaker;
-import fault.metrics.SingleWriterActionMetrics;
+import fault.metrics.ActionMetrics;
+import fault.metrics.Metric;
+import fault.metrics.MultiWriterActionMetrics;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Executors;
 
 /**
  * Created by timbrooks on 11/6/14.
@@ -14,7 +15,7 @@ import java.util.concurrent.Executors;
 public class Example {
 
     public static void main(String[] args) {
-        SingleWriterActionMetrics actionMetrics = new SingleWriterActionMetrics(3600);
+        ActionMetrics actionMetrics = new MultiWriterActionMetrics(3600);
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
                 .failureThreshold(100).timeToPauseMillis(2000).build();
 //        EventLoopExecutor serviceExecutor = new EventLoopExecutor(15, actionMetrics, new DefaultCircuitBreaker
@@ -52,10 +53,12 @@ public class Example {
         try {
             for (int i = 0; i < 1000; ++i) {
                 Thread.sleep(1000);
-                System.out.println("Success " + actionMetrics.getSuccessesForTimePeriod(1000));
-                System.out.println("Failures " + actionMetrics.getFailuresForTimePeriod(1000));
-                System.out.println("Permit " + actionMetrics.getMaxConcurrencyRejectionsForTimePeriod(1000));
-                System.out.println("Permit " + actionMetrics.getQueueFullRejectionsForTimePeriod(1000));
+                System.out.println("Success " + actionMetrics.getMetricForTimePeriod(Metric.SUCCESS, 1));
+                System.out.println("Failures " + actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, 1));
+                System.out.println("Errors " + actionMetrics.getMetricForTimePeriod(Metric.ERROR, 1));
+                System.out.println("Concurrency " + actionMetrics.getMetricForTimePeriod(Metric
+                        .MAX_CONCURRENCY_LEVEL_EXCEEDED, 1));
+                System.out.println("Circuit " + actionMetrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, 1));
 //                System.out.println("Success2 " + actionMetrics2.getSuccessesForTimePeriod(5000));
 //                System.out.println("Failures2 " + actionMetrics2.getMetricForTimePeriod(5000));
             }

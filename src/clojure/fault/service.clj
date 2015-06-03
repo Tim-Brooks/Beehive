@@ -11,7 +11,7 @@
                           BreakerConfig
                           BreakerConfig$BreakerConfigBuilder
                           NoOpCircuitBreaker)
-           (fault.metrics ActionMetrics SingleWriterActionMetrics)))
+           (fault.metrics ActionMetrics MultiWriterActionMetrics Metric)))
 
 (set! *warn-on-reflection* true)
 
@@ -51,28 +51,36 @@
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
-    (let [millis (* 1000 seconds-tracked)]
-      (case key
-        :failures (.getFailuresForTimePeriod metrics millis)
-        :errors (.getErrorsForTimePeriod metrics millis)
-        :successes (.getSuccessesForTimePeriod metrics millis)
-        :timeouts (.getTimeoutsForTimePeriod metrics millis)
-        :circuit-open (.getCircuitOpenedRejectionsForTimePeriod metrics millis)
-        :queue-full (.getQueueFullRejectionsForTimePeriod metrics millis)
-        :max-concurrency-level-exceeded (.getMaxConcurrencyRejectionsForTimePeriod
-                                          metrics millis)
-        default)))
+    (case key
+      :errors (.getMetricForTimePeriod metrics Metric/ERROR seconds-tracked)
+      :successes (.getMetricForTimePeriod metrics Metric/SUCCESS seconds-tracked)
+      :timeouts (.getMetricForTimePeriod metrics Metric/TIMEOUT seconds-tracked)
+      :circuit-open (.getMetricForTimePeriod metrics
+                                             Metric/CIRCUIT_OPEN
+                                             seconds-tracked)
+      :queue-full (.getMetricForTimePeriod metrics
+                                           Metric/QUEUE_FULL
+                                           seconds-tracked)
+      :max-concurrency-level-exceeded (.getMetricForTimePeriod
+                                        metrics
+                                        Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
+                                        seconds-tracked)
+      default))
   Object
   (toString [this]
-    (let [millis (* 1000 seconds-tracked)]
-      (str {:failures (.getFailuresForTimePeriod metrics millis)
-            :errors (.getErrorsForTimePeriod metrics millis)
-            :successes (.getSuccessesForTimePeriod metrics millis)
-            :timeouts (.getTimeoutsForTimePeriod metrics millis)
-            :circuit-open (.getCircuitOpenedRejectionsForTimePeriod metrics millis)
-            :queue-full (.getQueueFullRejectionsForTimePeriod metrics millis)
-            :max-concurrency-level-exceeded (.getMaxConcurrencyRejectionsForTimePeriod
-                                              metrics millis)}))))
+    (str {:errors (.getMetricForTimePeriod metrics Metric/ERROR seconds-tracked)
+          :successes (.getMetricForTimePeriod metrics Metric/SUCCESS seconds-tracked)
+          :timeouts (.getMetricForTimePeriod metrics Metric/TIMEOUT seconds-tracked)
+          :circuit-open (.getMetricForTimePeriod metrics
+                                                 Metric/CIRCUIT_OPEN
+                                                 seconds-tracked)
+          :queue-full (.getMetricForTimePeriod metrics
+                                               Metric/QUEUE_FULL
+                                               seconds-tracked)
+          :max-concurrency-level-exceeded (.getMetricForTimePeriod
+                                            metrics
+                                            Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
+                                            seconds-tracked)})))
 
 (deftype CLJService
   [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]
@@ -126,7 +134,7 @@
   (.forceOpen ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
 (defn service-executor [name pool-size max-concurrency {:keys [seconds]}]
-  (let [metrics (SingleWriterActionMetrics. seconds)
+  (let [metrics (MultiWriterActionMetrics. seconds)
         executor (BlockingExecutor. (int pool-size)
                                     (int max-concurrency)
                                     ^String
@@ -138,7 +146,7 @@
 (defn executor-with-no-opt-breaker
   [name pool-size max-concurrency {:keys [seconds]}]
   (let [breaker (NoOpCircuitBreaker.)
-        metrics (SingleWriterActionMetrics. seconds)
+        metrics (MultiWriterActionMetrics. seconds)
         executor (BlockingExecutor. (int pool-size)
                                     (int max-concurrency)
                                     ^String name

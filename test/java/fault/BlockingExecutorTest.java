@@ -7,7 +7,8 @@ import fault.concurrent.MultipleWriterResilientPromise;
 import fault.concurrent.ResilientFuture;
 import fault.concurrent.ResilientPromise;
 import fault.metrics.ActionMetrics;
-import fault.metrics.SingleWriterActionMetrics;
+import fault.metrics.Metric;
+import fault.metrics.MultiWriterActionMetrics;
 import fault.utils.TestActions;
 import fault.utils.TestCallbacks;
 import org.junit.After;
@@ -272,7 +273,7 @@ public class BlockingExecutorTest {
     }
 
     private void assertMetrics(ActionMetrics metrics, Map<Object, Integer> expectedCounts) throws Exception {
-        int milliseconds = 5000;
+        int milliseconds = 5;
 
         int expectedErrors = expectedCounts.get(Status.ERROR) == null ? 0 : expectedCounts.get(Status.ERROR);
         int expectedSuccesses = expectedCounts.get(Status.SUCCESS) == null ? 0 : expectedCounts.get(Status.SUCCESS);
@@ -281,25 +282,23 @@ public class BlockingExecutorTest {
                 expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         int expectedCircuitOpen = expectedCounts.get(RejectionReason.CIRCUIT_OPEN) == null ? 0 : expectedCounts.get
                 (RejectionReason.CIRCUIT_OPEN);
-        int expectedFailures = expectedErrors + expectedTimeouts;
         for (int i = 0; i < 20; ++i) {
             Thread.sleep(5);
-            if (expectedErrors == metrics.getErrorsForTimePeriod(milliseconds) && expectedSuccesses == metrics
-                    .getSuccessesForTimePeriod(milliseconds) && expectedFailures == metrics.getFailuresForTimePeriod
-                    (milliseconds) && expectedTimeouts == metrics.getTimeoutsForTimePeriod(milliseconds) &&
-                    expectedCircuitOpen == metrics.getCircuitOpenedRejectionsForTimePeriod(milliseconds) &&
-                    expectedMaxConcurrency == metrics.getMaxConcurrencyRejectionsForTimePeriod(milliseconds)) {
+            if (expectedErrors == metrics.getMetricForTimePeriod(Metric.ERROR, milliseconds)
+                    && expectedSuccesses == metrics.getMetricForTimePeriod(Metric.SUCCESS, milliseconds)
+                    && expectedTimeouts == metrics.getMetricForTimePeriod(Metric.TIMEOUT, milliseconds)
+                    && expectedCircuitOpen == metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds)
+                    && expectedMaxConcurrency == metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds)) {
                 break;
             }
         }
 
-        assertEquals(expectedErrors, metrics.getErrorsForTimePeriod(milliseconds));
-        assertEquals(expectedTimeouts, metrics.getTimeoutsForTimePeriod(milliseconds));
-        assertEquals(expectedSuccesses, metrics.getSuccessesForTimePeriod(milliseconds));
-        assertEquals(expectedFailures, metrics.getFailuresForTimePeriod(milliseconds));
-        assertEquals(expectedMaxConcurrency, metrics.getMaxConcurrencyRejectionsForTimePeriod(milliseconds));
-        assertEquals(expectedCircuitOpen, metrics.getCircuitOpenedRejectionsForTimePeriod(milliseconds));
-        assertEquals(0, metrics.getQueueFullRejectionsForTimePeriod(milliseconds));
+        assertEquals(expectedErrors, metrics.getMetricForTimePeriod(Metric.ERROR, milliseconds));
+        assertEquals(expectedTimeouts, metrics.getMetricForTimePeriod(Metric.TIMEOUT, milliseconds));
+        assertEquals(expectedSuccesses, metrics.getMetricForTimePeriod(Metric.SUCCESS, milliseconds));
+        assertEquals(expectedMaxConcurrency, metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds));
+        assertEquals(expectedCircuitOpen, metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds));
+        assertEquals(0, metrics.getMetricForTimePeriod(Metric.QUEUE_FULL, milliseconds));
     }
 
     @Test
@@ -309,7 +308,7 @@ public class BlockingExecutorTest {
         builder.failureThreshold = 5;
         builder.timeToPauseMillis = 50;
 
-        ActionMetrics metrics = new SingleWriterActionMetrics(3600);
+        ActionMetrics metrics = new MultiWriterActionMetrics(3600);
         CircuitBreaker breaker = new DefaultCircuitBreaker(metrics, builder.build());
         blockingExecutor = new BlockingExecutor(1, 100, "test", metrics, breaker);
 

@@ -2,6 +2,7 @@ package fault;
 
 import fault.concurrent.ResilientFuture;
 import fault.metrics.ActionMetrics;
+import fault.metrics.Metric;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -128,9 +129,9 @@ public class ResilientActionTest {
         int timeoutCount = Integer.MIN_VALUE;
         for (int i = 0; i < 5; ++i) {
             Thread.sleep(50);
-            successCount = actionMetrics.getSuccessesForTimePeriod(60000);
-            errorCount = actionMetrics.getErrorsForTimePeriod(60000);
-            timeoutCount = actionMetrics.getTimeoutsForTimePeriod(60000);
+            successCount = actionMetrics.getMetricForTimePeriod(Metric.SUCCESS, 60);
+            errorCount = actionMetrics.getMetricForTimePeriod(Metric.ERROR, 60);
+            timeoutCount = actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, 60);
             if (errorCount == errors && successCount == success && timeoutCount == timeouts) {
                 break;
             }
@@ -138,7 +139,6 @@ public class ResilientActionTest {
         assertEquals(success, successCount);
         assertEquals(errors, errorCount);
         assertEquals(timeouts, timeoutCount);
-        assertEquals(timeouts + errors, actionMetrics.getFailuresForTimePeriod(60000));
     }
 
     private class SuccessAction implements ResilientAction<String> {

@@ -5,8 +5,6 @@ import fault.concurrent.ResilientFuture;
 import fault.concurrent.ResilientPromise;
 import fault.metrics.ActionMetrics;
 
-import java.util.UUID;
-
 /**
  * Created by timbrooks on 12/22/14.
  */

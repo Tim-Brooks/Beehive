@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 /**
  * Created by timbrooks on 6/1/15.
  */
-public class MultiWriterActionMetrics implements NewActionMetrics {
+public class MultiWriterActionMetrics implements ActionMetrics {
 
     private final AtomicReferenceArray<Second> metrics;
     private final SystemTime systemTime;

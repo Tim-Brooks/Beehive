@@ -7,6 +7,7 @@ import fault.concurrent.SingleWriterResilientPromise;
 import fault.messages.ResultMessage;
 import fault.messages.ScheduleMessage;
 import fault.metrics.ActionMetrics;
+import fault.metrics.Metric;
 import fault.utils.SystemTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -103,7 +104,7 @@ public class ScheduleLoopTest {
         when(toScheduleQueue.poll()).thenReturn(null);
         ScheduleLoop.runLoop(context);
 
-        verify(actionMetrics).reportActionResult(Status.TIMEOUT);
+        verify(actionMetrics).incrementMetric(Metric.TIMEOUT);
         verify(circuitBreaker).informBreakerOfResult(false);
         assertTrue(promise.isTimedOut());
     }
@@ -143,7 +144,7 @@ public class ScheduleLoopTest {
         when(taskMap.remove(result)).thenReturn(new ResilientTask(null, promise));
         ScheduleLoop.runLoop(context);
 
-        verify(actionMetrics).reportActionResult(Status.SUCCESS);
+        verify(actionMetrics).incrementMetric(Metric.SUCCESS);
         verify(circuitBreaker).informBreakerOfResult(true);
     }
 
@@ -160,7 +161,7 @@ public class ScheduleLoopTest {
         when(taskMap.remove(result)).thenReturn(new ResilientTask(null, promise));
         ScheduleLoop.runLoop(context);
 
-        verify(actionMetrics).reportActionResult(Status.ERROR);
+        verify(actionMetrics).incrementMetric(Metric.ERROR);
         verify(circuitBreaker).informBreakerOfResult(false);
     }
 

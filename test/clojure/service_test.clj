@@ -87,8 +87,7 @@
       (.countDown latch)
       (is (= 1 (-> metrics-service :metrics :successes)))
       (is (= 1 (-> metrics-service :metrics :timeouts)))
-      (is (= 1 (-> metrics-service :metrics :errors)))
-      (is (= 2 (-> metrics-service :metrics :failures)))))
+      (is (= 1 (-> metrics-service :metrics :errors)))))
   (testing "Testing that rejection reasons are updated"
     (let [metrics-service (fault/service "test" 1 1)
           latch (CountDownLatch. 1)]

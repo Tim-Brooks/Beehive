@@ -1,8 +1,9 @@
 package fault.scheduling;
 
-import fault.concurrent.ResilientPromise;
 import fault.Status;
+import fault.concurrent.ResilientPromise;
 import fault.messages.ResultMessage;
+import fault.metrics.Metric;
 
 import java.util.*;
 
@@ -42,7 +43,7 @@ public class TimeoutService {
     }
 
     public static void handleSyncTimeout(ScheduleContext scheduleContext) {
-        scheduleContext.actionMetrics.reportActionResult(Status.TIMEOUT);
+        scheduleContext.actionMetrics.incrementMetric(Metric.TIMEOUT);
         scheduleContext.circuitBreaker.informBreakerOfResult(false);
     }
 
@@ -54,7 +55,7 @@ public class TimeoutService {
             if (!promise.isDone()) {
                 promise.setTimedOut();
                 task.cancel(true);
-                scheduleContext.actionMetrics.reportActionResult(promise.getStatus());
+                scheduleContext.actionMetrics.incrementMetric(Metric.statusToMetric(promise.getStatus()));
                 scheduleContext.circuitBreaker.informBreakerOfResult(false);
             }
         }

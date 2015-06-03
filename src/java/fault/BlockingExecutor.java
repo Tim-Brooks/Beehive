@@ -5,7 +5,8 @@ import fault.circuit.CircuitBreaker;
 import fault.circuit.DefaultCircuitBreaker;
 import fault.concurrent.*;
 import fault.metrics.ActionMetrics;
-import fault.metrics.SingleWriterActionMetrics;
+import fault.metrics.Metric;
+import fault.metrics.MultiWriterActionMetrics;
 import fault.timeout.ActionTimeout;
 import fault.timeout.TimeoutService;
 
@@ -19,7 +20,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
 
     private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
     private final ExecutorService service;
-    private final BlockingQueue<Enum<?>> metricsQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Metric> metricsQueue = new LinkedBlockingQueue<>();
     private final TimeoutService timeoutService = TimeoutService.defaultTimeoutService;
     private final String name;
     private final ExecutorSemaphore semaphore;
@@ -29,7 +30,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     }
 
     public BlockingExecutor(int poolSize, int concurrencyLevel, String name) {
-        this(poolSize, concurrencyLevel, name, new SingleWriterActionMetrics(3600));
+        this(poolSize, concurrencyLevel, name, new MultiWriterActionMetrics(3600));
     }
 
     public BlockingExecutor(int poolSize, int concurrencyLevel, String name, ActionMetrics actionMetrics) {
@@ -38,7 +39,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     }
 
     public BlockingExecutor(int poolSize, int concurrencyLevel, String name, CircuitBreaker breaker) {
-        this(poolSize, concurrencyLevel, name, new SingleWriterActionMetrics(3600), breaker);
+        this(poolSize, concurrencyLevel, name, new MultiWriterActionMetrics(3600), breaker);
     }
 
     public BlockingExecutor(int poolSize, int concurrencyLevel, String name, ActionMetrics actionMetrics, CircuitBreaker
@@ -97,7 +98,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                     } catch (Exception e) {
                         internalPromise.deliverError(e);
                     } finally {
-                        metricsQueue.offer(internalPromise.getStatus());
+                        metricsQueue.offer(Metric.statusToMetric(internalPromise.getStatus()));
                         if (callback != null) {
                             callback.run(promise == null ? internalPromise : promise);
                         }
@@ -114,7 +115,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                 timeoutService.scheduleTimeout(new ActionTimeout(millisTimeout, internalPromise, f));
             }
         } catch (RejectedExecutionException e) {
-            metricsQueue.add(RejectionReason.QUEUE_FULL);
+            metricsQueue.add(Metric.QUEUE_FULL);
             semaphore.releasePermit();
             throw new RejectedActionException(RejectionReason.QUEUE_FULL);
         }
@@ -140,7 +141,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
             promise.deliverError(e);
         }
 
-        metricsQueue.offer(promise.getStatus());
+        metricsQueue.offer(Metric.statusToMetric(promise.getStatus()));
         semaphore.releasePermit();
 
         return promise;
@@ -156,11 +157,11 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     private void acquirePermitOrRejectIfActionNotAllowed() {
         boolean isPermitAcquired = semaphore.acquirePermit();
         if (!isPermitAcquired) {
-            metricsQueue.add(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+            metricsQueue.add(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             throw new RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         }
         if (!circuitBreaker.allowAction()) {
-            metricsQueue.add(RejectionReason.CIRCUIT_OPEN);
+            metricsQueue.add(Metric.CIRCUIT_OPEN);
             semaphore.releasePermit();
             throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }
@@ -172,12 +173,10 @@ public class BlockingExecutor extends AbstractServiceExecutor {
             public void run() {
                 for (; ; ) {
                     try {
-                        Enum result = metricsQueue.take();
-                        if (result instanceof Status) {
-                            actionMetrics.reportActionResult((Status) result);
-                            circuitBreaker.informBreakerOfResult(result == Status.SUCCESS);
-                        } else {
-                            actionMetrics.reportRejectionAction((RejectionReason) result);
+                        Metric result = metricsQueue.take();
+                        actionMetrics.incrementMetric(result);
+                        if (!result.actionRejected()) {
+                            circuitBreaker.informBreakerOfResult(result == Metric.SUCCESS);
                         }
                     } catch (InterruptedException e) {
                         break;
