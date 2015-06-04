@@ -150,8 +150,6 @@ public class BlockingExecutor extends AbstractServiceExecutor {
 
     @Override
     public void shutdown() {
-        // Need to shutdown metrics and timeout
-
         service.shutdown();
     }
 

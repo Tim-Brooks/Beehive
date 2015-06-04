@@ -191,7 +191,7 @@ public class BlockingExecutorTest {
         CountDownLatch timeoutLatch = new CountDownLatch(1);
         CountDownLatch blockingLatch = new CountDownLatch(3);
 
-        ResilientCallback<String> countdownCallback = TestCallbacks.latchedPromise("", blockingLatch);
+        ResilientCallback<String> countdownCallback = TestCallbacks.latchedCallback(blockingLatch);
         ResilientFuture<String> errorF = blockingExecutor.submitAction(TestActions.erredAction(new IOException()),
                 countdownCallback, 100);
         ResilientFuture<String> timeOutF = blockingExecutor.submitAction(TestActions.blockedAction(timeoutLatch),
@@ -216,22 +216,28 @@ public class BlockingExecutorTest {
 
         blockingLatch.await();
 
-        assertMetrics(metrics, expectedCounts);
+        assertNewMetrics(metrics, expectedCounts);
     }
 
     @Test
     public void rejectedMetricsUpdated() throws Exception {
         blockingExecutor = new BlockingExecutor(1, 1);
         CountDownLatch latch = new CountDownLatch(1);
-        ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.blockedAction(latch), Long.MAX_VALUE);
+        CountDownLatch blockingLatch = new CountDownLatch(1);
+        ResilientCallback<String> callback = TestCallbacks.latchedCallback(blockingLatch);
+
+        ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.blockedAction(latch), callback,
+                Long.MAX_VALUE);
 
         try {
-            blockingExecutor.submitAction(TestActions.successAction(1), Long.MAX_VALUE);
+            blockingExecutor.submitAction(TestActions.successAction(1), callback, Long.MAX_VALUE);
         } catch (RejectedActionException e) {
+            assertEquals(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED, e.reason);
         }
 
         latch.countDown();
         f.get();
+        blockingLatch.await();
         blockingExecutor.getCircuitBreaker().forceOpen();
 
         int maxConcurrencyErrors = 1;
@@ -247,38 +253,52 @@ public class BlockingExecutorTest {
             }
         }
 
-        ActionMetrics metrics = blockingExecutor.getActionMetrics();
-        HashMap<Object, Integer> expectedCounts = new HashMap<>();
+        Map<Object, Integer> expectedCounts = new HashMap<>();
         expectedCounts.put(Status.SUCCESS, 1);
         expectedCounts.put(RejectionReason.CIRCUIT_OPEN, 1);
         expectedCounts.put(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED, maxConcurrencyErrors);
 
-        assertMetrics(metrics, expectedCounts);
+        assertNewMetrics(blockingExecutor.getActionMetrics(), expectedCounts);
     }
 
     @Test
     public void metricsUpdatedEvenIfPromiseAlreadyCompleted() throws Exception {
         CountDownLatch timeoutLatch = new CountDownLatch(1);
+        CountDownLatch blockingLatch = new CountDownLatch(3);
         ResilientPromise<String> errP = new MultipleWriterResilientPromise<>();
         ResilientPromise<String> timeoutP = new MultipleWriterResilientPromise<>();
         ResilientPromise<String> successP = new MultipleWriterResilientPromise<>();
+        ResilientCallback<String> callback = TestCallbacks.latchedCallback(blockingLatch);
         errP.deliverResult("Done");
         timeoutP.deliverResult("Done");
         successP.deliverResult("Done");
 
-        blockingExecutor.submitAction(TestActions.erredAction(new IOException()), errP, 100);
-        blockingExecutor.submitAction(TestActions.blockedAction(timeoutLatch), timeoutP, 1);
-        blockingExecutor.submitAction(TestActions.successAction(50, "Success"), successP, Long.MAX_VALUE);
+        blockingExecutor.submitAction(TestActions.erredAction(new IOException()), errP, callback, 100);
+        blockingExecutor.submitAction(TestActions.blockedAction(timeoutLatch), timeoutP, callback, 1);
+        blockingExecutor.submitAction(TestActions.successAction(50, "Success"), successP, callback, Long.MAX_VALUE);
 
         ActionMetrics metrics = blockingExecutor.getActionMetrics();
+        for (int i = 0; i < 9; ++i) {
+            if (metrics.getMetricForTimePeriod(Metric.TIMEOUT, 5) == 1) {
+                break;
+            } else {
+                if (i == 10) {
+                    fail("Never encountered a timeout.");
+                } else {
+                    Thread.sleep(5);
+                }
+            }
+        }
+
+        timeoutLatch.countDown();
+
         Map<Object, Integer> expectedCounts = new HashMap<>();
         expectedCounts.put(Status.SUCCESS, 1);
         expectedCounts.put(Status.ERROR, 1);
         expectedCounts.put(Status.TIMEOUT, 1);
 
-
-        assertMetrics(metrics, expectedCounts);
-        timeoutLatch.countDown();
+        blockingLatch.await();
+        assertNewMetrics(metrics, expectedCounts);
     }
 
     @Test
@@ -355,9 +375,8 @@ public class BlockingExecutorTest {
         }
     }
 
-    private void assertMetrics(ActionMetrics metrics, Map<Object, Integer> expectedCounts) throws Exception {
+    private void assertNewMetrics(ActionMetrics metrics, Map<Object, Integer> expectedCounts) {
         int milliseconds = 5;
-
         int expectedErrors = expectedCounts.get(Status.ERROR) == null ? 0 : expectedCounts.get(Status.ERROR);
         int expectedSuccesses = expectedCounts.get(Status.SUCCESS) == null ? 0 : expectedCounts.get(Status.SUCCESS);
         int expectedTimeouts = expectedCounts.get(Status.TIMEOUT) == null ? 0 : expectedCounts.get(Status.TIMEOUT);
@@ -365,16 +384,6 @@ public class BlockingExecutorTest {
                 expectedCounts.get(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         int expectedCircuitOpen = expectedCounts.get(RejectionReason.CIRCUIT_OPEN) == null ? 0 : expectedCounts.get
                 (RejectionReason.CIRCUIT_OPEN);
-        for (int i = 0; i < 20; ++i) {
-            Thread.sleep(5);
-            if (expectedErrors == metrics.getMetricForTimePeriod(Metric.ERROR, milliseconds)
-                    && expectedSuccesses == metrics.getMetricForTimePeriod(Metric.SUCCESS, milliseconds)
-                    && expectedTimeouts == metrics.getMetricForTimePeriod(Metric.TIMEOUT, milliseconds)
-                    && expectedCircuitOpen == metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds)
-                    && expectedMaxConcurrency == metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds)) {
-                break;
-            }
-        }
 
         assertEquals(expectedErrors, metrics.getMetricForTimePeriod(Metric.ERROR, milliseconds));
         assertEquals(expectedTimeouts, metrics.getMetricForTimePeriod(Metric.TIMEOUT, milliseconds));
@@ -382,5 +391,6 @@ public class BlockingExecutorTest {
         assertEquals(expectedMaxConcurrency, metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds));
         assertEquals(expectedCircuitOpen, metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds));
         assertEquals(0, metrics.getMetricForTimePeriod(Metric.QUEUE_FULL, milliseconds));
+
     }
 }

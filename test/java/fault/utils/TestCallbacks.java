@@ -20,7 +20,7 @@ public class TestCallbacks {
         };
     }
 
-    public static <T> ResilientCallback<T> latchedPromise(T type, final CountDownLatch latch) {
+    public static <T> ResilientCallback<T> latchedCallback(final CountDownLatch latch) {
         return new ResilientCallback<T>() {
             @Override
             public void run(ResilientPromise<T> resultPromise) {
