@@ -72,7 +72,7 @@ public class DefaultExecutor extends AbstractServiceExecutor {
     public <T> ResilientFuture<T> submitAction(final ResilientAction<T> action, final ResilientPromise<T> promise,
                                                final ResilientCallback<T> callback, long millisTimeout) {
         acquirePermitOrRejectIfActionNotAllowed();
-        final AbstractResilientPromise<T> internalPromise = new MultipleWriterResilientPromise<>();
+        final AbstractResilientPromise<T> internalPromise = new DefaultResilientPromise<>();
         if (promise != null) {
             internalPromise.wrapPromise(promise);
         }

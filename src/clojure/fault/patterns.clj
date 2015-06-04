@@ -2,7 +2,7 @@
   (:require [fault.service :as service]
             [fault.future :as future])
   (:import (fault ServiceExecutor ResilientAction RejectedActionException)
-           (fault.concurrent MultipleWriterResilientPromise ResilientPromise)
+           (fault.concurrent DefaultResilientPromise ResilientPromise)
            (java.util ArrayList)))
 
 (set! *warn-on-reflection* true)
@@ -59,7 +59,7 @@
 (deftype Shotgun [action-count context shotgun-fn]
   ComposedService
   (submit-action [this action-fn timeout-millis]
-    (let [^ResilientPromise promise (MultipleWriterResilientPromise.)
+    (let [^ResilientPromise promise (DefaultResilientPromise.)
           rejects (ArrayList. ^long action-count)]
       (doseq [[key service] (shotgun-fn)
               :let [svc-context (get context key)]]
@@ -72,7 +72,7 @@
       (when (not= (count rejects) action-count)
         (future/->CLJResilientFuture promise))))
   (submit-action-map [this key->fn timeout-millis]
-    (let [^ResilientPromise promise (MultipleWriterResilientPromise.)
+    (let [^ResilientPromise promise (DefaultResilientPromise.)
           rejects (ArrayList. ^long action-count)]
       (doseq [[key service] (shotgun-fn)
               :let [fn (get key->fn key)]]

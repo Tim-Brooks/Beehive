@@ -3,7 +3,7 @@ package fault;
 import fault.circuit.BreakerConfig;
 import fault.circuit.CircuitBreaker;
 import fault.circuit.DefaultCircuitBreaker;
-import fault.concurrent.MultipleWriterResilientPromise;
+import fault.concurrent.DefaultResilientPromise;
 import fault.concurrent.ResilientFuture;
 import fault.concurrent.ResilientPromise;
 import fault.metrics.ActionMetrics;
@@ -111,7 +111,7 @@ public class DefaultExecutorTest {
 
     @Test
     public void promisePassedToExecutorWillBeCompleted() throws Exception {
-        MultipleWriterResilientPromise<String> promise = new MultipleWriterResilientPromise<>();
+        DefaultResilientPromise<String> promise = new DefaultResilientPromise<>();
         ResilientFuture<String> f = blockingExecutor.submitAction(TestActions.successAction(50, "Same Promise"),
                 promise, Long.MAX_VALUE);
 
@@ -122,7 +122,7 @@ public class DefaultExecutorTest {
     @Test
     public void promiseWillNotBeCompletedTwice() throws Exception {
         CountDownLatch latch = new CountDownLatch(1);
-        MultipleWriterResilientPromise<String> promise = new MultipleWriterResilientPromise<>();
+        DefaultResilientPromise<String> promise = new DefaultResilientPromise<>();
 
         blockingExecutor.submitAction(TestActions.blockedAction(latch), promise, Long.MAX_VALUE);
 
@@ -162,9 +162,9 @@ public class DefaultExecutorTest {
 
     @Test
     public void attachedCallbacksWillBeExecutedOnCompletion() throws Exception {
-        ResilientPromise<ResilientPromise<String>> errorPromise = new MultipleWriterResilientPromise<>();
-        ResilientPromise<ResilientPromise<String>> successPromise = new MultipleWriterResilientPromise<>();
-        ResilientPromise<ResilientPromise<String>> timeOutPromise = new MultipleWriterResilientPromise<>();
+        ResilientPromise<ResilientPromise<String>> errorPromise = new DefaultResilientPromise<>();
+        ResilientPromise<ResilientPromise<String>> successPromise = new DefaultResilientPromise<>();
+        ResilientPromise<ResilientPromise<String>> timeOutPromise = new DefaultResilientPromise<>();
 
 
         CountDownLatch blockingLatch = new CountDownLatch(1);
@@ -265,9 +265,9 @@ public class DefaultExecutorTest {
     public void metricsUpdatedEvenIfPromiseAlreadyCompleted() throws Exception {
         CountDownLatch timeoutLatch = new CountDownLatch(1);
         CountDownLatch blockingLatch = new CountDownLatch(3);
-        ResilientPromise<String> errP = new MultipleWriterResilientPromise<>();
-        ResilientPromise<String> timeoutP = new MultipleWriterResilientPromise<>();
-        ResilientPromise<String> successP = new MultipleWriterResilientPromise<>();
+        ResilientPromise<String> errP = new DefaultResilientPromise<>();
+        ResilientPromise<String> timeoutP = new DefaultResilientPromise<>();
+        ResilientPromise<String> successP = new DefaultResilientPromise<>();
         ResilientCallback<String> callback = TestCallbacks.latchedCallback(blockingLatch);
         errP.deliverResult("Done");
         timeoutP.deliverResult("Done");

@@ -5,7 +5,7 @@ import fault.Status;
 /**
  * Created by timbrooks on 12/22/14.
  */
-public class MultipleWriterResilientPromise<T> extends AbstractResilientPromise<T> {
+public class DefaultResilientPromise<T> extends AbstractResilientPromise<T> {
 
     @Override
     public boolean deliverResult(T result) {
