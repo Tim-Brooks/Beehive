@@ -19,7 +19,7 @@ public class BlockingExecutor extends AbstractServiceExecutor {
 
     private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
     private final ExecutorService service;
-    private final BlockingQueue<Enum<?>> metricsQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Enum<?>> metricsQueue = new LinkedBlockingQueue<>(10000);
     private final TimeoutService timeoutService = TimeoutService.defaultTimeoutService;
     private final String name;
     private final ExecutorSemaphore semaphore;
