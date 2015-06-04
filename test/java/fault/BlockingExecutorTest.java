@@ -32,7 +32,7 @@ public class BlockingExecutorTest {
 
     @Before
     public void setUp() {
-        blockingExecutor = new BlockingExecutor(1, 30);
+        blockingExecutor = Service.defaultService("Test", 1, 30);
     }
 
     @After
@@ -42,7 +42,7 @@ public class BlockingExecutorTest {
 
     @Test
     public void actionNotScheduledIfMaxConcurrencyLevelViolated() {
-        blockingExecutor = new BlockingExecutor(1, 2);
+        blockingExecutor = Service.defaultService("Test", 1, 2);
         CountDownLatch latch = new CountDownLatch(1);
         blockingExecutor.submitAction(TestActions.blockedAction(latch), Long.MAX_VALUE);
         blockingExecutor.submitAction(TestActions.blockedAction(latch), Long.MAX_VALUE);
@@ -64,7 +64,7 @@ public class BlockingExecutorTest {
 
     @Test
     public void actionsReleaseSemaphorePermitWhenComplete() throws Exception {
-        blockingExecutor = new BlockingExecutor(1, 1);
+        blockingExecutor = Service.defaultService("Test", 1, 1);
         int iterations = new Random().nextInt(50);
         for (int i = 0; i < iterations; ++i) {
             ResilientFuture<String> future = blockingExecutor.submitAction(TestActions.successAction(1), 500);
@@ -221,7 +221,7 @@ public class BlockingExecutorTest {
 
     @Test
     public void rejectedMetricsUpdated() throws Exception {
-        blockingExecutor = new BlockingExecutor(1, 1);
+        blockingExecutor = Service.defaultService("Test", 1, 1);
         CountDownLatch latch = new CountDownLatch(1);
         CountDownLatch blockingLatch = new CountDownLatch(1);
         ResilientCallback<String> callback = TestCallbacks.latchedCallback(blockingLatch);
@@ -303,7 +303,7 @@ public class BlockingExecutorTest {
 
     @Test
     public void semaphoreReleasedDespiteCallbackException() throws InterruptedException {
-        blockingExecutor = new BlockingExecutor(1, 1, "test");
+        blockingExecutor = Service.defaultService("Test", 1, 1);
         blockingExecutor.submitAction(TestActions.successAction(0), TestCallbacks.exceptionCallback(""), Long.MAX_VALUE);
 
         int i = 0;
@@ -331,7 +331,7 @@ public class BlockingExecutorTest {
 
         ActionMetrics metrics = new DefaultActionMetrics(3600);
         CircuitBreaker breaker = new DefaultCircuitBreaker(metrics, builder.build());
-        blockingExecutor = new BlockingExecutor(1, 100, "test", metrics, breaker);
+        blockingExecutor = Service.defaultService("Test", 1, 100, metrics, breaker);
 
         List<ResilientFuture<String>> fs = new ArrayList<>();
         for (int i = 0; i < 6; ++i) {

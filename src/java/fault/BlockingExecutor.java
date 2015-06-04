@@ -10,8 +10,10 @@ import fault.metrics.Metric;
 import fault.timeout.ActionTimeout;
 import fault.timeout.TimeoutService;
 
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
 
 /**
  * Created by timbrooks on 12/23/14.
@@ -21,27 +23,23 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
     private final ExecutorService service;
     private final TimeoutService timeoutService = TimeoutService.defaultTimeoutService;
-    private final String name;
     private final ExecutorSemaphore semaphore;
 
-    public BlockingExecutor(int poolSize, int concurrencyLevel) {
-        this(poolSize, concurrencyLevel, null);
+
+    public BlockingExecutor(ExecutorService service, int concurrencyLevel) {
+        this(service, concurrencyLevel, new DefaultActionMetrics(3600));
     }
 
-    public BlockingExecutor(int poolSize, int concurrencyLevel, String name) {
-        this(poolSize, concurrencyLevel, name, new DefaultActionMetrics(3600));
-    }
-
-    public BlockingExecutor(int poolSize, int concurrencyLevel, String name, ActionMetrics actionMetrics) {
-        this(poolSize, concurrencyLevel, name, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig
+    public BlockingExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics) {
+        this(service, concurrencyLevel, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig
                 .BreakerConfigBuilder().failureThreshold(20).timePeriodInMillis(5000).build()));
     }
 
-    public BlockingExecutor(int poolSize, int concurrencyLevel, String name, CircuitBreaker breaker) {
-        this(poolSize, concurrencyLevel, name, new DefaultActionMetrics(3600), breaker);
+    public BlockingExecutor(ExecutorService service, int concurrencyLevel, CircuitBreaker breaker) {
+        this(service, concurrencyLevel, new DefaultActionMetrics(3600), breaker);
     }
 
-    public BlockingExecutor(int poolSize, int concurrencyLevel, String name, ActionMetrics actionMetrics, CircuitBreaker
+    public BlockingExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics, CircuitBreaker
             circuitBreaker) {
         super(circuitBreaker, actionMetrics);
         if (concurrencyLevel > MAX_CONCURRENCY_LEVEL) {
@@ -49,14 +47,8 @@ public class BlockingExecutor extends AbstractServiceExecutor {
                     "maximum: " + MAX_CONCURRENCY_LEVEL + ".");
         }
 
-        if (name == null) {
-            this.name = this.toString();
-        } else {
-            this.name = name;
-        }
         this.semaphore = new ExecutorSemaphore(concurrencyLevel);
-        this.service = new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS,
-                new ArrayBlockingQueue<Runnable>(concurrencyLevel * 2), new ServiceThreadFactory());
+        this.service = service;
     }
 
     @Override
@@ -166,13 +158,4 @@ public class BlockingExecutor extends AbstractServiceExecutor {
         }
     }
 
-    private class ServiceThreadFactory implements ThreadFactory {
-
-        public final AtomicInteger count = new AtomicInteger(0);
-
-        @Override
-        public Thread newThread(Runnable r) {
-            return new Thread(r, name + "-" + count.getAndIncrement());
-        }
-    }
 }

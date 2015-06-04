@@ -3,8 +3,8 @@ package fault;
 import fault.circuit.BreakerConfig;
 import fault.circuit.DefaultCircuitBreaker;
 import fault.metrics.ActionMetrics;
-import fault.metrics.Metric;
 import fault.metrics.DefaultActionMetrics;
+import fault.metrics.Metric;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,9 +18,8 @@ public class Example {
         ActionMetrics actionMetrics = new DefaultActionMetrics(3600);
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
                 .failureThreshold(100).timeToPauseMillis(2000).build();
-        BlockingExecutor serviceExecutor = new BlockingExecutor(25, 120, "Test", actionMetrics, new
-                DefaultCircuitBreaker
-                (actionMetrics, breakerConfig));
+        ServiceExecutor serviceExecutor = Service.defaultService("Test", 25, 120, actionMetrics,
+                new DefaultCircuitBreaker(actionMetrics, breakerConfig));
 //        BreakerConfig breakerConfig2 = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
 //                .failureThreshold(400).timeToPauseMillis(2000).build();
 //        SingleWriterActionMetrics actionMetrics2 = new SingleWriterActionMetrics(3600);

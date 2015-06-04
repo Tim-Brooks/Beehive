@@ -1,8 +1,7 @@
 (ns fault.service
   (:require [fault.future :as f])
   (:import (clojure.lang ILookup)
-           (fault BlockingExecutor
-                  ServiceExecutor
+           (fault ServiceExecutor
                   ResilientAction
                   RejectedActionException
                   ResilientCallback)
@@ -11,7 +10,8 @@
                           BreakerConfig
                           BreakerConfig$BreakerConfigBuilder
                           NoOpCircuitBreaker)
-           (fault.metrics ActionMetrics DefaultActionMetrics Metric)))
+           (fault.metrics ActionMetrics DefaultActionMetrics Metric)
+           (fault Service)))
 
 (set! *warn-on-reflection* true)
 
@@ -23,7 +23,7 @@
   (reify ResilientCallback
     (run [_ promise] (callback-fn (f/->CLJResilientFuture promise)))))
 
-(defprotocol Service
+(defprotocol CLJService
   (submit-action [this action-fn timeout-millis] [this action-fn callback timeout-millis])
   (perform-action [this action-fn])
   (shutdown [this]))
@@ -82,9 +82,9 @@
                                             Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
                                             seconds-tracked)})))
 
-(deftype CLJService
+(deftype CLJServiceImpl
   [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]
-  Service
+  CLJService
   (submit-action [this action-fn timeout-millis]
     (submit-action this action-fn nil timeout-millis))
   (submit-action [_ action-fn callback timeout-millis]
@@ -127,31 +127,28 @@
                      (.timeToPauseMillis time-to-pause-millis)
                      (.build))))
 
-(defn close-circuit! [^CLJService service]
+(defn close-circuit! [^CLJServiceImpl service]
   (.forceClosed ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
-(defn open-circuit! [^CLJService service]
+(defn open-circuit! [^CLJServiceImpl service]
   (.forceOpen ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
 (defn service-executor [name pool-size max-concurrency {:keys [seconds]}]
   (let [metrics (DefaultActionMetrics. seconds)
-        executor (BlockingExecutor. (int pool-size)
-                                    (int max-concurrency)
-                                    ^String
-                                    name metrics)]
-    (->CLJService executor
-                  (->CLJMetrics (.getActionMetrics executor) seconds)
-                  (->CLJBreaker (.getCircuitBreaker executor)))))
+        executor (Service/defaultService name (int pool-size) (int max-concurrency) metrics)]
+    (->CLJServiceImpl executor
+                      (->CLJMetrics (.getActionMetrics executor) seconds)
+                      (->CLJBreaker (.getCircuitBreaker executor)))))
 
 (defn executor-with-no-opt-breaker
   [name pool-size max-concurrency {:keys [seconds]}]
   (let [breaker (NoOpCircuitBreaker.)
         metrics (DefaultActionMetrics. seconds)
-        executor (BlockingExecutor. (int pool-size)
-                                    (int max-concurrency)
-                                    ^String name
-                                    metrics
-                                    breaker)]
-    (->CLJService executor
-                  (->CLJMetrics (.getActionMetrics executor) seconds)
-                  (->CLJBreaker (.getCircuitBreaker executor)))))
+        executor (Service/defaultService name
+                                         (int pool-size)
+                                         (int max-concurrency)
+                                         metrics
+                                         breaker)]
+    (->CLJServiceImpl executor
+                      (->CLJMetrics (.getActionMetrics executor) seconds)
+                      (->CLJBreaker (.getCircuitBreaker executor)))))
