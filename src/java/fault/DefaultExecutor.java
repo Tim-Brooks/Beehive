@@ -18,7 +18,7 @@ import java.util.concurrent.RejectedExecutionException;
 /**
  * Created by timbrooks on 12/23/14.
  */
-public class BlockingExecutor extends AbstractServiceExecutor {
+public class DefaultExecutor extends AbstractServiceExecutor {
 
     private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
     private final ExecutorService service;
@@ -26,20 +26,20 @@ public class BlockingExecutor extends AbstractServiceExecutor {
     private final ExecutorSemaphore semaphore;
 
 
-    public BlockingExecutor(ExecutorService service, int concurrencyLevel) {
+    public DefaultExecutor(ExecutorService service, int concurrencyLevel) {
         this(service, concurrencyLevel, new DefaultActionMetrics(3600));
     }
 
-    public BlockingExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics) {
+    public DefaultExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics) {
         this(service, concurrencyLevel, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig
                 .BreakerConfigBuilder().failureThreshold(20).timePeriodInMillis(5000).build()));
     }
 
-    public BlockingExecutor(ExecutorService service, int concurrencyLevel, CircuitBreaker breaker) {
+    public DefaultExecutor(ExecutorService service, int concurrencyLevel, CircuitBreaker breaker) {
         this(service, concurrencyLevel, new DefaultActionMetrics(3600), breaker);
     }
 
-    public BlockingExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics, CircuitBreaker
+    public DefaultExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics, CircuitBreaker
             circuitBreaker) {
         super(circuitBreaker, actionMetrics);
         if (concurrencyLevel > MAX_CONCURRENCY_LEVEL) {

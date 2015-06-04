@@ -26,7 +26,7 @@ import static org.junit.Assert.*;
 /**
  * Created by timbrooks on 1/7/15.
  */
-public class BlockingExecutorTest {
+public class DefaultExecutorTest {
 
     private ServiceExecutor blockingExecutor;
 

@@ -16,19 +16,19 @@ public class Service {
 
     public static ServiceExecutor defaultService(String name, int poolSize, int concurrencyLevel) {
         ExecutorService service = createExecutor(name, poolSize, concurrencyLevel);
-        return new BlockingExecutor(service, concurrencyLevel);
+        return new DefaultExecutor(service, concurrencyLevel);
     }
 
     public static ServiceExecutor defaultService(String name, int poolSize, int concurrencyLevel, ActionMetrics
             metrics) {
         ExecutorService service = createExecutor(name, poolSize, concurrencyLevel);
-        return new BlockingExecutor(service, concurrencyLevel, metrics);
+        return new DefaultExecutor(service, concurrencyLevel, metrics);
     }
 
     public static ServiceExecutor defaultService(String name, int poolSize, int concurrencyLevel, ActionMetrics
             metrics, CircuitBreaker breaker) {
         ExecutorService service = createExecutor(name, poolSize, concurrencyLevel);
-        return new BlockingExecutor(service, concurrencyLevel, metrics, breaker);
+        return new DefaultExecutor(service, concurrencyLevel, metrics, breaker);
     }
 
     private static ExecutorService createExecutor(String name, int poolSize, int concurrencyLevel) {
