@@ -5,7 +5,7 @@ import fault.concurrent.LongAdder;
 /**
  * Created by timbrooks on 6/1/15.
  */
-public class Second {
+public class Slot {
 
     private final LongAdder successes = new LongAdder();
     private final LongAdder errors = new LongAdder();
@@ -15,7 +15,7 @@ public class Second {
     private final LongAdder maxConcurrencyExceeded = new LongAdder();
     private final long second;
 
-    public Second(long second) {
+    public Slot(long second) {
         this.second = second;
     }
 
@@ -63,13 +63,13 @@ public class Second {
         }
     }
 
-    public long getSecond() {
+    public long getAbsoluteSlot() {
         return second;
     }
 
     @Override
     public String toString() {
-        return "Second{" +
+        return "Slot{" +
                 "successes=" + successes +
                 ", errors=" + errors +
                 ", timeouts=" + timeouts +

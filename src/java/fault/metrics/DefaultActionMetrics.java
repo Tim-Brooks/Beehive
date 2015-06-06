@@ -9,39 +9,46 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
  */
 public class DefaultActionMetrics implements ActionMetrics {
 
-    private final AtomicReferenceArray<Second> metrics;
+    private final AtomicReferenceArray<Slot> metrics;
     private final SystemTime systemTime;
     private final int totalSlots;
     private final long startTime;
+    private final long millisecondsPerSlot;
 
-    public DefaultActionMetrics(int secondsToTrack) {
-        this(secondsToTrack, new SystemTime());
+    public DefaultActionMetrics(int slotsToTrack) {
+        this(slotsToTrack, 1000);
     }
 
-    public DefaultActionMetrics(int secondsToTrack, SystemTime systemTime) {
+    public DefaultActionMetrics(int slotsToTrack, long millisecondsPerSlot) {
+        this(slotsToTrack, millisecondsPerSlot, new SystemTime());
+
+    }
+
+    public DefaultActionMetrics(int secondsToTrack, long millisecondsPerSlot, SystemTime systemTime) {
+        this.millisecondsPerSlot = millisecondsPerSlot;
         this.startTime = systemTime.currentTimeMillis();
         this.totalSlots = secondsToTrack;
         this.metrics = new AtomicReferenceArray<>(secondsToTrack);
         this.systemTime = systemTime;
 
         for (int i = 0; i < secondsToTrack; ++i) {
-            metrics.set(i, new Second(i));
+            metrics.set(i, new Slot(i));
         }
     }
 
     @Override
     public void incrementMetric(Metric metric) {
-        int currentSecond = currentSecond();
-        int currentSlot = currentSecond % totalSlots;
+        int absoluteSlot = currentAbsoluteSlot();
+        int relativeSlot = absoluteSlot % totalSlots;
         for (; ; ) {
-            Second second = metrics.get(currentSlot);
-            if (second.getSecond() == currentSecond) {
-                second.incrementMetric(metric);
+            Slot slot = metrics.get(relativeSlot);
+            if (slot.getAbsoluteSlot() == absoluteSlot) {
+                slot.incrementMetric(metric);
                 break;
             } else {
-                Second newSecond = new Second(currentSecond);
-                if (metrics.compareAndSet(currentSlot, second, newSecond)) {
-                    newSecond.incrementMetric(metric);
+                Slot newSlot = new Slot(absoluteSlot);
+                if (metrics.compareAndSet(relativeSlot, slot, newSlot)) {
+                    newSlot.incrementMetric(metric);
                     break;
                 }
             }
@@ -60,24 +67,24 @@ public class DefaultActionMetrics implements ActionMetrics {
             throw new IllegalArgumentException(message);
         }
 
-        int currentSecond = currentSecond();
-        int startSecond = 1 + currentSecond - seconds;
-        int adjustedStartSecond = startSecond >= 0 ? startSecond : 0;
+        int absoluteSlot = currentAbsoluteSlot();
+        int startSlot = 1 + absoluteSlot - seconds;
+        int adjustedStartSlot = startSlot >= 0 ? startSlot : 0;
 
-        int totalEvents = 0;
-        for (int i = adjustedStartSecond; i <= currentSecond; ++i) {
-            int slot = i % totalSlots;
-            Second second = metrics.get(slot);
-            if (second.getSecond() == i) {
-                totalEvents = totalEvents + second.getMetric(metric).intValue();
+        int count = 0;
+        for (int i = adjustedStartSlot; i <= absoluteSlot; ++i) {
+            int relativeSlot = i % totalSlots;
+            Slot slot = metrics.get(relativeSlot);
+            if (slot.getAbsoluteSlot() == i) {
+                count = count + slot.getMetric(metric).intValue();
             }
         }
 
-        return totalEvents;
+        return count;
     }
 
-    private int currentSecond() {
-        return (int) ((systemTime.currentTimeMillis() - startTime) / 1000);
+    private int currentAbsoluteSlot() {
+        return (int) ((systemTime.currentTimeMillis() - startTime) / millisecondsPerSlot);
     }
 
 }

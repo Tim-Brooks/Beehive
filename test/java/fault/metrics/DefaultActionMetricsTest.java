@@ -29,7 +29,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void testMetricsEdgeScenario() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new DefaultActionMetrics(1, systemTime);
+        this.metrics = new DefaultActionMetrics(1, 1000, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1L);
         metrics.incrementMetric(Metric.SUCCESS);
@@ -46,7 +46,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void testMetricsTrackingTwoSeconds() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new DefaultActionMetrics(2, systemTime);
+        this.metrics = new DefaultActionMetrics(2, 1000, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1L);
         metrics.incrementMetric(Metric.ERROR);
@@ -75,7 +75,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void testMultipleWraps() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new DefaultActionMetrics(10, systemTime);
+        this.metrics = new DefaultActionMetrics(10, 1000, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(8000L);
         metrics.incrementMetric(Metric.ERROR);
@@ -92,7 +92,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void concurrentTest() throws Exception {
         when(systemTime.currentTimeMillis()).thenReturn(1500L);
-        this.metrics = new DefaultActionMetrics(5, systemTime);
+        this.metrics = new DefaultActionMetrics(5, 1000, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1980L);
         fireThreads(metrics, 10);
