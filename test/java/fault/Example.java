@@ -50,14 +50,14 @@ public class Example {
         try {
             for (int i = 0; i < 1000; ++i) {
                 Thread.sleep(1000);
-                System.out.println("Success " + actionMetrics.getMetricForTimePeriod(Metric.SUCCESS, 1));
-                System.out.println("Failures " + actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, 1));
-                System.out.println("Errors " + actionMetrics.getMetricForTimePeriod(Metric.ERROR, 1));
-                System.out.println("Concurrency " + actionMetrics.getMetricForTimePeriod(Metric
+                System.out.println("Success " + actionMetrics.getMetricCountForTimePeriod(Metric.SUCCESS, 1));
+                System.out.println("Failures " + actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 1));
+                System.out.println("Errors " + actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, 1));
+                System.out.println("Concurrency " + actionMetrics.getMetricCountForTimePeriod(Metric
                         .MAX_CONCURRENCY_LEVEL_EXCEEDED, 1));
-                System.out.println("Circuit " + actionMetrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, 1));
+                System.out.println("Circuit " + actionMetrics.getMetricCountForTimePeriod(Metric.CIRCUIT_OPEN, 1));
 //                System.out.println("Success2 " + actionMetrics2.getSuccessesForTimePeriod(5000));
-//                System.out.println("Failures2 " + actionMetrics2.getMetricForTimePeriod(5000));
+//                System.out.println("Failures2 " + actionMetrics2.getMetricCountForTimePeriod(5000));
             }
         } catch (InterruptedException e) {
             e.printStackTrace();

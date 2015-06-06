@@ -291,7 +291,7 @@ public class DefaultExecutorTest {
 
         ActionMetrics metrics = blockingExecutor.getActionMetrics();
         for (int i = 0; i < 9; ++i) {
-            if (metrics.getMetricForTimePeriod(Metric.TIMEOUT, 5) == 1) {
+            if (metrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 5) == 1) {
                 break;
             } else {
                 if (i == 10) {
@@ -397,12 +397,12 @@ public class DefaultExecutorTest {
         int expectedCircuitOpen = expectedCounts.get(RejectionReason.CIRCUIT_OPEN) == null ? 0 : expectedCounts.get
                 (RejectionReason.CIRCUIT_OPEN);
 
-        assertEquals(expectedErrors, metrics.getMetricForTimePeriod(Metric.ERROR, milliseconds));
-        assertEquals(expectedTimeouts, metrics.getMetricForTimePeriod(Metric.TIMEOUT, milliseconds));
-        assertEquals(expectedSuccesses, metrics.getMetricForTimePeriod(Metric.SUCCESS, milliseconds));
-        assertEquals(expectedMaxConcurrency, metrics.getMetricForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds));
-        assertEquals(expectedCircuitOpen, metrics.getMetricForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds));
-        assertEquals(0, metrics.getMetricForTimePeriod(Metric.QUEUE_FULL, milliseconds));
+        assertEquals(expectedErrors, metrics.getMetricCountForTimePeriod(Metric.ERROR, milliseconds));
+        assertEquals(expectedTimeouts, metrics.getMetricCountForTimePeriod(Metric.TIMEOUT, milliseconds));
+        assertEquals(expectedSuccesses, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, milliseconds));
+        assertEquals(expectedMaxConcurrency, metrics.getMetricCountForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, milliseconds));
+        assertEquals(expectedCircuitOpen, metrics.getMetricCountForTimePeriod(Metric.CIRCUIT_OPEN, milliseconds));
+        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.QUEUE_FULL, milliseconds));
 
     }
 }

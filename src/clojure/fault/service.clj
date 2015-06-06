@@ -52,32 +52,32 @@
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
     (case key
-      :errors (.getMetricForTimePeriod metrics Metric/ERROR seconds-tracked)
-      :successes (.getMetricForTimePeriod metrics Metric/SUCCESS seconds-tracked)
-      :timeouts (.getMetricForTimePeriod metrics Metric/TIMEOUT seconds-tracked)
-      :circuit-open (.getMetricForTimePeriod metrics
+      :errors (.getMetricCountForTimePeriod metrics Metric/ERROR seconds-tracked)
+      :successes (.getMetricCountForTimePeriod metrics Metric/SUCCESS seconds-tracked)
+      :timeouts (.getMetricCountForTimePeriod metrics Metric/TIMEOUT seconds-tracked)
+      :circuit-open (.getMetricCountForTimePeriod metrics
                                              Metric/CIRCUIT_OPEN
                                              seconds-tracked)
-      :queue-full (.getMetricForTimePeriod metrics
+      :queue-full (.getMetricCountForTimePeriod metrics
                                            Metric/QUEUE_FULL
                                            seconds-tracked)
-      :max-concurrency-level-exceeded (.getMetricForTimePeriod
+      :max-concurrency-level-exceeded (.getMetricCountForTimePeriod
                                         metrics
                                         Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
                                         seconds-tracked)
       default))
   Object
   (toString [this]
-    (str {:errors (.getMetricForTimePeriod metrics Metric/ERROR seconds-tracked)
-          :successes (.getMetricForTimePeriod metrics Metric/SUCCESS seconds-tracked)
-          :timeouts (.getMetricForTimePeriod metrics Metric/TIMEOUT seconds-tracked)
-          :circuit-open (.getMetricForTimePeriod metrics
+    (str {:errors (.getMetricCountForTimePeriod metrics Metric/ERROR seconds-tracked)
+          :successes (.getMetricCountForTimePeriod metrics Metric/SUCCESS seconds-tracked)
+          :timeouts (.getMetricCountForTimePeriod metrics Metric/TIMEOUT seconds-tracked)
+          :circuit-open (.getMetricCountForTimePeriod metrics
                                                  Metric/CIRCUIT_OPEN
                                                  seconds-tracked)
-          :queue-full (.getMetricForTimePeriod metrics
+          :queue-full (.getMetricCountForTimePeriod metrics
                                                Metric/QUEUE_FULL
                                                seconds-tracked)
-          :max-concurrency-level-exceeded (.getMetricForTimePeriod
+          :max-concurrency-level-exceeded (.getMetricCountForTimePeriod
                                             metrics
                                             Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
                                             seconds-tracked)})))

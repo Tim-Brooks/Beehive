@@ -15,7 +15,7 @@ public class CodahaleMetrics implements ActionMetrics {
     private Meter maxConcurrencyExceeded = new Meter();
 
     @Override
-    public void incrementMetric(Metric metric) {
+    public void incrementMetricCount(Metric metric) {
         switch (metric) {
             case SUCCESS:
                 successes.mark();
@@ -41,7 +41,7 @@ public class CodahaleMetrics implements ActionMetrics {
     }
 
     @Override
-    public int getMetricForTimePeriod(Metric metric, int seconds) {
+    public int getMetricCountForTimePeriod(Metric metric, int seconds) {
         double value;
         switch (metric) {
             case SUCCESS:

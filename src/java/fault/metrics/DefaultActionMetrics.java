@@ -37,7 +37,7 @@ public class DefaultActionMetrics implements ActionMetrics {
     }
 
     @Override
-    public void incrementMetric(Metric metric) {
+    public void incrementMetricCount(Metric metric) {
         int absoluteSlot = currentAbsoluteSlot();
         int relativeSlot = absoluteSlot % totalSlots;
         for (; ; ) {
@@ -57,7 +57,7 @@ public class DefaultActionMetrics implements ActionMetrics {
     }
 
     @Override
-    public int getMetricForTimePeriod(Metric metric, int seconds) {
+    public int getMetricCountForTimePeriod(Metric metric, int seconds) {
         if (seconds > totalSlots) {
             String message = String.format("Seconds greater than seconds tracked: [Tracked: %s, Argument: %s]",
                     totalSlots, seconds);

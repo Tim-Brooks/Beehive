@@ -64,8 +64,8 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
             if (state.get() == CLOSED) {
                 BreakerConfig config = this.breakerConfig.get();
                 int timePeriod = config.timePeriodInMillis / 1000;
-                int errorsForTimePeriod = actionMetrics.getMetricForTimePeriod(Metric.ERROR, timePeriod);
-                int timeoutsForTimePeriod = actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, timePeriod);
+                int errorsForTimePeriod = actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, timePeriod);
+                int timeoutsForTimePeriod = actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, timePeriod);
                 int failuresForTimePeriod = errorsForTimePeriod + timeoutsForTimePeriod;
                 if (config.failureThreshold < failuresForTimePeriod) {
                     lastTestedTime.set(systemTime.currentTimeMillis());

@@ -90,7 +90,7 @@ public class DefaultExecutor extends AbstractServiceExecutor {
                     } catch (Exception e) {
                         internalPromise.deliverError(e);
                     } finally {
-                        actionMetrics.incrementMetric(Metric.statusToMetric(internalPromise.getStatus()));
+                        actionMetrics.incrementMetricCount(Metric.statusToMetric(internalPromise.getStatus()));
                         circuitBreaker.informBreakerOfResult(internalPromise.isSuccessful());
                         try {
                             if (callback != null) {
@@ -110,7 +110,7 @@ public class DefaultExecutor extends AbstractServiceExecutor {
                 timeoutService.scheduleTimeout(new ActionTimeout(millisTimeout, internalPromise, f));
             }
         } catch (RejectedExecutionException e) {
-            actionMetrics.incrementMetric(Metric.QUEUE_FULL);
+            actionMetrics.incrementMetricCount(Metric.QUEUE_FULL);
             semaphore.releasePermit();
             throw new RejectedActionException(RejectionReason.QUEUE_FULL);
         }
@@ -136,7 +136,7 @@ public class DefaultExecutor extends AbstractServiceExecutor {
             promise.deliverError(e);
         }
 
-        actionMetrics.incrementMetric(Metric.statusToMetric(promise.getStatus()));
+        actionMetrics.incrementMetricCount(Metric.statusToMetric(promise.getStatus()));
         semaphore.releasePermit();
 
         return promise;
@@ -155,12 +155,12 @@ public class DefaultExecutor extends AbstractServiceExecutor {
 
         boolean isPermitAcquired = semaphore.acquirePermit();
         if (!isPermitAcquired) {
-            actionMetrics.incrementMetric(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+            actionMetrics.incrementMetricCount(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             throw new RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         }
 
         if (!circuitBreaker.allowAction()) {
-            actionMetrics.incrementMetric(Metric.CIRCUIT_OPEN);
+            actionMetrics.incrementMetricCount(Metric.CIRCUIT_OPEN);
             semaphore.releasePermit();
             throw new RejectedActionException(RejectionReason.CIRCUIT_OPEN);
         }

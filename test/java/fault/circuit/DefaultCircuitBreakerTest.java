@@ -46,13 +46,13 @@ public class DefaultCircuitBreakerTest {
 
         assertFalse(circuitBreaker.isOpen());
 
-        when(actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, timePeriodInMillis / 1000)).thenReturn(3);
-        when(actionMetrics.getMetricForTimePeriod(Metric.ERROR, timePeriodInMillis / 1000)).thenReturn(2);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, timePeriodInMillis / 1000)).thenReturn(3);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, timePeriodInMillis / 1000)).thenReturn(2);
         circuitBreaker.informBreakerOfResult(false);
         assertFalse(circuitBreaker.isOpen());
 
-        when(actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, timePeriodInMillis / 1000)).thenReturn(3);
-        when(actionMetrics.getMetricForTimePeriod(Metric.ERROR, timePeriodInMillis / 1000)).thenReturn(3);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, timePeriodInMillis / 1000)).thenReturn(3);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, timePeriodInMillis / 1000)).thenReturn(3);
         circuitBreaker.informBreakerOfResult(false);
 
         assertTrue(circuitBreaker.isOpen());
@@ -67,8 +67,8 @@ public class DefaultCircuitBreakerTest {
 
         assertFalse(circuitBreaker.isOpen());
 
-        when(actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, timePeriodInMillis / 1000)).thenReturn(3);
-        when(actionMetrics.getMetricForTimePeriod(Metric.ERROR, timePeriodInMillis / 1000)).thenReturn(3);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, timePeriodInMillis / 1000)).thenReturn(3);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, timePeriodInMillis / 1000)).thenReturn(3);
         circuitBreaker.informBreakerOfResult(false);
 
         assertTrue(circuitBreaker.isOpen());
@@ -83,24 +83,24 @@ public class DefaultCircuitBreakerTest {
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(10).timePeriodInMillis
                 (1000).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
-        when(actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, 1)).thenReturn(3);
-        when(actionMetrics.getMetricForTimePeriod(Metric.ERROR, 1)).thenReturn(3);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 1)).thenReturn(3);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, 1)).thenReturn(3);
 
         circuitBreaker.informBreakerOfResult(false);
 
-        verify(actionMetrics, times(1)).getMetricForTimePeriod(Metric.TIMEOUT, 1);
-        verify(actionMetrics, times(1)).getMetricForTimePeriod(Metric.ERROR, 1);
+        verify(actionMetrics, times(1)).getMetricCountForTimePeriod(Metric.TIMEOUT, 1);
+        verify(actionMetrics, times(1)).getMetricCountForTimePeriod(Metric.ERROR, 1);
         assertFalse(circuitBreaker.isOpen());
 
         BreakerConfig newBreakerConfig = new BreakerConfig.BreakerConfigBuilder().failureThreshold(5)
                 .timePeriodInMillis(2000).build();
         circuitBreaker.setBreakerConfig(newBreakerConfig);
-        when(actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, 2)).thenReturn(3);
-        when(actionMetrics.getMetricForTimePeriod(Metric.ERROR, 2)).thenReturn(3);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 2)).thenReturn(3);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, 2)).thenReturn(3);
         circuitBreaker.informBreakerOfResult(false);
 
-        verify(actionMetrics, times(1)).getMetricForTimePeriod(Metric.TIMEOUT, 1);
-        verify(actionMetrics, times(1)).getMetricForTimePeriod(Metric.ERROR, 1);
+        verify(actionMetrics, times(1)).getMetricCountForTimePeriod(Metric.TIMEOUT, 1);
+        verify(actionMetrics, times(1)).getMetricCountForTimePeriod(Metric.ERROR, 1);
         assertTrue(circuitBreaker.isOpen());
     }
 
@@ -125,8 +125,8 @@ public class DefaultCircuitBreakerTest {
         assertFalse(circuitBreaker.isOpen());
         assertTrue(circuitBreaker.allowAction());
 
-        when(actionMetrics.getMetricForTimePeriod(Metric.TIMEOUT, 5)).thenReturn(6);
-        when(actionMetrics.getMetricForTimePeriod(Metric.ERROR, 5)).thenReturn(5);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 5)).thenReturn(6);
+        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, 5)).thenReturn(5);
         when(systemTime.currentTimeMillis()).thenReturn(0L);
         circuitBreaker.informBreakerOfResult(false);
 

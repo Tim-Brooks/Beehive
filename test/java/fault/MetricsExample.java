@@ -23,7 +23,7 @@ public class MetricsExample {
 
             for (int i = 0; i < 100000; ++i) {
                 long start = System.nanoTime();
-                metrics.getMetricForTimePeriod(Metric.SUCCESS, 5);
+                metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 5);
                 System.out.println(System.nanoTime() - start);
             }
         } catch (InterruptedException e) {
@@ -40,12 +40,12 @@ public class MetricsExample {
                 @Override
                 public void run() {
                     for (int j = 0; j < 100; ++j) {
-                        metrics.incrementMetric(Metric.SUCCESS);
-                        metrics.incrementMetric(Metric.ERROR);
-                        metrics.incrementMetric(Metric.TIMEOUT);
-                        metrics.incrementMetric(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
-                        metrics.incrementMetric(Metric.QUEUE_FULL);
-                        metrics.incrementMetric(Metric.CIRCUIT_OPEN);
+                        metrics.incrementMetricCount(Metric.SUCCESS);
+                        metrics.incrementMetricCount(Metric.ERROR);
+                        metrics.incrementMetricCount(Metric.TIMEOUT);
+                        metrics.incrementMetricCount(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+                        metrics.incrementMetricCount(Metric.QUEUE_FULL);
+                        metrics.incrementMetricCount(Metric.CIRCUIT_OPEN);
                     }
                     latch.countDown();
                 }
