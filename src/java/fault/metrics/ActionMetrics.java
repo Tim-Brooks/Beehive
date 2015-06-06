@@ -6,5 +6,5 @@ package fault.metrics;
 public interface ActionMetrics {
     void incrementMetricCount(Metric metric);
 
-    int getMetricCountForTimePeriod(Metric metric, int seconds);
+    long getMetricCountForTimePeriod(Metric metric, int seconds);
 }

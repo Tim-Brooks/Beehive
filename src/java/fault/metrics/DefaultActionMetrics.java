@@ -57,7 +57,7 @@ public class DefaultActionMetrics implements ActionMetrics {
     }
 
     @Override
-    public int getMetricCountForTimePeriod(Metric metric, int seconds) {
+    public long getMetricCountForTimePeriod(Metric metric, int seconds) {
         if (seconds > totalSlots) {
             String message = String.format("Seconds greater than seconds tracked: [Tracked: %s, Argument: %s]",
                     totalSlots, seconds);

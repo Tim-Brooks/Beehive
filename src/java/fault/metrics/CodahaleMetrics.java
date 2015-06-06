@@ -41,7 +41,7 @@ public class CodahaleMetrics implements ActionMetrics {
     }
 
     @Override
-    public int getMetricCountForTimePeriod(Metric metric, int seconds) {
+    public long getMetricCountForTimePeriod(Metric metric, int seconds) {
         double value;
         switch (metric) {
             case SUCCESS:
@@ -65,7 +65,7 @@ public class CodahaleMetrics implements ActionMetrics {
             default:
                 throw new RuntimeException("Unknown metric: " + metric);
         }
-        return (int) value;
+        return (long) value;
     }
 
 
