@@ -21,5 +21,6 @@ public interface Pattern<C> {
                                         ResilientCallback<T> callback, long millisTimeout);
 
     <T> ResilientPromise<T> performAction(ResilientPatternAction<T, C> action);
-    
+
+    void shutdown();
 }

@@ -41,6 +41,18 @@ public class DefaultExecutorTest {
     }
 
     @Test
+    public void actionRejectedIfShutdown() {
+        blockingExecutor.shutdown();
+
+        try {
+            blockingExecutor.submitAction(TestActions.successAction(0), Long.MAX_VALUE);
+            fail("Action should have been rejected due to shutdown.");
+        } catch (RejectedActionException e) {
+            assertEquals(RejectionReason.SERVICE_SHUTDOWN, e.reason);
+        }
+    }
+
+    @Test
     public void actionNotScheduledIfMaxConcurrencyLevelViolated() {
         blockingExecutor = Service.defaultService("Test", 1, 2);
         CountDownLatch latch = new CountDownLatch(1);

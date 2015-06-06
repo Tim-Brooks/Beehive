@@ -63,6 +63,13 @@ public class LoadBalancer<C> implements Pattern<C> {
         });
     }
 
+    @Override
+    public void shutdown() {
+        for (ServiceExecutor e : services) {
+            e.shutdown();
+        }
+    }
+
     private int nextService() {
         return new Random().nextInt(services.length) % services.length;
     }

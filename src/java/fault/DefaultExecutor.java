@@ -14,6 +14,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Created by timbrooks on 12/23/14.
@@ -21,6 +22,7 @@ import java.util.concurrent.RejectedExecutionException;
 public class DefaultExecutor extends AbstractServiceExecutor {
 
     private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
+    private final AtomicBoolean isShutdown = new AtomicBoolean(false);
     private final ExecutorService service;
     private final TimeoutService timeoutService = TimeoutService.defaultTimeoutService;
     private final ExecutorSemaphore semaphore;
@@ -142,15 +144,21 @@ public class DefaultExecutor extends AbstractServiceExecutor {
 
     @Override
     public void shutdown() {
+        isShutdown.compareAndSet(false, true);
         service.shutdown();
     }
 
     private void acquirePermitOrRejectIfActionNotAllowed() {
+        if (isShutdown.get()) {
+            throw new RejectedActionException(RejectionReason.SERVICE_SHUTDOWN);
+        }
+
         boolean isPermitAcquired = semaphore.acquirePermit();
         if (!isPermitAcquired) {
             actionMetrics.incrementMetric(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
             throw new RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED);
         }
+
         if (!circuitBreaker.allowAction()) {
             actionMetrics.incrementMetric(Metric.CIRCUIT_OPEN);
             semaphore.releasePermit();
