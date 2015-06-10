@@ -15,7 +15,6 @@ public class MetricsExample {
 
         DefaultActionMetrics metrics = new DefaultActionMetrics(60);
 
-//        CodahaleMetrics metrics = new CodahaleMetrics();
         try {
             for (int i = 0; i < 1000; ++i) {
                 fireThreads(metrics, 10);
