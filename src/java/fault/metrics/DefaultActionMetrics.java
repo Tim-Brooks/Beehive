@@ -90,7 +90,7 @@ public class DefaultActionMetrics implements ActionMetrics {
         int seconds = (int) longSeconds;
 
 
-        Slot[] slotArray = collectSlots(seconds);
+        Slot[] slotArray = collectActiveSlots(seconds);
         long total = 0;
         long successes = 0;
         long timeouts = 0;
@@ -107,34 +107,36 @@ public class DefaultActionMetrics implements ActionMetrics {
         long maxQueueFull = 0;
         long maxCircuitOpen = 0;
         for (Slot slot : slotArray) {
-            long slotSuccesses = slot.getMetric(Metric.SUCCESS).longValue();
-            long slotErrors = slot.getMetric(Metric.ERROR).longValue();
-            long slotTimeouts = slot.getMetric(Metric.TIMEOUT).longValue();
-            long slotMaxConcurrency = slot.getMetric(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED).longValue();
-            long slotCircuitOpen = slot.getMetric(Metric.CIRCUIT_OPEN).longValue();
-            long slotQueueFull = slot.getMetric(Metric.QUEUE_FULL).longValue();
-            long slotTotal = slotSuccesses + slotErrors + slotTimeouts + slotMaxConcurrency + slotCircuitOpen +
-                    slotQueueFull;
-            total = total + slotTotal;
-            maxTotal = Math.max(maxTotal, slotTotal);
+            if (slot != null) {
+                long slotSuccesses = slot.getMetric(Metric.SUCCESS).longValue();
+                long slotErrors = slot.getMetric(Metric.ERROR).longValue();
+                long slotTimeouts = slot.getMetric(Metric.TIMEOUT).longValue();
+                long slotMaxConcurrency = slot.getMetric(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED).longValue();
+                long slotCircuitOpen = slot.getMetric(Metric.CIRCUIT_OPEN).longValue();
+                long slotQueueFull = slot.getMetric(Metric.QUEUE_FULL).longValue();
+                long slotTotal = slotSuccesses + slotErrors + slotTimeouts + slotMaxConcurrency + slotCircuitOpen +
+                        slotQueueFull;
+                total = total + slotTotal;
+                maxTotal = Math.max(maxTotal, slotTotal);
 
-            successes = successes + slotSuccesses;
-            maxSuccesses = Math.max(maxSuccesses, slotSuccesses);
+                successes = successes + slotSuccesses;
+                maxSuccesses = Math.max(maxSuccesses, slotSuccesses);
 
-            timeouts = timeouts + slotTimeouts;
-            maxTimeouts = Math.max(maxTimeouts, slotTimeouts);
+                timeouts = timeouts + slotTimeouts;
+                maxTimeouts = Math.max(maxTimeouts, slotTimeouts);
 
-            errors = errors + slotErrors;
-            maxErrors = Math.max(maxErrors, slotErrors);
+                errors = errors + slotErrors;
+                maxErrors = Math.max(maxErrors, slotErrors);
 
-            maxConcurrency = slotMaxConcurrency + maxConcurrency;
-            maxMaxConcurrency = Math.max(maxMaxConcurrency, slotMaxConcurrency);
+                maxConcurrency = slotMaxConcurrency + maxConcurrency;
+                maxMaxConcurrency = Math.max(maxMaxConcurrency, slotMaxConcurrency);
 
-            circuitOpen = slotCircuitOpen + circuitOpen;
-            maxQueueFull = Math.max(maxQueueFull, slotCircuitOpen);
+                circuitOpen = slotCircuitOpen + circuitOpen;
+                maxQueueFull = Math.max(maxQueueFull, slotCircuitOpen);
 
-            queueFull = slotQueueFull + queueFull;
-            maxCircuitOpen = Math.max(maxCircuitOpen, slotQueueFull);
+                queueFull = slotQueueFull + queueFull;
+                maxCircuitOpen = Math.max(maxCircuitOpen, slotQueueFull);
+            }
         }
 
         Map<Object, Object> metricsMap = new HashMap<>();
@@ -154,7 +156,7 @@ public class DefaultActionMetrics implements ActionMetrics {
         return metricsMap;
     }
 
-    private Slot[] collectSlots(int slots) {
+    private Slot[] collectActiveSlots(int slots) {
         int absoluteSlot = currentAbsoluteSlot();
         int startSlot = 1 + absoluteSlot - slots;
         int adjustedStartSlot = startSlot >= 0 ? startSlot : 0;
