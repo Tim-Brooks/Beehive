@@ -9,7 +9,7 @@ import java.util.concurrent.TimeUnit;
 public interface ActionMetrics {
     void incrementMetricCount(Metric metric);
 
-    long getMetricCountForTimePeriod(Metric metric, int seconds);
+    long getMetricCountForTimePeriod(Metric metric, long timePeriod, TimeUnit timeUnit);
 
     Map<Object, Object> snapshot(long timeAmount, TimeUnit timeUnit);
 }

@@ -22,11 +22,11 @@ public class DefaultActionMetrics implements ActionMetrics {
         this(3600, 1, TimeUnit.SECONDS);
     }
 
-    public DefaultActionMetrics(int slotsToTrack, int resolution, TimeUnit slotUnit) {
+    public DefaultActionMetrics(int slotsToTrack, long resolution, TimeUnit slotUnit) {
         this(slotsToTrack, resolution, slotUnit, new SystemTime());
     }
 
-    public DefaultActionMetrics(int secondsToTrack, long resolution, TimeUnit slotUnit, SystemTime systemTime) {
+    public DefaultActionMetrics(int slotsToTrack, long resolution, TimeUnit slotUnit, SystemTime systemTime) {
         long millisecondsPerSlot = TimeUnit.MILLISECONDS.convert(resolution, slotUnit);
         if (100 > millisecondsPerSlot) {
             throw new IllegalArgumentException(String.format("Too low of resolution: [%s milliseconds]. 100 " +
@@ -35,11 +35,11 @@ public class DefaultActionMetrics implements ActionMetrics {
 
         this.millisecondsPerSlot = millisecondsPerSlot;
         this.startTime = systemTime.currentTimeMillis();
-        this.totalSlots = secondsToTrack;
-        this.metrics = new AtomicReferenceArray<>(secondsToTrack);
+        this.totalSlots = slotsToTrack;
+        this.metrics = new AtomicReferenceArray<>(slotsToTrack);
         this.systemTime = systemTime;
 
-        for (int i = 0; i < secondsToTrack; ++i) {
+        for (int i = 0; i < slotsToTrack; ++i) {
             metrics.set(i, new Slot(i));
         }
     }
@@ -65,11 +65,11 @@ public class DefaultActionMetrics implements ActionMetrics {
     }
 
     @Override
-    public long getMetricCountForTimePeriod(Metric metric, int seconds) {
-        assertValidArgument(seconds);
+    public long getMetricCountForTimePeriod(Metric metric, long timePeriod, TimeUnit timeUnit) {
+        int slots = convertToSlots(timePeriod, timeUnit);
 
         int absoluteSlot = currentAbsoluteSlot();
-        int startSlot = 1 + absoluteSlot - seconds;
+        int startSlot = 1 + absoluteSlot - slots;
         int adjustedStartSlot = startSlot >= 0 ? startSlot : 0;
 
         int count = 0;
@@ -85,13 +85,11 @@ public class DefaultActionMetrics implements ActionMetrics {
     }
 
     @Override
-    public Map<Object, Object> snapshot(long timeAmount, TimeUnit timeUnit) {
-        long longSeconds = TimeUnit.SECONDS.convert(timeAmount, timeUnit);
-        assertValidArgument(longSeconds);
-        int seconds = (int) longSeconds;
+    public Map<Object, Object> snapshot(long timePeriod, TimeUnit timeUnit) {
+        int slots = convertToSlots(timePeriod, timeUnit);
 
 
-        Slot[] slotArray = collectActiveSlots(seconds);
+        Slot[] slotArray = collectActiveSlots(slots);
         long total = 0;
         long successes = 0;
         long timeouts = 0;
@@ -179,15 +177,18 @@ public class DefaultActionMetrics implements ActionMetrics {
         return (int) ((systemTime.currentTimeMillis() - startTime) / millisecondsPerSlot);
     }
 
-    private void assertValidArgument(long seconds) {
-        if (seconds > totalSlots) {
-            String message = String.format("Seconds greater than seconds tracked: [Tracked: %s, Argument: %s]",
-                    totalSlots, seconds);
+    private int convertToSlots(long timePeriod, TimeUnit timeUnit) {
+        long longSlots = TimeUnit.MILLISECONDS.convert(timePeriod, timeUnit) / millisecondsPerSlot;
+
+        if (longSlots > totalSlots) {
+            String message = String.format("Slots greater than slots tracked: [Tracked: %s, Argument: %s]",
+                    totalSlots, longSlots);
             throw new IllegalArgumentException(message);
-        } else if (seconds <= 0) {
-            String message = String.format("Seconds must be greater than 0. [Argument: %s]", seconds);
+        } else if (longSlots <= 0) {
+            String message = String.format("Slots must be greater than 0. [Argument: %s]", longSlots);
             throw new IllegalArgumentException(message);
         }
+        return (int) longSlots;
     }
 
 }

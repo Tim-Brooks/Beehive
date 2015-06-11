@@ -5,6 +5,7 @@ import fault.metrics.DefaultActionMetrics;
 import fault.metrics.ActionMetrics;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by timbrooks on 6/3/15.
@@ -22,7 +23,7 @@ public class MetricsExample {
 
             for (int i = 0; i < 100000; ++i) {
                 long start = System.nanoTime();
-                metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 5);
+                metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 5, TimeUnit.SECONDS);
                 System.out.println(System.nanoTime() - start);
             }
         } catch (InterruptedException e) {
