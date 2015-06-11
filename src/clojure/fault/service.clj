@@ -53,31 +53,53 @@
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
     (case key
-      :errors (.getMetricCountForTimePeriod metrics Metric/ERROR seconds-tracked)
-      :successes (.getMetricCountForTimePeriod metrics Metric/SUCCESS seconds-tracked)
-      :timeouts (.getMetricCountForTimePeriod metrics Metric/TIMEOUT seconds-tracked)
+      :errors (.getMetricCountForTimePeriod metrics
+                                            Metric/ERROR
+                                            seconds-tracked
+                                            TimeUnit/SECONDS)
+      :successes (.getMetricCountForTimePeriod metrics
+                                               Metric/SUCCESS
+                                               seconds-tracked
+                                               TimeUnit/SECONDS)
+      :timeouts (.getMetricCountForTimePeriod metrics
+                                              Metric/TIMEOUT
+                                              seconds-tracked
+                                              TimeUnit/SECONDS)
       :circuit-open (.getMetricCountForTimePeriod metrics
-                                             Metric/CIRCUIT_OPEN
-                                             seconds-tracked)
+                                                  Metric/CIRCUIT_OPEN
+                                                  seconds-tracked
+                                                  TimeUnit/SECONDS)
       :queue-full (.getMetricCountForTimePeriod metrics
-                                           Metric/QUEUE_FULL
-                                           seconds-tracked)
+                                                Metric/QUEUE_FULL
+                                                seconds-tracked
+                                                TimeUnit/SECONDS)
       :max-concurrency-level-exceeded (.getMetricCountForTimePeriod
                                         metrics
                                         Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
-                                        seconds-tracked)
+                                        seconds-tracked
+                                        TimeUnit/SECONDS)
       default))
   Object
   (toString [this]
-    (str {:errors (.getMetricCountForTimePeriod metrics Metric/ERROR seconds-tracked)
-          :successes (.getMetricCountForTimePeriod metrics Metric/SUCCESS seconds-tracked)
-          :timeouts (.getMetricCountForTimePeriod metrics Metric/TIMEOUT seconds-tracked)
+    (str {:errors (.getMetricCountForTimePeriod metrics
+                                                Metric/ERROR
+                                                seconds-tracked
+                                                TimeUnit/SECONDS)
+          :successes (.getMetricCountForTimePeriod metrics Metric/SUCCESS
+                                                   seconds-tracked
+                                                   TimeUnit/SECONDS)
+          :timeouts (.getMetricCountForTimePeriod metrics
+                                                  Metric/TIMEOUT
+                                                  seconds-tracked
+                                                  TimeUnit/SECONDS)
           :circuit-open (.getMetricCountForTimePeriod metrics
-                                                 Metric/CIRCUIT_OPEN
-                                                 seconds-tracked)
+                                                      Metric/CIRCUIT_OPEN
+                                                      seconds-tracked
+                                                      TimeUnit/SECONDS)
           :queue-full (.getMetricCountForTimePeriod metrics
-                                               Metric/QUEUE_FULL
-                                               seconds-tracked)
+                                                    Metric/QUEUE_FULL
+                                                    seconds-tracked
+                                                    TimeUnit/SECONDS)
           :max-concurrency-level-exceeded (.getMetricCountForTimePeriod
                                             metrics
                                             Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
