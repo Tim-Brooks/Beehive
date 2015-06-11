@@ -5,8 +5,7 @@ import fault.concurrent.ResilientFuture;
 import fault.concurrent.ResilientPromise;
 import fault.utils.ResilientPatternAction;
 
-import java.util.List;
-import java.util.Random;
+import java.util.Map;
 
 /**
  * Created by timbrooks on 6/4/15.
@@ -14,15 +13,24 @@ import java.util.Random;
 public class LoadBalancer<C> implements Pattern<C> {
 
     private final ServiceExecutor[] services;
-    private final C context;
+    private final C[] contexts;
+    private final LoadBalancerStrategy strategy;
 
-    public LoadBalancer(List<ServiceExecutor> executors, C context) {
-        if (executors.size() == 0) {
+    @SuppressWarnings("unchecked")
+    public LoadBalancer(LoadBalancerStrategy strategy, Map<ServiceExecutor, C> executorToContext) {
+        if (executorToContext.size() == 0) {
             throw new IllegalArgumentException("Cannot create LoadBalancer with 0 Executors.");
         }
 
-        this.context = context;
-        services = (ServiceExecutor[]) executors.toArray();
+        this.strategy = strategy;
+        services = new ServiceExecutor[executorToContext.size()];
+        contexts = (C[]) new Object[executorToContext.size()];
+        int i = 0;
+        for (Map.Entry<ServiceExecutor, C> entry : executorToContext.entrySet()) {
+            services[i] = entry.getKey();
+            contexts[i] = entry.getValue();
+            ++i;
+        }
     }
 
     @Override
@@ -45,20 +53,22 @@ public class LoadBalancer<C> implements Pattern<C> {
     @Override
     public <T> ResilientFuture<T> submitAction(final ResilientPatternAction<T, C> action, ResilientPromise<T> promise,
                                                ResilientCallback<T> callback, long millisTimeout) {
-        return services[nextService()].submitAction(new ResilientAction<T>() {
+        final int i = strategy.nextExectutorIndex();
+        return services[i].submitAction(new ResilientAction<T>() {
             @Override
             public T run() throws Exception {
-                return action.run(context);
+                return action.run(contexts[i]);
             }
         }, promise, callback, millisTimeout);
     }
 
     @Override
     public <T> ResilientPromise<T> performAction(final ResilientPatternAction<T, C> action) {
-        return services[nextService()].performAction(new ResilientAction<T>() {
+        final int i = strategy.nextExectutorIndex();
+        return services[i].performAction(new ResilientAction<T>() {
             @Override
             public T run() throws Exception {
-                return action.run(context);
+                return action.run(contexts[i]);
             }
         });
     }
@@ -68,9 +78,5 @@ public class LoadBalancer<C> implements Pattern<C> {
         for (ServiceExecutor e : services) {
             e.shutdown();
         }
-    }
-
-    private int nextService() {
-        return new Random().nextInt(services.length) % services.length;
     }
 }
