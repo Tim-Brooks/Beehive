@@ -29,7 +29,7 @@ public class DefaultExecutor extends AbstractServiceExecutor {
 
 
     public DefaultExecutor(ExecutorService service, int concurrencyLevel) {
-        this(service, concurrencyLevel, new DefaultActionMetrics(3600));
+        this(service, concurrencyLevel, new DefaultActionMetrics());
     }
 
     public DefaultExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics) {
@@ -38,7 +38,7 @@ public class DefaultExecutor extends AbstractServiceExecutor {
     }
 
     public DefaultExecutor(ExecutorService service, int concurrencyLevel, CircuitBreaker breaker) {
-        this(service, concurrencyLevel, new DefaultActionMetrics(3600), breaker);
+        this(service, concurrencyLevel, new DefaultActionMetrics(), breaker);
     }
 
     public DefaultExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics, CircuitBreaker

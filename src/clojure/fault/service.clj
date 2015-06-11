@@ -11,7 +11,8 @@
                           BreakerConfig$BreakerConfigBuilder
                           NoOpCircuitBreaker)
            (fault.metrics ActionMetrics DefaultActionMetrics Metric)
-           (fault Service)))
+           (fault Service)
+           (java.util.concurrent TimeUnit)))
 
 (set! *warn-on-reflection* true)
 
@@ -134,7 +135,7 @@
   (.forceOpen ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
 (defn service-executor [name pool-size max-concurrency {:keys [seconds]}]
-  (let [metrics (DefaultActionMetrics. seconds)
+  (let [metrics (DefaultActionMetrics. seconds 1 TimeUnit/SECONDS)
         executor (Service/defaultService name (int pool-size) (int max-concurrency) metrics)]
     (->CLJServiceImpl executor
                       (->CLJMetrics (.getActionMetrics executor) seconds)
@@ -143,7 +144,7 @@
 (defn executor-with-no-opt-breaker
   [name pool-size max-concurrency {:keys [seconds]}]
   (let [breaker (NoOpCircuitBreaker.)
-        metrics (DefaultActionMetrics. seconds)
+        metrics (DefaultActionMetrics. seconds 1 TimeUnit/SECONDS)
         executor (Service/defaultService name
                                          (int pool-size)
                                          (int max-concurrency)

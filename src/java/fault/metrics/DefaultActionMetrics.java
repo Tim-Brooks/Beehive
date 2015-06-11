@@ -18,8 +18,12 @@ public class DefaultActionMetrics implements ActionMetrics {
     private final long startTime;
     private final long millisecondsPerSlot;
 
-    public DefaultActionMetrics(int slotsToTrack) {
-        this(slotsToTrack, 1000);
+    public DefaultActionMetrics() {
+        this(3600, 1, TimeUnit.SECONDS);
+    }
+
+    public DefaultActionMetrics(int slotsToTrack, int resolution, TimeUnit slotUnit) {
+        this(slotsToTrack, TimeUnit.MILLISECONDS.convert(resolution, slotUnit));
     }
 
     public DefaultActionMetrics(int slotsToTrack, long millisecondsPerSlot) {

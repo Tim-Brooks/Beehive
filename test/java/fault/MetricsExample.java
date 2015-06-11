@@ -13,7 +13,7 @@ public class MetricsExample {
 
     public static void main(String[] args) {
 
-        DefaultActionMetrics metrics = new DefaultActionMetrics(60);
+        DefaultActionMetrics metrics = new DefaultActionMetrics();
 
         try {
             for (int i = 0; i < 1000; ++i) {

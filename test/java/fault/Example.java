@@ -15,7 +15,7 @@ import java.util.List;
 public class Example {
 
     public static void main(String[] args) {
-        ActionMetrics actionMetrics = new DefaultActionMetrics(3600);
+        ActionMetrics actionMetrics = new DefaultActionMetrics();
         BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
                 .failureThreshold(100).timeToPauseMillis(2000).build();
         ServiceExecutor serviceExecutor = Service.defaultService("Test", 25, 120, actionMetrics,

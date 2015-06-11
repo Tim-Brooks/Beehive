@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -341,7 +342,7 @@ public class DefaultExecutorTest {
         builder.failureThreshold = 5;
         builder.timeToPauseMillis = 50;
 
-        ActionMetrics metrics = new DefaultActionMetrics(3600);
+        ActionMetrics metrics = new DefaultActionMetrics(3600, 1, TimeUnit.SECONDS);
         CircuitBreaker breaker = new DefaultCircuitBreaker(metrics, builder.build());
         blockingExecutor = Service.defaultService("Test", 1, 100, metrics, breaker);
 
