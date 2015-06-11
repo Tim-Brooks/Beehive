@@ -54,12 +54,26 @@ public class LoadBalancer<C> implements Pattern<C> {
     public <T> ResilientFuture<T> submitAction(final ResilientPatternAction<T, C> action, ResilientPromise<T> promise,
                                                ResilientCallback<T> callback, long millisTimeout) {
         final int i = strategy.nextExectutorIndex();
-        return services[i].submitAction(new ResilientAction<T>() {
+        ResilientAction<T> resilientAction = new ResilientAction<T>() {
             @Override
             public T run() throws Exception {
                 return action.run(contexts[i]);
             }
-        }, promise, callback, millisTimeout);
+        };
+
+        int j = 0;
+        int serviceCount = services.length;
+        while (true) {
+            try {
+                return services[(i + j) % serviceCount].submitAction(resilientAction, promise, callback, millisTimeout);
+            } catch (RejectedActionException e) {
+                ++j;
+                if (j == serviceCount) {
+                    throw e;
+                }
+            }
+        }
+
     }
 
     @Override

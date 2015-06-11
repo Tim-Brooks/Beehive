@@ -87,4 +87,17 @@ public class LoadBalancerTest {
         verify(action).run(context2);
     }
 
+    @Test
+    public void actionTriedOnSecondServiceIfRejectedOnFirst() throws Exception {
+        long timeout = 100L;
+        ResilientPromise<String> promise = mock(ResilientPromise.class);
+        ResilientCallback<String> callback = mock(ResilientCallback.class);
+
+        when(strategy.nextExectutorIndex()).thenReturn(0);
+        when(executor1.submitAction(actionCaptor.capture(), eq(promise), eq(callback), eq(timeout))).thenThrow(new
+                RejectedActionException(RejectionReason.CIRCUIT_OPEN));
+        balancer.submitAction(action, promise, callback, timeout);
+        verify(executor2).submitAction(actionCaptor.capture(), eq(promise), eq(callback), eq(timeout));
+    }
+
 }
