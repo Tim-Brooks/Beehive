@@ -85,7 +85,8 @@
                                                 Metric/ERROR
                                                 seconds-tracked
                                                 TimeUnit/SECONDS)
-          :successes (.getMetricCountForTimePeriod metrics Metric/SUCCESS
+          :successes (.getMetricCountForTimePeriod metrics
+                                                   Metric/SUCCESS
                                                    seconds-tracked
                                                    TimeUnit/SECONDS)
           :timeouts (.getMetricCountForTimePeriod metrics
@@ -103,7 +104,8 @@
           :max-concurrency-level-exceeded (.getMetricCountForTimePeriod
                                             metrics
                                             Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
-                                            seconds-tracked)})))
+                                            seconds-tracked
+                                            TimeUnit/SECONDS)})))
 
 (deftype CLJServiceImpl
   [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]

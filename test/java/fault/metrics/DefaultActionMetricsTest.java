@@ -46,8 +46,12 @@ public class DefaultActionMetricsTest {
 
     @Test
     public void testMetricsTrackingTwoSeconds() {
-        when(systemTime.currentTimeMillis()).thenReturn(0L);
-        metrics = new DefaultActionMetrics(2, 1, TimeUnit.SECONDS, systemTime);
+        TimeUnit unit = TimeUnit.SECONDS;
+        long startTime = 0L;
+        int slotsToTrack = 2;
+
+        when(systemTime.currentTimeMillis()).thenReturn(startTime);
+        metrics = new DefaultActionMetrics(slotsToTrack, 1, unit, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1L);
         metrics.incrementMetricCount(Metric.ERROR);
@@ -55,64 +59,76 @@ public class DefaultActionMetricsTest {
         metrics.incrementMetricCount(Metric.ERROR);
 
         when(systemTime.currentTimeMillis()).thenReturn(999L);
-        assertEquals(2, metrics.getMetricCountForTimePeriod(Metric.ERROR, 1, TimeUnit.SECONDS));
+        assertEquals(2, metrics.getMetricCountForTimePeriod(Metric.ERROR, 1, unit));
 
         when(systemTime.currentTimeMillis()).thenReturn(999L);
-        assertEquals(2, metrics.getMetricCountForTimePeriod(Metric.ERROR, 2, TimeUnit.SECONDS));
+        assertEquals(2, metrics.getMetricCountForTimePeriod(Metric.ERROR, 2, unit));
 
         when(systemTime.currentTimeMillis()).thenReturn(1000L);
-        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.ERROR, 1, TimeUnit.SECONDS));
+        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.ERROR, 1, unit));
 
         when(systemTime.currentTimeMillis()).thenReturn(1000L);
-        assertEquals(2, metrics.getMetricCountForTimePeriod(Metric.ERROR, 2, TimeUnit.SECONDS));
+        assertEquals(2, metrics.getMetricCountForTimePeriod(Metric.ERROR, 2, unit));
 
         when(systemTime.currentTimeMillis()).thenReturn(2000L);
-        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.ERROR, 1, TimeUnit.SECONDS));
+        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.ERROR, 1, unit));
 
         when(systemTime.currentTimeMillis()).thenReturn(2000L);
-        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.ERROR, 2, TimeUnit.SECONDS));
+        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.ERROR, 2, unit));
     }
 
     @Test
     public void testMultipleWraps() {
-        when(systemTime.currentTimeMillis()).thenReturn(0L);
-        metrics = new DefaultActionMetrics(10, 1, TimeUnit.SECONDS, systemTime);
+        TimeUnit unit = TimeUnit.SECONDS;
+        long startTime = 0L;
+        long resolution = 1;
+        long offsetTime = 50L;
+        int slotsTracked = 10;
+        long millisResolution = resolution * 1000;
 
-        when(systemTime.currentTimeMillis()).thenReturn(8000L);
+        when(systemTime.currentTimeMillis()).thenReturn(startTime);
+        metrics = new DefaultActionMetrics(slotsTracked, resolution, unit, systemTime);
+
+        when(systemTime.currentTimeMillis()).thenReturn(offsetTime + millisResolution * 8);
         metrics.incrementMetricCount(Metric.ERROR);
 
-        when(systemTime.currentTimeMillis()).thenReturn(20000L);
+        when(systemTime.currentTimeMillis()).thenReturn(offsetTime + millisResolution * 20);
         metrics.incrementMetricCount(Metric.SUCCESS);
 
-        when(systemTime.currentTimeMillis()).thenReturn(21000L);
-        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.ERROR, 1, TimeUnit.SECONDS));
-        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 1, TimeUnit.SECONDS));
-        assertEquals(1, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 2, TimeUnit.SECONDS));
+        when(systemTime.currentTimeMillis()).thenReturn(offsetTime + millisResolution * 21);
+        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.ERROR, resolution, unit));
+        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, resolution, unit));
+        assertEquals(1, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, resolution * 2, unit));
     }
 
     @Test
     public void testMillisecondResolution() {
+        TimeUnit unit = TimeUnit.MILLISECONDS;
         long startTime = 500L;
         long resolution = 100;
         long offsetTime = 550L;
         int slotsTracked = 1000;
 
         when(systemTime.currentTimeMillis()).thenReturn(startTime);
-        metrics = new DefaultActionMetrics(slotsTracked, resolution, TimeUnit.MILLISECONDS, systemTime);
+        metrics = new DefaultActionMetrics(slotsTracked, resolution, unit, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(offsetTime);
         metrics.incrementMetricCount(Metric.SUCCESS);
 
         when(systemTime.currentTimeMillis()).thenReturn(offsetTime + resolution);
-        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 100, TimeUnit.MILLISECONDS));
-        assertEquals(1, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 200, TimeUnit.MILLISECONDS));
+        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, resolution, unit));
+        assertEquals(1, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, resolution * 2, unit));
 
         when(systemTime.currentTimeMillis()).thenReturn(offsetTime + resolution * (slotsTracked - 1));
-        assertEquals(1, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, slotsTracked * resolution, TimeUnit.MILLISECONDS));
+        assertEquals(1, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, slotsTracked * resolution, unit));
 
         when(systemTime.currentTimeMillis()).thenReturn(offsetTime + resolution * slotsTracked);
-        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, slotsTracked * resolution, TimeUnit
-                .MILLISECONDS));
+        assertEquals(0, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, slotsTracked * resolution, unit));
+    }
+
+    @Test
+    public void testSnapshot() {
+
     }
 
     @Test
