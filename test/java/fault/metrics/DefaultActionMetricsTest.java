@@ -172,7 +172,7 @@ public class DefaultActionMetricsTest {
         metrics.incrementMetricCount(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
 
         when(systemTime.currentTimeMillis()).thenReturn(offsetTime + millisResolution * 4);
-        Map<Object, Object> snapshot = metrics.snapshot(6, TimeUnit.SECONDS);
+        Map<Object, Object> snapshot = metrics.snapshot(5, TimeUnit.SECONDS);
         assertEquals(22L, snapshot.get(Snapshot.TOTAL));
         assertEquals(4L, snapshot.get(Snapshot.SUCCESSES));
         assertEquals(3L, snapshot.get(Snapshot.TIMEOUTS));
@@ -194,6 +194,9 @@ public class DefaultActionMetricsTest {
         assertEquals(4L, snapshot.get(Snapshot.MAX_2_CIRCUIT_OPEN));
         assertEquals(1L, snapshot.get(Snapshot.MAX_2_QUEUE_FULL));
         assertEquals(2L, snapshot.get(Snapshot.MAX_2_MAX_CONCURRENCY));
+
+        Map<Object, Object> snapshot2 = metrics.snapshot(4, TimeUnit.SECONDS);
+        assertEquals(19L, snapshot2.get(Snapshot.TOTAL));
     }
 
     @Test
