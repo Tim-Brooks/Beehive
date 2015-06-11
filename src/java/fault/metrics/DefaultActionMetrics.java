@@ -96,7 +96,12 @@ public class DefaultActionMetrics implements ActionMetrics {
         long circuitOpen = 0;
 
         long maxTotal = 0;
-        long maxSuccess = 0;
+        long maxSuccesses = 0;
+        long maxTimeouts = 0;
+        long maxErrors = 0;
+        long maxMaxConcurrency = 0;
+        long maxQueueFull = 0;
+        long maxCircuitOpen = 0;
         for (Slot slot : slotArray) {
             long slotSuccesses = slot.getMetric(Metric.SUCCESS).longValue();
             long slotErrors = slot.getMetric(Metric.ERROR).longValue();
@@ -107,24 +112,41 @@ public class DefaultActionMetrics implements ActionMetrics {
             long slotTotal = slotSuccesses + slotErrors + slotTimeouts + slotMaxConcurrency + slotCircuitOpen +
                     slotQueueFull;
             total = total + slotTotal;
-            maxTotal = Math.max(maxTotal, total);
+            maxTotal = Math.max(maxTotal, slotTotal);
 
             successes = successes + slotSuccesses;
-            maxSuccess = Math.max(maxSuccess, successes);
+            maxSuccesses = Math.max(maxSuccesses, slotSuccesses);
 
             timeouts = timeouts + slotTimeouts;
+            maxTimeouts = Math.max(maxTimeouts, slotTimeouts);
+
             errors = errors + slotErrors;
+            maxErrors = Math.max(maxErrors, slotErrors);
+
             maxConcurrency = slotMaxConcurrency + maxConcurrency;
+            maxMaxConcurrency = Math.max(maxMaxConcurrency, slotMaxConcurrency);
+
             circuitOpen = slotCircuitOpen + circuitOpen;
+            maxQueueFull = Math.max(maxQueueFull, slotCircuitOpen);
+
             queueFull = slotQueueFull + queueFull;
+            maxCircuitOpen = Math.max(maxCircuitOpen, slotQueueFull);
         }
 
         Map<Object, Object> metricsMap = new HashMap<>();
+        metricsMap.put("total", total);
         metricsMap.put("successes", successes);
         metricsMap.put("errors", successes);
-        metricsMap.put("successes", successes);
-        metricsMap.put("successes", successes);
-        metricsMap.put("successes", successes);
+        metricsMap.put("max-concurrency", maxConcurrency);
+        metricsMap.put("queue-full", queueFull);
+        metricsMap.put("circuit-open", circuitOpen);
+
+        metricsMap.put("max-total", maxTotal);
+        metricsMap.put("max-successes", maxSuccesses);
+        metricsMap.put("max-errors", maxErrors);
+        metricsMap.put("max-max-concurrency", maxMaxConcurrency);
+        metricsMap.put("max-queue-full", maxQueueFull);
+        metricsMap.put("max-circuit-open", maxCircuitOpen);
         return metricsMap;
     }
 
