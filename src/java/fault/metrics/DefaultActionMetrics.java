@@ -32,6 +32,11 @@ public class DefaultActionMetrics implements ActionMetrics {
     }
 
     public DefaultActionMetrics(int secondsToTrack, long millisecondsPerSlot, SystemTime systemTime) {
+        if (100 > millisecondsPerSlot) {
+            throw new IllegalArgumentException(String.format("Too low of resolution: [%s milliseconds]. 100 " +
+                    "milliseconds is the minimum resolution.", millisecondsPerSlot));
+        }
+
         this.millisecondsPerSlot = millisecondsPerSlot;
         this.startTime = systemTime.currentTimeMillis();
         this.totalSlots = secondsToTrack;
