@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
@@ -29,7 +30,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void testMetricsEdgeScenario() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new DefaultActionMetrics(1, 1000, systemTime);
+        this.metrics = new DefaultActionMetrics(1, 1, TimeUnit.SECONDS, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1L);
         metrics.incrementMetricCount(Metric.SUCCESS);
@@ -46,7 +47,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void testMetricsTrackingTwoSeconds() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new DefaultActionMetrics(2, 1000, systemTime);
+        this.metrics = new DefaultActionMetrics(2, 1, TimeUnit.SECONDS, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1L);
         metrics.incrementMetricCount(Metric.ERROR);
@@ -75,7 +76,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void testMultipleWraps() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new DefaultActionMetrics(10, 1000, systemTime);
+        this.metrics = new DefaultActionMetrics(10, 1, TimeUnit.SECONDS, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(8000L);
         metrics.incrementMetricCount(Metric.ERROR);
@@ -92,7 +93,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void concurrentTest() throws Exception {
         when(systemTime.currentTimeMillis()).thenReturn(1500L);
-        this.metrics = new DefaultActionMetrics(5, 1000, systemTime);
+        this.metrics = new DefaultActionMetrics(5, 1, TimeUnit.SECONDS, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1980L);
         fireThreads(metrics, 10);

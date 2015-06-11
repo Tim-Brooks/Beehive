@@ -23,15 +23,11 @@ public class DefaultActionMetrics implements ActionMetrics {
     }
 
     public DefaultActionMetrics(int slotsToTrack, int resolution, TimeUnit slotUnit) {
-        this(slotsToTrack, TimeUnit.MILLISECONDS.convert(resolution, slotUnit));
+        this(slotsToTrack, resolution, slotUnit, new SystemTime());
     }
 
-    public DefaultActionMetrics(int slotsToTrack, long millisecondsPerSlot) {
-        this(slotsToTrack, millisecondsPerSlot, new SystemTime());
-
-    }
-
-    public DefaultActionMetrics(int secondsToTrack, long millisecondsPerSlot, SystemTime systemTime) {
+    public DefaultActionMetrics(int secondsToTrack, long resolution, TimeUnit slotUnit, SystemTime systemTime) {
+        long millisecondsPerSlot = TimeUnit.MILLISECONDS.convert(resolution, slotUnit);
         if (100 > millisecondsPerSlot) {
             throw new IllegalArgumentException(String.format("Too low of resolution: [%s milliseconds]. 100 " +
                     "milliseconds is the minimum resolution.", millisecondsPerSlot));
