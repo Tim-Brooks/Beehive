@@ -30,7 +30,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void testMetricsEdgeScenario() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new DefaultActionMetrics(1, 1, TimeUnit.SECONDS, systemTime);
+        metrics = new DefaultActionMetrics(1, 1, TimeUnit.SECONDS, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1L);
         metrics.incrementMetricCount(Metric.SUCCESS);
@@ -47,7 +47,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void testMetricsTrackingTwoSeconds() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new DefaultActionMetrics(2, 1, TimeUnit.SECONDS, systemTime);
+        metrics = new DefaultActionMetrics(2, 1, TimeUnit.SECONDS, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1L);
         metrics.incrementMetricCount(Metric.ERROR);
@@ -76,7 +76,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void testMultipleWraps() {
         when(systemTime.currentTimeMillis()).thenReturn(0L);
-        this.metrics = new DefaultActionMetrics(10, 1, TimeUnit.SECONDS, systemTime);
+        metrics = new DefaultActionMetrics(10, 1, TimeUnit.SECONDS, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(8000L);
         metrics.incrementMetricCount(Metric.ERROR);
@@ -93,7 +93,7 @@ public class DefaultActionMetricsTest {
     @Test
     public void concurrentTest() throws Exception {
         when(systemTime.currentTimeMillis()).thenReturn(1500L);
-        this.metrics = new DefaultActionMetrics(5, 1, TimeUnit.SECONDS, systemTime);
+        metrics = new DefaultActionMetrics(5, 1, TimeUnit.SECONDS, systemTime);
 
         when(systemTime.currentTimeMillis()).thenReturn(1980L);
         fireThreads(metrics, 10);
@@ -111,27 +111,27 @@ public class DefaultActionMetricsTest {
         fireThreads(metrics, 10);
 
         when(systemTime.currentTimeMillis()).thenReturn(6000L);
-        assertEquals(5000, this.metrics.getMetricCountForTimePeriod(Metric.CIRCUIT_OPEN, 5));
-        assertEquals(5000, this.metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 5));
-        assertEquals(5000, this.metrics.getMetricCountForTimePeriod(Metric.ERROR, 5));
-        assertEquals(5000, this.metrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 5));
-        assertEquals(5000, this.metrics.getMetricCountForTimePeriod(Metric.QUEUE_FULL, 5));
-        assertEquals(5000, this.metrics.getMetricCountForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 5));
+        assertEquals(5000, metrics.getMetricCountForTimePeriod(Metric.CIRCUIT_OPEN, 5));
+        assertEquals(5000, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 5));
+        assertEquals(5000, metrics.getMetricCountForTimePeriod(Metric.ERROR, 5));
+        assertEquals(5000, metrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 5));
+        assertEquals(5000, metrics.getMetricCountForTimePeriod(Metric.QUEUE_FULL, 5));
+        assertEquals(5000, metrics.getMetricCountForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 5));
 
-        assertEquals(1000, this.metrics.getMetricCountForTimePeriod(Metric.CIRCUIT_OPEN, 1));
-        assertEquals(1000, this.metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 1));
-        assertEquals(1000, this.metrics.getMetricCountForTimePeriod(Metric.ERROR, 1));
-        assertEquals(1000, this.metrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 1));
-        assertEquals(1000, this.metrics.getMetricCountForTimePeriod(Metric.QUEUE_FULL, 1));
-        assertEquals(1000, this.metrics.getMetricCountForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 1));
+        assertEquals(1000, metrics.getMetricCountForTimePeriod(Metric.CIRCUIT_OPEN, 1));
+        assertEquals(1000, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 1));
+        assertEquals(1000, metrics.getMetricCountForTimePeriod(Metric.ERROR, 1));
+        assertEquals(1000, metrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 1));
+        assertEquals(1000, metrics.getMetricCountForTimePeriod(Metric.QUEUE_FULL, 1));
+        assertEquals(1000, metrics.getMetricCountForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 1));
 
         when(systemTime.currentTimeMillis()).thenReturn(6500L);
-        assertEquals(4000, this.metrics.getMetricCountForTimePeriod(Metric.CIRCUIT_OPEN, 5));
-        assertEquals(4000, this.metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 5));
-        assertEquals(4000, this.metrics.getMetricCountForTimePeriod(Metric.ERROR, 5));
-        assertEquals(4000, this.metrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 5));
-        assertEquals(4000, this.metrics.getMetricCountForTimePeriod(Metric.QUEUE_FULL, 5));
-        assertEquals(4000, this.metrics.getMetricCountForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 5));
+        assertEquals(4000, metrics.getMetricCountForTimePeriod(Metric.CIRCUIT_OPEN, 5));
+        assertEquals(4000, metrics.getMetricCountForTimePeriod(Metric.SUCCESS, 5));
+        assertEquals(4000, metrics.getMetricCountForTimePeriod(Metric.ERROR, 5));
+        assertEquals(4000, metrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 5));
+        assertEquals(4000, metrics.getMetricCountForTimePeriod(Metric.QUEUE_FULL, 5));
+        assertEquals(4000, metrics.getMetricCountForTimePeriod(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED, 5));
     }
 
     private void fireThreads(final ActionMetrics metrics, int num) throws InterruptedException {
