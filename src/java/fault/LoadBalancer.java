@@ -53,19 +53,16 @@ public class LoadBalancer<C> implements Pattern<C> {
     @Override
     public <T> ResilientFuture<T> submitAction(final ResilientPatternAction<T, C> action, ResilientPromise<T> promise,
                                                ResilientCallback<T> callback, long millisTimeout) {
-        final int i = strategy.nextExectutorIndex();
-        ResilientAction<T> resilientAction = new ResilientAction<T>() {
-            @Override
-            public T run() throws Exception {
-                return action.run(contexts[i]);
-            }
-        };
+        final int firstServiceToTry = strategy.nextExectutorIndex();
+        ResilientActionWithContext<T> actionWithContext = new ResilientActionWithContext<>(action);
 
         int j = 0;
         int serviceCount = services.length;
         while (true) {
             try {
-                return services[(i + j) % serviceCount].submitAction(resilientAction, promise, callback, millisTimeout);
+                int serviceIndex = (firstServiceToTry + j) % serviceCount;
+                actionWithContext.context = contexts[serviceIndex];
+                return services[serviceIndex].submitAction(actionWithContext, promise, callback, millisTimeout);
             } catch (RejectedActionException e) {
                 ++j;
                 if (j == serviceCount) {
@@ -78,19 +75,43 @@ public class LoadBalancer<C> implements Pattern<C> {
 
     @Override
     public <T> ResilientPromise<T> performAction(final ResilientPatternAction<T, C> action) {
-        final int i = strategy.nextExectutorIndex();
-        return services[i].performAction(new ResilientAction<T>() {
-            @Override
-            public T run() throws Exception {
-                return action.run(contexts[i]);
+        final int firstServiceToTry = strategy.nextExectutorIndex();
+        ResilientActionWithContext<T> actionWithContext = new ResilientActionWithContext<>(action);
+
+        int j = 0;
+        int serviceCount = services.length;
+        while (true) {
+            try {
+                int serviceIndex = (firstServiceToTry + j) % serviceCount;
+                actionWithContext.context = contexts[serviceIndex];
+                return services[serviceIndex].performAction(actionWithContext);
+            } catch (RejectedActionException e) {
+                ++j;
+                if (j == serviceCount) {
+                    throw e;
+                }
             }
-        });
+        }
     }
 
     @Override
     public void shutdown() {
         for (ServiceExecutor e : services) {
             e.shutdown();
+        }
+    }
+
+    private class ResilientActionWithContext<T> implements ResilientAction<T> {
+        public C context;
+        private final ResilientPatternAction<T, C> action;
+
+        public ResilientActionWithContext(ResilientPatternAction<T, C> action) {
+            this.action = action;
+        }
+
+        @Override
+        public T run() throws Exception {
+            return action.run(context);
         }
     }
 }

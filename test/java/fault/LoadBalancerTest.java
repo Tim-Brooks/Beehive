@@ -88,7 +88,7 @@ public class LoadBalancerTest {
     }
 
     @Test
-    public void actionTriedOnSecondServiceIfRejectedOnFirst() throws Exception {
+    public void submitTriedOnSecondServiceIfRejectedOnFirst() throws Exception {
         long timeout = 100L;
         ResilientPromise<String> promise = mock(ResilientPromise.class);
         ResilientCallback<String> callback = mock(ResilientCallback.class);
@@ -98,6 +98,18 @@ public class LoadBalancerTest {
                 RejectedActionException(RejectionReason.CIRCUIT_OPEN));
         balancer.submitAction(action, promise, callback, timeout);
         verify(executor2).submitAction(actionCaptor.capture(), eq(promise), eq(callback), eq(timeout));
+        actionCaptor.getValue().run();
+        verify(action).run(context2);
     }
 
+    @Test
+    public void actionTriedOnSecondServiceIfRejectedOnFirst() throws Exception {
+        when(strategy.nextExectutorIndex()).thenReturn(0);
+        when(executor1.performAction(actionCaptor.capture())).thenThrow(new
+                RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED));
+        balancer.performAction(action);
+        verify(executor2).performAction(actionCaptor.capture());
+        actionCaptor.getValue().run();
+        verify(action).run(context2);
+    }
 }
