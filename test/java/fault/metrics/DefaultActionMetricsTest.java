@@ -6,6 +6,7 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -128,7 +129,71 @@ public class DefaultActionMetricsTest {
 
     @Test
     public void testSnapshot() {
+        TimeUnit unit = TimeUnit.SECONDS;
+        long startTime = 0L;
+        long resolution = 1;
+        long millisResolution = 1000L;
+        long offsetTime = 50L;
+        int slotsTracked = 10;
 
+        when(systemTime.currentTimeMillis()).thenReturn(startTime);
+        metrics = new DefaultActionMetrics(slotsTracked, resolution, unit, systemTime);
+
+        when(systemTime.currentTimeMillis()).thenReturn(offsetTime);
+        metrics.incrementMetricCount(Metric.SUCCESS);
+        metrics.incrementMetricCount(Metric.SUCCESS);
+        metrics.incrementMetricCount(Metric.ERROR);
+
+        when(systemTime.currentTimeMillis()).thenReturn(offsetTime + millisResolution);
+        metrics.incrementMetricCount(Metric.SUCCESS);
+        metrics.incrementMetricCount(Metric.ERROR);
+        metrics.incrementMetricCount(Metric.TIMEOUT);
+        metrics.incrementMetricCount(Metric.CIRCUIT_OPEN);
+        metrics.incrementMetricCount(Metric.CIRCUIT_OPEN);
+        metrics.incrementMetricCount(Metric.CIRCUIT_OPEN);
+
+        when(systemTime.currentTimeMillis()).thenReturn(offsetTime + millisResolution * 2);
+        metrics.incrementMetricCount(Metric.SUCCESS);
+        metrics.incrementMetricCount(Metric.ERROR);
+        metrics.incrementMetricCount(Metric.ERROR);
+        metrics.incrementMetricCount(Metric.ERROR);
+
+        when(systemTime.currentTimeMillis()).thenReturn(offsetTime + millisResolution * 3);
+        metrics.incrementMetricCount(Metric.CIRCUIT_OPEN);
+        metrics.incrementMetricCount(Metric.CIRCUIT_OPEN);
+        metrics.incrementMetricCount(Metric.TIMEOUT);
+        metrics.incrementMetricCount(Metric.QUEUE_FULL);
+        metrics.incrementMetricCount(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+
+        when(systemTime.currentTimeMillis()).thenReturn(offsetTime + millisResolution * 4);
+        metrics.incrementMetricCount(Metric.CIRCUIT_OPEN);
+        metrics.incrementMetricCount(Metric.CIRCUIT_OPEN);
+        metrics.incrementMetricCount(Metric.TIMEOUT);
+        metrics.incrementMetricCount(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED);
+
+        when(systemTime.currentTimeMillis()).thenReturn(offsetTime + millisResolution * 4);
+        Map<Object, Object> snapshot = metrics.snapshot(6, TimeUnit.SECONDS);
+        assertEquals(22L, snapshot.get(Snapshot.TOTAL));
+        assertEquals(4L, snapshot.get(Snapshot.SUCCESSES));
+        assertEquals(3L, snapshot.get(Snapshot.TIMEOUTS));
+        assertEquals(5L, snapshot.get(Snapshot.ERRORS));
+        assertEquals(7L, snapshot.get(Snapshot.CIRCUIT_OPEN));
+        assertEquals(1L, snapshot.get(Snapshot.QUEUE_FULL));
+        assertEquals(2L, snapshot.get(Snapshot.MAX_CONCURRENCY));
+        assertEquals(6L, snapshot.get(Snapshot.MAX_1_TOTAL));
+        assertEquals(2L, snapshot.get(Snapshot.MAX_1_SUCCESSES));
+        assertEquals(1L, snapshot.get(Snapshot.MAX_1_TIMEOUTS));
+        assertEquals(3L, snapshot.get(Snapshot.MAX_1_ERRORS));
+        assertEquals(3L, snapshot.get(Snapshot.MAX_1_CIRCUIT_OPEN));
+        assertEquals(1L, snapshot.get(Snapshot.MAX_1_QUEUE_FULL));
+        assertEquals(1L, snapshot.get(Snapshot.MAX_1_MAX_CONCURRENCY));
+        assertEquals(10L, snapshot.get(Snapshot.MAX_2_TOTAL));
+        assertEquals(3L, snapshot.get(Snapshot.MAX_2_SUCCESSES));
+        assertEquals(2L, snapshot.get(Snapshot.MAX_2_TIMEOUTS));
+        assertEquals(4L, snapshot.get(Snapshot.MAX_2_ERRORS));
+        assertEquals(4L, snapshot.get(Snapshot.MAX_2_CIRCUIT_OPEN));
+        assertEquals(1L, snapshot.get(Snapshot.MAX_2_QUEUE_FULL));
+        assertEquals(2L, snapshot.get(Snapshot.MAX_2_MAX_CONCURRENCY));
     }
 
     @Test
