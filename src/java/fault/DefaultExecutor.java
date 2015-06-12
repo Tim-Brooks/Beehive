@@ -10,10 +10,9 @@ import fault.metrics.Metric;
 import fault.timeout.ActionTimeout;
 import fault.timeout.TimeoutService;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -78,35 +77,14 @@ public class DefaultExecutor extends AbstractServiceExecutor {
             internalPromise.wrapPromise(promise);
         }
         try {
-            final Future<Void> f = service.submit(new Callable<Void>() {
-                @Override
-                public Void call() {
-                    try {
-                        T result = action.run();
-                        internalPromise.deliverResult(result);
-                    } catch (InterruptedException e) {
-                        Thread.interrupted();
-                    } catch (Exception e) {
-                        internalPromise.deliverError(e);
-                    } finally {
-                        actionMetrics.incrementMetricCount(Metric.statusToMetric(internalPromise.getStatus()));
-                        circuitBreaker.informBreakerOfResult(internalPromise.isSuccessful());
-                        try {
-                            if (callback != null) {
-                                callback.run(promise == null ? internalPromise : promise);
-                            }
-                        } finally {
-                            semaphore.releasePermit();
-                        }
-                    }
-                    return null;
-                }
-            });
+            RunnableFuture<Void> task = new ResilientTask<>(actionMetrics, semaphore, circuitBreaker, action, callback,
+                    internalPromise, promise);
+            service.execute(task);
 
             if (millisTimeout > MAX_TIMEOUT_MILLIS) {
-                timeoutService.scheduleTimeout(new ActionTimeout(MAX_TIMEOUT_MILLIS, internalPromise, f));
+                timeoutService.scheduleTimeout(new ActionTimeout(MAX_TIMEOUT_MILLIS, internalPromise, task));
             } else {
-                timeoutService.scheduleTimeout(new ActionTimeout(millisTimeout, internalPromise, f));
+                timeoutService.scheduleTimeout(new ActionTimeout(millisTimeout, internalPromise, task));
             }
         } catch (RejectedExecutionException e) {
             actionMetrics.incrementMetricCount(Metric.QUEUE_FULL);
