@@ -17,7 +17,7 @@
       :or {breaker {} metrics {:seconds 3600}}}]
   (if (empty? breaker)
     (s/executor-with-no-opt-breaker name pool-size max-concurrency metrics)
-    (s/service-executor name pool-size max-concurrency metrics)))
+    (s/service-executor name pool-size max-concurrency breaker metrics)))
 
 (defn metrics [{:keys [metrics]}]
   (let [{:keys [failures

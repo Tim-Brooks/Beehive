@@ -18,12 +18,12 @@ public class Example {
 
     public static void main(String[] args) {
         ActionMetrics actionMetrics = new DefaultActionMetrics();
-        BreakerConfig breakerConfig = new BreakerConfigBuilder().timePeriodInMillis(5000)
-                .failureThreshold(100).timeToPauseMillis(2000).build();
+        BreakerConfig breakerConfig = new BreakerConfigBuilder().trailingPeriodMillis(5000)
+                .failureThreshold(100).backOffTimeMillis(2000).build();
         ServiceExecutor serviceExecutor = Service.defaultService("Test", 25, 120, actionMetrics,
                 new DefaultCircuitBreaker(actionMetrics, breakerConfig));
-//        BreakerConfig breakerConfig2 = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
-//                .failureThreshold(400).timeToPauseMillis(2000).build();
+//        BreakerConfig breakerConfig2 = new BreakerConfig.BreakerConfigBuilder().trailingPeriodInMillis(5000)
+//                .failureThreshold(400).backOffTimeInMillis(2000).build();
 //        SingleWriterActionMetrics actionMetrics2 = new SingleWriterActionMetrics(3600);
 //        ServiceExecutor serviceExecutor2 = new EventLoopExecutor(15, actionMetrics2, new DefaultCircuitBreaker
 //                (actionMetrics2, breakerConfig2), Executors.newFixedThreadPool(15));

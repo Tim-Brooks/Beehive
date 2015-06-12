@@ -1,5 +1,6 @@
 (ns fault.service
-  (:require [fault.future :as f])
+  (:require [fault.future :as f]
+            [fault.utils :as utils])
   (:import (clojure.lang ILookup)
            (fault ServiceExecutor
                   ResilientAction
@@ -36,17 +37,19 @@
     (case key
       :open? (.isOpen breaker)
       :config (let [^BreakerConfig config (.getBreakerConfig breaker)]
-                {:time-period-in-millis (.timePeriodInMillis config)
+                {:time-period-in-millis (.trailingPeriodMillis config)
                  :failure-threshold (.failureThreshold config)
-                 :time-to-pause-millis (.timeToPauseMillis config)})
+                 :time-to-pause-millis (.backOffTimeMillis config)})
       default))
   Object
   (toString [this]
     (str {:open? (.isOpen breaker)
           :config (let [^BreakerConfig config (.getBreakerConfig breaker)]
-                    {:time-period-in-millis (.timePeriodInMillis config)
+                    {:trailing-period-millis (.trailingPeriodMillis config)
                      :failure-threshold (.failureThreshold config)
-                     :time-to-pause-millis (.timeToPauseMillis config)})})))
+                     :back-off-time-millis (.backOffTimeMillis config)
+                     :failure-percentage-threshold (.failurePercentageThreshold config)
+                     :health-refresh-millis (.healthRefreshMillis config)})})))
 
 (deftype CLJMetrics [^ActionMetrics metrics seconds-tracked]
   ILookup
@@ -143,13 +146,19 @@
 
 (defn swap-breaker-config!
   [{:keys [circuit-breaker]}
-   {:keys [time-period-in-millis failure-threshold time-to-pause-millis]}]
+   {:keys [trailing-period-millis
+           failure-threshold
+           failure-percentage-threshold
+           backoff-time-millis
+           health-refresh-millis]}]
   (.setBreakerConfig
     ^CircuitBreaker circuit-breaker
     ^BreakerConfig (doto (BreakerConfigBuilder.)
-                     (.timePeriodInMillis time-period-in-millis)
+                     (.trailingPeriodMillis trailing-period-millis)
                      (.failureThreshold failure-threshold)
-                     (.timeToPauseMillis time-to-pause-millis)
+                     (.failurePercentageThreshold failure-percentage-threshold)
+                     (.backOffTimeMillis backoff-time-millis)
+                     (.healthRefreshMillis health-refresh-millis)
                      (.build))))
 
 (defn close-circuit! [^CLJServiceImpl service]
@@ -158,11 +167,16 @@
 (defn open-circuit! [^CLJServiceImpl service]
   (.forceOpen ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
-(defn service-executor [name pool-size max-concurrency {:keys [seconds]}]
-  (let [metrics (DefaultActionMetrics. seconds 1 TimeUnit/SECONDS)
+(defn service-executor
+  [name
+   pool-size
+   max-concurrency
+   {:keys [failure-percentage-threshold backoff-time-millis]}
+   {:keys [slots-to-track resolution time-unit]}]
+  (let [metrics (DefaultActionMetrics. slots-to-track resolution (utils/->time-unit time-unit))
         executor (Service/defaultService name (int pool-size) (int max-concurrency) metrics)]
     (->CLJServiceImpl executor
-                      (->CLJMetrics (.getActionMetrics executor) seconds)
+                      (->CLJMetrics (.getActionMetrics executor) slots-to-track)
                       (->CLJBreaker (.getCircuitBreaker executor)))))
 
 (defn executor-with-no-opt-breaker

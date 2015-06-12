@@ -5,19 +5,19 @@ package fault.circuit;
  */
 public class BreakerConfig {
 
-    public final int timePeriodInMillis;
     public final int failurePercentageThreshold;
-    public final int failureThreshold;
-    private final long healthRefreshMillis;
-    public final long timeToPauseMillis;
+    public final long failureThreshold;
+    public final long trailingPeriodMillis;
+    public final long healthRefreshMillis;
+    public final long backOffTimeMillis;
 
-    public BreakerConfig(int failureThreshold, int failurePercentageThreshold, int timePeriodInMillis,
-                         long healthRefreshMillis, long timeToPauseMillis) {
+    public BreakerConfig(long failureThreshold, int failurePercentageThreshold, long trailingPeriodMillis,
+                         long healthRefreshMillis, long backOffTimeMillis) {
         this.failureThreshold = failureThreshold;
         this.failurePercentageThreshold = failurePercentageThreshold;
-        this.timePeriodInMillis = timePeriodInMillis;
+        this.trailingPeriodMillis = trailingPeriodMillis;
         this.healthRefreshMillis = healthRefreshMillis;
-        this.timeToPauseMillis = timeToPauseMillis;
+        this.backOffTimeMillis = backOffTimeMillis;
     }
 
 }

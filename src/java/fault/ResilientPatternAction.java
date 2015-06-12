@@ -1,4 +1,4 @@
-package fault.utils;
+package fault;
 
 /**
  * Created by timbrooks on 6/4/15.

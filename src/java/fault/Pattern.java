@@ -2,7 +2,6 @@ package fault;
 
 import fault.concurrent.ResilientFuture;
 import fault.concurrent.ResilientPromise;
-import fault.utils.ResilientPatternAction;
 
 /**
  * Created by timbrooks on 6/4/15.

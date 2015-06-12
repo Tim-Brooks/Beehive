@@ -3,7 +3,6 @@ package fault;
 import fault.concurrent.DefaultResilientPromise;
 import fault.concurrent.ResilientFuture;
 import fault.concurrent.ResilientPromise;
-import fault.utils.ResilientPatternAction;
 
 import java.util.Map;
 

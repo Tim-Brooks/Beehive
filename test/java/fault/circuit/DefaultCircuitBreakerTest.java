@@ -34,7 +34,7 @@ public class DefaultCircuitBreakerTest {
     @Test
     public void testCircuitIsClosedByDefault() {
         BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(20)
-                .timePeriodInMillis(5000).build();
+                .backOffTimeMillis(5000).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
         assertFalse(circuitBreaker.isOpen());
     }
@@ -42,7 +42,7 @@ public class DefaultCircuitBreakerTest {
     @Test
     public void testCircuitOpensOnlyWhenFailuresGreaterThanThreshold() {
         int timePeriodInMillis = 1000;
-        BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(5).timePeriodInMillis
+        BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(5).backOffTimeMillis
                 (timePeriodInMillis).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
 
@@ -63,7 +63,7 @@ public class DefaultCircuitBreakerTest {
     @Test
     public void testOpenCircuitClosesAfterSuccess() {
         int timePeriodInMillis = 1000;
-        BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(5).timePeriodInMillis
+        BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(5).backOffTimeMillis
                 (timePeriodInMillis).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
 
@@ -82,7 +82,7 @@ public class DefaultCircuitBreakerTest {
 
     @Test
     public void testSettingBreakerConfigChangesConfig() {
-        BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(10).timePeriodInMillis
+        BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(10).trailingPeriodMillis
                 (1000).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
         when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 1, TimeUnit.SECONDS)).thenReturn(3L);
@@ -95,7 +95,7 @@ public class DefaultCircuitBreakerTest {
         assertFalse(circuitBreaker.isOpen());
 
         BreakerConfig newBreakerConfig = new BreakerConfigBuilder().failureThreshold(5)
-                .timePeriodInMillis(2000).build();
+                .trailingPeriodMillis(2000).build();
         circuitBreaker.setBreakerConfig(newBreakerConfig);
         when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 2, TimeUnit.SECONDS)).thenReturn(3L);
         when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, 2, TimeUnit.SECONDS)).thenReturn(3L);
@@ -109,7 +109,7 @@ public class DefaultCircuitBreakerTest {
     @Test
     public void testActionAllowedIfCircuitClosed() {
         BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(20)
-                .timePeriodInMillis(5000).build();
+                .backOffTimeMillis(5000).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
         assertFalse(circuitBreaker.isOpen());
         assertTrue(circuitBreaker.allowAction());
@@ -120,7 +120,7 @@ public class DefaultCircuitBreakerTest {
         final int failureThreshold = 10;
         int timePeriodInMillis = 5000;
         BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(failureThreshold)
-                .timePeriodInMillis(timePeriodInMillis).timeToPauseMillis(1000).build();
+                .trailingPeriodMillis(timePeriodInMillis).build();
 
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig, systemTime);
 
@@ -147,7 +147,7 @@ public class DefaultCircuitBreakerTest {
         final int failureThreshold = 10;
         int timePeriodInMillis = 5000;
         BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(failureThreshold)
-                .timePeriodInMillis(timePeriodInMillis).timeToPauseMillis(1000).build();
+                .trailingPeriodMillis(timePeriodInMillis).backOffTimeMillis(1000).build();
 
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig, systemTime);
 

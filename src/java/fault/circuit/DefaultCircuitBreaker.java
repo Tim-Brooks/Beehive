@@ -43,10 +43,10 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
     public boolean allowAction() {
         int state = this.state.get();
         if (state == OPEN) {
-            long timeToPauseMillis = breakerConfig.get().timeToPauseMillis;
+            long backOffTimeMillis = breakerConfig.get().backOffTimeMillis;
             long currentTime = systemTime.currentTimeMillis();
             // This potentially allows a couple of tests through. Should think about this decision
-            if (currentTime < timeToPauseMillis + lastTestedTime.get()) {
+            if (currentTime < backOffTimeMillis + lastTestedTime.get()) {
                 return false;
             }
             lastTestedTime.set(currentTime);
@@ -64,7 +64,7 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
         } else {
             if (state.get() == CLOSED) {
                 BreakerConfig config = this.breakerConfig.get();
-                int timePeriod = config.timePeriodInMillis / 1000;
+                long timePeriod = config.trailingPeriodMillis / 1000;
                 long errorsForTimePeriod = actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, timePeriod, TimeUnit.SECONDS);
                 long timeoutsForTimePeriod = actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, timePeriod, TimeUnit.SECONDS);
                 long failuresForTimePeriod = errorsForTimePeriod + timeoutsForTimePeriod;

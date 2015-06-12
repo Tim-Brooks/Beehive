@@ -1,7 +1,6 @@
 package fault;
 
 import fault.concurrent.ResilientPromise;
-import fault.utils.ResilientPatternAction;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;

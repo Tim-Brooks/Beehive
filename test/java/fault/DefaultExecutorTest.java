@@ -338,9 +338,9 @@ public class DefaultExecutorTest {
     @Test
     public void circuitBreaker() throws Exception {
         BreakerConfigBuilder builder = new BreakerConfigBuilder();
-        builder.timePeriodInMillis = 10000;
+        builder.trailingPeriodMillis = 10000;
         builder.failureThreshold = 5;
-        builder.timeToPauseMillis = 50;
+        builder.backOffTimeMillis = 50;
 
         ActionMetrics metrics = new DefaultActionMetrics(3600, 1, TimeUnit.SECONDS);
         CircuitBreaker breaker = new DefaultCircuitBreaker(metrics, builder.build());

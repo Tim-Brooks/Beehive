@@ -4,18 +4,18 @@ package fault.circuit;
  * Created by timbrooks on 6/11/15.
  */
 public class BreakerConfigBuilder {
-    public int timePeriodInMillis = 1000;
-    public int failureThreshold = 30;
+    public long trailingPeriodMillis = 1000;
+    public long failureThreshold = Long.MAX_VALUE;
     public int failurePercentageThreshold = 50;
     public long healthRefreshMillis = 500;
-    public long timeToPauseMillis = 1000;
+    public long backOffTimeMillis = 1000;
 
-    public BreakerConfigBuilder timePeriodInMillis(int timePeriodInMillis) {
-        this.timePeriodInMillis = timePeriodInMillis;
+    public BreakerConfigBuilder trailingPeriodMillis(long trailingPeriodMillis) {
+        this.trailingPeriodMillis = trailingPeriodMillis;
         return this;
     }
 
-    public BreakerConfigBuilder failureThreshold(int failureThreshold) {
+    public BreakerConfigBuilder failureThreshold(long failureThreshold) {
         this.failureThreshold = failureThreshold;
         return this;
     }
@@ -25,8 +25,8 @@ public class BreakerConfigBuilder {
         return this;
     }
 
-    public BreakerConfigBuilder timeToPauseMillis(long timeToPauseMillis) {
-        this.timeToPauseMillis = timeToPauseMillis;
+    public BreakerConfigBuilder backOffTimeMillis(long backOffTimeMillis) {
+        this.backOffTimeMillis = backOffTimeMillis;
         return this;
     }
 
@@ -36,8 +36,8 @@ public class BreakerConfigBuilder {
     }
 
     public BreakerConfig build() {
-        return new BreakerConfig(failureThreshold, failurePercentageThreshold, timePeriodInMillis,
-                healthRefreshMillis, timeToPauseMillis);
+        return new BreakerConfig(failureThreshold, failurePercentageThreshold, trailingPeriodMillis,
+                healthRefreshMillis, backOffTimeMillis);
     }
 
 }
