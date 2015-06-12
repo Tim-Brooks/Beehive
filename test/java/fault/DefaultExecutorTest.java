@@ -1,6 +1,6 @@
 package fault;
 
-import fault.circuit.BreakerConfig;
+import fault.circuit.BreakerConfigBuilder;
 import fault.circuit.CircuitBreaker;
 import fault.circuit.DefaultCircuitBreaker;
 import fault.concurrent.DefaultResilientPromise;
@@ -337,7 +337,7 @@ public class DefaultExecutorTest {
 
     @Test
     public void circuitBreaker() throws Exception {
-        BreakerConfig.BreakerConfigBuilder builder = new BreakerConfig.BreakerConfigBuilder();
+        BreakerConfigBuilder builder = new BreakerConfigBuilder();
         builder.timePeriodInMillis = 10000;
         builder.failureThreshold = 5;
         builder.timeToPauseMillis = 50;

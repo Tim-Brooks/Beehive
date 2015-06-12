@@ -8,7 +8,7 @@
            (fault.concurrent ResilientFuture ResilientPromise)
            (fault.circuit CircuitBreaker
                           BreakerConfig
-                          BreakerConfig$BreakerConfigBuilder
+                          BreakerConfigBuilder
                           NoOpCircuitBreaker)
            (fault.metrics ActionMetrics DefaultActionMetrics Metric)
            (fault Service)
@@ -146,7 +146,7 @@
    {:keys [time-period-in-millis failure-threshold time-to-pause-millis]}]
   (.setBreakerConfig
     ^CircuitBreaker circuit-breaker
-    ^BreakerConfig (doto (BreakerConfig$BreakerConfigBuilder.)
+    ^BreakerConfig (doto (BreakerConfigBuilder.)
                      (.timePeriodInMillis time-period-in-millis)
                      (.failureThreshold failure-threshold)
                      (.timeToPauseMillis time-to-pause-millis)

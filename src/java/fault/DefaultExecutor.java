@@ -1,6 +1,6 @@
 package fault;
 
-import fault.circuit.BreakerConfig;
+import fault.circuit.BreakerConfigBuilder;
 import fault.circuit.CircuitBreaker;
 import fault.circuit.DefaultCircuitBreaker;
 import fault.concurrent.*;
@@ -33,8 +33,7 @@ public class DefaultExecutor extends AbstractServiceExecutor {
     }
 
     public DefaultExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics) {
-        this(service, concurrencyLevel, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfig
-                .BreakerConfigBuilder().failureThreshold(20).timePeriodInMillis(5000).build()));
+        this(service, concurrencyLevel, actionMetrics, new DefaultCircuitBreaker(actionMetrics, new BreakerConfigBuilder().failureThreshold(20).timePeriodInMillis(5000).build()));
     }
 
     public DefaultExecutor(ExecutorService service, int concurrencyLevel, CircuitBreaker breaker) {

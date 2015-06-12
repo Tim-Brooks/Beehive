@@ -11,5 +11,7 @@ public interface ActionMetrics {
 
     long getMetricCountForTimePeriod(Metric metric, long timePeriod, TimeUnit timeUnit);
 
-    Map<Object, Object> snapshot(long timeAmount, TimeUnit timeUnit);
+    HealthSnapshot healthSnapshot(long timePeriod, TimeUnit timeUnit);
+
+    Map<Object, Object> snapshot(long timePeriod, TimeUnit timeUnit);
 }

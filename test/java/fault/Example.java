@@ -1,6 +1,7 @@
 package fault;
 
 import fault.circuit.BreakerConfig;
+import fault.circuit.BreakerConfigBuilder;
 import fault.circuit.DefaultCircuitBreaker;
 import fault.metrics.ActionMetrics;
 import fault.metrics.DefaultActionMetrics;
@@ -17,7 +18,7 @@ public class Example {
 
     public static void main(String[] args) {
         ActionMetrics actionMetrics = new DefaultActionMetrics();
-        BreakerConfig breakerConfig = new BreakerConfig.BreakerConfigBuilder().timePeriodInMillis(5000)
+        BreakerConfig breakerConfig = new BreakerConfigBuilder().timePeriodInMillis(5000)
                 .failureThreshold(100).timeToPauseMillis(2000).build();
         ServiceExecutor serviceExecutor = Service.defaultService("Test", 25, 120, actionMetrics,
                 new DefaultCircuitBreaker(actionMetrics, breakerConfig));
