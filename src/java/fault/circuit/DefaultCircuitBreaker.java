@@ -1,7 +1,7 @@
 package fault.circuit;
 
 import fault.metrics.ActionMetrics;
-import fault.metrics.Metric;
+import fault.metrics.HealthSnapshot;
 import fault.utils.SystemTime;
 
 import java.util.concurrent.TimeUnit;
@@ -64,11 +64,10 @@ public class DefaultCircuitBreaker implements CircuitBreaker {
         } else {
             if (state.get() == CLOSED) {
                 BreakerConfig config = this.breakerConfig.get();
-                long timePeriod = config.trailingPeriodMillis / 1000;
-                long errorsForTimePeriod = actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, timePeriod, TimeUnit.SECONDS);
-                long timeoutsForTimePeriod = actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, timePeriod, TimeUnit.SECONDS);
-                long failuresForTimePeriod = errorsForTimePeriod + timeoutsForTimePeriod;
-                if (config.failureThreshold < failuresForTimePeriod) {
+                HealthSnapshot health = actionMetrics.healthSnapshot(config.trailingPeriodMillis, TimeUnit.MILLISECONDS);
+                long failures = health.failures;
+                double failurePercentage = health.failurePercentage();
+                if (config.failureThreshold < failures || config.failurePercentageThreshold < failurePercentage) {
                     lastTestedTime.set(systemTime.currentTimeMillis());
                     state.compareAndSet(CLOSED, OPEN);
                 }

@@ -92,17 +92,19 @@ public class DefaultActionMetrics implements ActionMetrics {
         long failures = 0;
         long rejections = 0;
         for (Slot slot : slotArray) {
-            long successes = slot.getMetric(Metric.SUCCESS).longValue();
-            long errors = slot.getMetric(Metric.ERROR).longValue();
-            long timeouts = slot.getMetric(Metric.TIMEOUT).longValue();
-            long maxConcurrency = slot.getMetric(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED).longValue();
-            long circuitOpen = slot.getMetric(Metric.CIRCUIT_OPEN).longValue();
-            long queueFull = slot.getMetric(Metric.QUEUE_FULL).longValue();
-            long slotTotal = successes + errors + timeouts + maxConcurrency + circuitOpen + queueFull;
+            if (slot != null) {
+                long successes = slot.getMetric(Metric.SUCCESS).longValue();
+                long errors = slot.getMetric(Metric.ERROR).longValue();
+                long timeouts = slot.getMetric(Metric.TIMEOUT).longValue();
+                long maxConcurrency = slot.getMetric(Metric.MAX_CONCURRENCY_LEVEL_EXCEEDED).longValue();
+                long circuitOpen = slot.getMetric(Metric.CIRCUIT_OPEN).longValue();
+                long queueFull = slot.getMetric(Metric.QUEUE_FULL).longValue();
+                long slotTotal = successes + errors + timeouts + maxConcurrency + circuitOpen + queueFull;
 
-            total = total + slotTotal;
-            failures = failures + errors + timeouts;
-            rejections = rejections + circuitOpen + queueFull + maxConcurrency;
+                total = total + slotTotal;
+                failures = failures + errors + timeouts;
+                rejections = rejections + circuitOpen + queueFull + maxConcurrency;
+            }
         }
 
         return new HealthSnapshot(total, failures, rejections);

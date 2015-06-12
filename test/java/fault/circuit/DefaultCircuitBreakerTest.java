@@ -1,7 +1,7 @@
 package fault.circuit;
 
 import fault.metrics.ActionMetrics;
-import fault.metrics.Metric;
+import fault.metrics.HealthSnapshot;
 import fault.utils.SystemTime;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
 
 /**
  * Created by timbrooks on 11/20/14.
@@ -41,20 +41,21 @@ public class DefaultCircuitBreakerTest {
 
     @Test
     public void testCircuitOpensOnlyWhenFailuresGreaterThanThreshold() {
-        int timePeriodInMillis = 1000;
+        long trailingPeriodInMillis = 1000;
+        HealthSnapshot failingSnapshot = new HealthSnapshot(10000, 6, 0);
+        HealthSnapshot healthySnapshot = new HealthSnapshot(10000, 5, 0);
+
         BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(5).backOffTimeMillis
-                (timePeriodInMillis).build();
+                (trailingPeriodInMillis).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
 
         assertFalse(circuitBreaker.isOpen());
 
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, timePeriodInMillis / 1000, TimeUnit.SECONDS)).thenReturn(3L);
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, timePeriodInMillis / 1000, TimeUnit.SECONDS)).thenReturn(2L);
+        when(actionMetrics.healthSnapshot(trailingPeriodInMillis, TimeUnit.MILLISECONDS)).thenReturn(healthySnapshot);
         circuitBreaker.informBreakerOfResult(false);
         assertFalse(circuitBreaker.isOpen());
 
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, timePeriodInMillis / 1000, TimeUnit.SECONDS)).thenReturn(3L);
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, timePeriodInMillis / 1000, TimeUnit.SECONDS)).thenReturn(3L);
+        when(actionMetrics.healthSnapshot(trailingPeriodInMillis, TimeUnit.MILLISECONDS)).thenReturn(failingSnapshot);
         circuitBreaker.informBreakerOfResult(false);
 
         assertTrue(circuitBreaker.isOpen());
@@ -62,15 +63,16 @@ public class DefaultCircuitBreakerTest {
 
     @Test
     public void testOpenCircuitClosesAfterSuccess() {
-        int timePeriodInMillis = 1000;
-        BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(5).backOffTimeMillis
-                (timePeriodInMillis).build();
+        long trailingPeriodInMillis = 1000;
+        HealthSnapshot failureSnapshot = new HealthSnapshot(1000, 6, 0);
+
+        BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(5).trailingPeriodMillis
+                (trailingPeriodInMillis).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
 
         assertFalse(circuitBreaker.isOpen());
 
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, timePeriodInMillis / 1000, TimeUnit.SECONDS)).thenReturn(3L);
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, timePeriodInMillis / 1000, TimeUnit.SECONDS)).thenReturn(3L);
+        when(actionMetrics.healthSnapshot(trailingPeriodInMillis, TimeUnit.MILLISECONDS)).thenReturn(failureSnapshot);
         circuitBreaker.informBreakerOfResult(false);
 
         assertTrue(circuitBreaker.isOpen());
@@ -82,27 +84,23 @@ public class DefaultCircuitBreakerTest {
 
     @Test
     public void testSettingBreakerConfigChangesConfig() {
+        HealthSnapshot snapshot = new HealthSnapshot(1000, 6, 0);
+
         BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(10).trailingPeriodMillis
                 (1000).build();
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig);
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 1, TimeUnit.SECONDS)).thenReturn(3L);
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, 1, TimeUnit.SECONDS)).thenReturn(3L);
 
+        when(actionMetrics.healthSnapshot(1000, TimeUnit.MILLISECONDS)).thenReturn(snapshot);
         circuitBreaker.informBreakerOfResult(false);
-
-        verify(actionMetrics, times(1)).getMetricCountForTimePeriod(Metric.TIMEOUT, 1, TimeUnit.SECONDS);
-        verify(actionMetrics, times(1)).getMetricCountForTimePeriod(Metric.ERROR, 1, TimeUnit.SECONDS);
         assertFalse(circuitBreaker.isOpen());
 
         BreakerConfig newBreakerConfig = new BreakerConfigBuilder().failureThreshold(5)
                 .trailingPeriodMillis(2000).build();
         circuitBreaker.setBreakerConfig(newBreakerConfig);
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 2, TimeUnit.SECONDS)).thenReturn(3L);
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, 2, TimeUnit.SECONDS)).thenReturn(3L);
+
+        when(actionMetrics.healthSnapshot(2000, TimeUnit.MILLISECONDS)).thenReturn(snapshot);
         circuitBreaker.informBreakerOfResult(false);
 
-        verify(actionMetrics, times(1)).getMetricCountForTimePeriod(Metric.TIMEOUT, 1, TimeUnit.SECONDS);
-        verify(actionMetrics, times(1)).getMetricCountForTimePeriod(Metric.ERROR, 1, TimeUnit.SECONDS);
         assertTrue(circuitBreaker.isOpen());
     }
 
@@ -117,18 +115,18 @@ public class DefaultCircuitBreakerTest {
 
     @Test
     public void testActionAllowedIfPauseTimeHasPassed() {
-        final int failureThreshold = 10;
+        int failureThreshold = 10;
         int timePeriodInMillis = 5000;
+        HealthSnapshot snapshot = new HealthSnapshot(10000, 11, 0);
+
         BreakerConfig breakerConfig = new BreakerConfigBuilder().failureThreshold(failureThreshold)
                 .trailingPeriodMillis(timePeriodInMillis).build();
-
         circuitBreaker = new DefaultCircuitBreaker(actionMetrics, breakerConfig, systemTime);
 
         assertFalse(circuitBreaker.isOpen());
         assertTrue(circuitBreaker.allowAction());
 
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.TIMEOUT, 5, TimeUnit.SECONDS)).thenReturn(6L);
-        when(actionMetrics.getMetricCountForTimePeriod(Metric.ERROR, 5, TimeUnit.SECONDS)).thenReturn(5L);
+        when(actionMetrics.healthSnapshot(5000, TimeUnit.MILLISECONDS)).thenReturn(snapshot);
         when(systemTime.currentTimeMillis()).thenReturn(0L);
         circuitBreaker.informBreakerOfResult(false);
 
