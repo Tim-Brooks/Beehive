@@ -55,13 +55,13 @@ public class LoadBalancerTest {
 
     @Test
     public void performActionCalledWithCorrectContext() throws Exception {
-        when(strategy.nextExectutorIndex()).thenReturn(0);
+        when(strategy.nextExecutorIndex()).thenReturn(0);
         balancer.performAction(action);
         verify(executor1).performAction(actionCaptor.capture());
         actionCaptor.getValue().run();
         verify(action).run(context1);
 
-        when(strategy.nextExectutorIndex()).thenReturn(1);
+        when(strategy.nextExecutorIndex()).thenReturn(1);
         balancer.performAction(action);
         verify(executor2).performAction(actionCaptor.capture());
         actionCaptor.getValue().run();
@@ -74,13 +74,13 @@ public class LoadBalancerTest {
         ResilientPromise<String> promise = mock(ResilientPromise.class);
         ResilientCallback<String> callback = mock(ResilientCallback.class);
 
-        when(strategy.nextExectutorIndex()).thenReturn(0);
+        when(strategy.nextExecutorIndex()).thenReturn(0);
         balancer.submitAction(action, promise, callback, timeout);
         verify(executor1).submitAction(actionCaptor.capture(), eq(promise), eq(callback), eq(timeout));
         actionCaptor.getValue().run();
         verify(action).run(context1);
 
-        when(strategy.nextExectutorIndex()).thenReturn(1);
+        when(strategy.nextExecutorIndex()).thenReturn(1);
         balancer.submitAction(action, promise, callback, timeout);
         verify(executor2).submitAction(actionCaptor.capture(), eq(promise), eq(callback), eq(timeout));
         actionCaptor.getValue().run();
@@ -93,7 +93,7 @@ public class LoadBalancerTest {
         ResilientPromise<String> promise = mock(ResilientPromise.class);
         ResilientCallback<String> callback = mock(ResilientCallback.class);
 
-        when(strategy.nextExectutorIndex()).thenReturn(0);
+        when(strategy.nextExecutorIndex()).thenReturn(0);
         when(executor1.submitAction(actionCaptor.capture(), eq(promise), eq(callback), eq(timeout))).thenThrow(new
                 RejectedActionException(RejectionReason.CIRCUIT_OPEN));
         balancer.submitAction(action, promise, callback, timeout);
@@ -104,7 +104,7 @@ public class LoadBalancerTest {
 
     @Test
     public void actionTriedOnSecondServiceIfRejectedOnFirst() throws Exception {
-        when(strategy.nextExectutorIndex()).thenReturn(0);
+        when(strategy.nextExecutorIndex()).thenReturn(0);
         when(executor1.performAction(actionCaptor.capture())).thenThrow(new
                 RejectedActionException(RejectionReason.MAX_CONCURRENCY_LEVEL_EXCEEDED));
         balancer.performAction(action);

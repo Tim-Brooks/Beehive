@@ -5,5 +5,5 @@ package fault;
  */
 public interface LoadBalancerStrategy {
 
-    int nextExectutorIndex();
+    int nextExecutorIndex();
 }

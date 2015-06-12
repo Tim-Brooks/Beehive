@@ -53,7 +53,7 @@ public class LoadBalancer<C> implements Pattern<C> {
     @Override
     public <T> ResilientFuture<T> submitAction(final ResilientPatternAction<T, C> action, ResilientPromise<T> promise,
                                                ResilientCallback<T> callback, long millisTimeout) {
-        final int firstServiceToTry = strategy.nextExectutorIndex();
+        final int firstServiceToTry = strategy.nextExecutorIndex();
         ResilientActionWithContext<T> actionWithContext = new ResilientActionWithContext<>(action);
 
         int j = 0;
@@ -75,7 +75,7 @@ public class LoadBalancer<C> implements Pattern<C> {
 
     @Override
     public <T> ResilientPromise<T> performAction(final ResilientPatternAction<T, C> action) {
-        final int firstServiceToTry = strategy.nextExectutorIndex();
+        final int firstServiceToTry = strategy.nextExecutorIndex();
         ResilientActionWithContext<T> actionWithContext = new ResilientActionWithContext<>(action);
 
         int j = 0;
