@@ -20,20 +20,7 @@
     (s/service-executor name pool-size max-concurrency breaker metrics)))
 
 (defn metrics [{:keys [metrics]}]
-  (let [{:keys [failures
-                errors
-                successes
-                timeouts
-                circuit-open
-                queue-full
-                max-concurrency-level-exceeded]} metrics]
-    {:failures failures
-     :errors errors
-     :successes successes
-     :timeouts timeouts
-     :circuit-open circuit-open
-     :queue-full queue-full
-     :max-concurrency-level-exceeded max-concurrency-level-exceeded}))
+  (-> metrics :snapshot))
 
 (defn submit-action [service f time-out-ms]
   (s/submit-action service f time-out-ms))
