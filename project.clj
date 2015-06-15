@@ -13,8 +13,7 @@
                    :plugins [[lein-junit "1.1.3"]]
                    :junit-formatter "brief"}}
   :javac-target "1.7"
-  :dependencies [[org.clojure/clojure "1.6.0"]
-                 [io.dropwizard.metrics/metrics-core "3.1.0"]]
+  :dependencies [[org.clojure/clojure "1.6.0"]]
   :source-paths ["src/clojure"]
   :java-source-paths ["src/java"])
 
