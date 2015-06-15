@@ -1,11 +1,17 @@
 (ns fault.patterns
   (:require [fault.service :as service]
-            [fault.future :as future])
-  (:import (fault ServiceExecutor ResilientAction RejectedActionException)
+            [fault.future :as future]
+            [fault.future :as f])
+  (:import (fault ServiceExecutor ResilientAction RejectedActionException LoadBalancerCreator Pattern ResilientPatternAction)
            (fault.concurrent DefaultResilientPromise ResilientPromise)
-           (java.util ArrayList)))
+           (java.util ArrayList)
+           (fault.service CLJServiceImpl)))
 
 (set! *warn-on-reflection* true)
+
+(defn- wrap-action-fn [action-fn]
+  (reify ResilientPatternAction
+    (run [_ context] (action-fn context))))
 
 (defprotocol ComposedService
   (submit-action [this action-fn timeout-millis])
@@ -13,48 +19,36 @@
   (perform-action [this action-fn])
   (perform-action-map [this key->fn]))
 
-(deftype LoadBalancer [context load-balancer-fn]
+(deftype CLJLoadBalancer [^Pattern balancer]
   ComposedService
   (submit-action [this action-fn timeout-millis]
-    (some (fn [[key service]]
-            (let [f (service/submit-action service
-                                           (partial action-fn (get context key))
-                                           timeout-millis)]
-              (if (identical? :rejected (:status f)) nil f)))
-          (load-balancer-fn)))
+    (try (f/->CLJResilientFuture
+           ^ResilientPromise (.promise
+                               (.submitAction balancer
+                                              (wrap-action-fn action-fn)
+                                              timeout-millis)))
+         (catch RejectedActionException e
+           (f/rejected-action-future (.reason e)))))
   (submit-action-map [this key->fn timeout-millis]
-    (some (fn [[key service]]
-            (let [f (service/submit-action service (get key->fn key) timeout-millis)]
-              (if (identical? :rejected (:status f)) nil f)))
-          (load-balancer-fn)))
+    (throw (UnsupportedOperationException.
+             "Cannot submit action with map with Balancer")))
   (perform-action [this action-fn]
-    (some (fn [[key service]]
-            (let [f (service/perform-action
-                      service (partial action-fn (get context key)))]
-              (if (identical? :rejected (:status f)) nil f)))
-          (load-balancer-fn)))
+    (try (f/->CLJResilientFuture
+           ^ResilientPromise (.performAction balancer
+                                             (wrap-action-fn action-fn)))
+         (catch RejectedActionException e
+           (f/rejected-action-future (.reason e)))))
   (perform-action-map [this key->fn]
-    (some (fn [[key service]]
-            (let [f (service/perform-action service (get key->fn key))]
-              (if (identical? :rejected (:status f)) nil f)))
-          (load-balancer-fn))))
+    (throw (UnsupportedOperationException.
+             "Cannot perform action with map with Balancer"))))
 
-(defn- next-idx [last-idx current]
-  (if (<= last-idx current)
-    0
-    (inc current)))
+(defn- transform-map [service->context]
+  (into {} (map (fn [[k v]] [(.executor ^CLJServiceImpl k) v]) service->context)))
 
-(defn load-balancer [key->service context]
-  (let [service-count (count key->service)
-        next-fn (partial next-idx (dec service-count))
-        state (atom -1)
-        key-service-tuples (vec key->service)]
-    (->LoadBalancer
-      context
-      (fn []
-        (let [start-idx (swap! state next-fn)]
-          (map #(nth key-service-tuples %)
-               (take service-count (iterate next-fn start-idx))))))))
+(defn load-balancer [service->context]
+  (let [service->context (transform-map service->context)
+        balancer (LoadBalancerCreator/roundRobin service->context)]
+    (->CLJLoadBalancer balancer)))
 
 (deftype Shotgun [action-count context shotgun-fn]
   ComposedService

@@ -58,7 +58,9 @@
 (def ^:private reject-enum->keyword
   {RejectionReason/CIRCUIT_OPEN :circuit-open
    RejectionReason/MAX_CONCURRENCY_LEVEL_EXCEEDED :max-concurrency-level-exceeded
-   RejectionReason/QUEUE_FULL :queue-full})
+   RejectionReason/QUEUE_FULL :queue-full
+   RejectionReason/SERVICE_SHUTDOWN :service-shutdown
+   RejectionReason/ALL_SERVICES_REJECTED :all-services-rejected})
 
 (defn rejected-action-future [reason]
   (->CLJRejectedFuture (get reject-enum->keyword reason)))

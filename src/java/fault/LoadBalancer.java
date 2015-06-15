@@ -65,7 +65,7 @@ public class LoadBalancer<C> implements Pattern<C> {
             } catch (RejectedActionException e) {
                 ++j;
                 if (j == serviceCount) {
-                    throw e;
+                    throw new RejectedActionException(RejectionReason.ALL_SERVICES_REJECTED);
                 }
             }
         }
@@ -87,7 +87,7 @@ public class LoadBalancer<C> implements Pattern<C> {
             } catch (RejectedActionException e) {
                 ++j;
                 if (j == serviceCount) {
-                    throw e;
+                    throw new RejectedActionException(RejectionReason.ALL_SERVICES_REJECTED);
                 }
             }
         }
