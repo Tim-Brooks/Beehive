@@ -14,6 +14,8 @@ import java.util.concurrent.TimeUnit;
  */
 public class Service {
 
+    public static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
+
     public static ServiceExecutor defaultService(String name, int poolSize, int concurrencyLevel) {
         ExecutorService service = createExecutor(name, poolSize, concurrencyLevel);
         return new DefaultExecutor(service, concurrencyLevel);
@@ -32,6 +34,10 @@ public class Service {
     }
 
     private static ExecutorService createExecutor(String name, int poolSize, int concurrencyLevel) {
+        if (concurrencyLevel > MAX_CONCURRENCY_LEVEL) {
+            throw new IllegalArgumentException("Concurrency Level \"" + concurrencyLevel + "\" is greater than the " +
+                    "allowed maximum: " + MAX_CONCURRENCY_LEVEL + ".");
+        }
         return new ThreadPoolExecutor(poolSize, poolSize, Long.MAX_VALUE, TimeUnit.DAYS,
                 new ArrayBlockingQueue<Runnable>(concurrencyLevel * 2), new ServiceThreadFactory(name));
     }

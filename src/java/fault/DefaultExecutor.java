@@ -20,7 +20,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class DefaultExecutor extends AbstractServiceExecutor {
 
-    private static final int MAX_CONCURRENCY_LEVEL = Integer.MAX_VALUE / 2;
     private final AtomicBoolean isShutdown = new AtomicBoolean(false);
     private final ExecutorService service;
     private final TimeoutService timeoutService = TimeoutService.defaultTimeoutService;
@@ -43,11 +42,6 @@ public class DefaultExecutor extends AbstractServiceExecutor {
     public DefaultExecutor(ExecutorService service, int concurrencyLevel, ActionMetrics actionMetrics, CircuitBreaker
             circuitBreaker) {
         super(circuitBreaker, actionMetrics);
-        if (concurrencyLevel > MAX_CONCURRENCY_LEVEL) {
-            throw new RuntimeException("Concurrency Level \"" + concurrencyLevel + "\" is greater than the allowed " +
-                    "maximum: " + MAX_CONCURRENCY_LEVEL + ".");
-        }
-
         this.semaphore = new ExecutorSemaphore(concurrencyLevel);
         this.service = service;
     }
