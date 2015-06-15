@@ -87,7 +87,29 @@
       (.countDown latch)
       (is (= 1 (-> metrics-service :metrics :successes)))
       (is (= 1 (-> metrics-service :metrics :timeouts)))
-      (is (= 1 (-> metrics-service :metrics :errors)))))
+      (is (= 1 (-> metrics-service :metrics :errors)))
+      (is (= {"circuit-open" 0
+              "errors" 1
+              "max-1-circuit-open" 0
+              "max-1-errors" 1
+              "max-1-max-concurrency" 0
+              "max-1-queue-full" 0
+              "max-1-successes" 1
+              "max-1-timeouts" 1
+              "max-1-total" 3
+              "max-2-circuit-open" 0
+              "max-2-errors" 1
+              "max-2-max-concurrency" 0
+              "max-2-queue-full" 0
+              "max-2-successes" 1
+              "max-2-timeouts" 1
+              "max-2-total" 3
+              "max-concurrency" 0
+              "queue-full" 0
+              "successes" 1
+              "timeouts" 1
+              "total" 3}
+             (-> metrics-service :metrics :snapshot)))))
   (testing "Testing that rejection reasons are updated"
     (let [metrics-service (fault/service "test" 1 1)
           latch (CountDownLatch. 1)]

@@ -56,6 +56,7 @@
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
     (case key
+      :snapshot (.snapshot metrics seconds-tracked TimeUnit/SECONDS)
       :errors (.getMetricCountForTimePeriod metrics
                                             Metric/ERROR
                                             seconds-tracked
