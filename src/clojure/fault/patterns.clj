@@ -2,7 +2,7 @@
   (:require [fault.service :as service]
             [fault.future :as future]
             [fault.future :as f])
-  (:import (fault ServiceExecutor ResilientAction RejectedActionException LoadBalancerCreator Pattern ResilientPatternAction)
+  (:import (fault ServiceExecutor ResilientAction RejectedActionException LoadBalancer Pattern ResilientPatternAction)
            (fault.concurrent DefaultResilientPromise ResilientPromise)
            (java.util ArrayList)
            (fault.service CLJServiceImpl)))
@@ -47,7 +47,7 @@
 
 (defn load-balancer [service->context]
   (let [service->context (transform-map service->context)
-        balancer (LoadBalancerCreator/roundRobin service->context)]
+        balancer (LoadBalancer/roundRobin service->context)]
     (->CLJLoadBalancer balancer)))
 
 (deftype Shotgun [action-count context shotgun-fn]

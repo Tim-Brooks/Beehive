@@ -7,8 +7,6 @@ import fault.concurrent.ResilientPromise;
  * Created by timbrooks on 6/4/15.
  */
 public interface Pattern<C> {
-    long MAX_TIMEOUT_MILLIS = 1000 * 60 * 60 * 24;
-
     <T> ResilientFuture<T> submitAction(ResilientPatternAction<T, C> action, long millisTimeout);
 
     <T> ResilientFuture<T> submitAction(ResilientPatternAction<T, C> action, ResilientCallback<T> callback, long millisTimeout);
