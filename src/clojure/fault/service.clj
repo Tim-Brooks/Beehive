@@ -1,5 +1,6 @@
 (ns fault.service
-  (:require [fault.future :as f]
+  (:require [fault.compatibility :as c]
+            [fault.future :as f]
             [fault.utils :as utils])
   (:import (clojure.lang ILookup)
            (fault ServiceExecutor
@@ -16,14 +17,6 @@
            (java.util.concurrent TimeUnit)))
 
 (set! *warn-on-reflection* true)
-
-(defn- wrap-action-fn [action-fn]
-  (reify ResilientAction
-    (run [_] (action-fn))))
-
-(defn- wrap-callback-fn [callback-fn]
-  (reify ResilientCallback
-    (run [_ promise] (callback-fn (f/->CLJResilientFuture promise)))))
 
 (defprotocol CLJService
   (submit-action [this action-fn timeout-millis] [this action-fn callback timeout-millis])
@@ -122,17 +115,17 @@
         (.promise ^ResilientFuture
                   (if callback
                     (.submitAction executor
-                                   ^ResilientAction (wrap-action-fn action-fn)
-                                   ^ResilientCallback (wrap-callback-fn callback)
+                                   ^ResilientAction (c/wrap-action-fn action-fn)
+                                   ^ResilientCallback (c/wrap-callback-fn callback)
                                    (long timeout-millis))
                     (.submitAction executor
-                                   ^ResilientAction (wrap-action-fn action-fn)
+                                   ^ResilientAction (c/wrap-action-fn action-fn)
                                    (long timeout-millis)))))
       (catch RejectedActionException e
         (f/rejected-action-future (.reason e)))))
   (perform-action [_ action-fn]
     (try (f/->CLJResilientFuture
-           ^ResilientPromise (.performAction executor (wrap-action-fn action-fn)))
+           ^ResilientPromise (.performAction executor (c/wrap-action-fn action-fn)))
          (catch RejectedActionException e
            (f/rejected-action-future (.reason e)))))
   (shutdown [_] (.shutdown executor))
