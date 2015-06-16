@@ -80,16 +80,6 @@
                              (.countDown ^CountDownLatch @test-blocking-latch))
                            result))]
     (testing "Actions submitted to multiple services"
-      (is (= 1
-             @(patterns/submit-action-map shotgun
-                                          {:service1 action-fn
-                                           :service2 action-fn
-                                           :service3 action-fn}
-                                          Long/MAX_VALUE)))
-      (.countDown ^CountDownLatch @action-blocking-latch)
-      (.await ^CountDownLatch @test-blocking-latch)
-      (is (= 2 @counter))
-
       (reset! counter 0)
       (reset! action-blocking-latch (CountDownLatch. 1))
       (reset! test-blocking-latch (CountDownLatch. 1))
@@ -101,19 +91,6 @@
       (.await ^CountDownLatch @test-blocking-latch)
       (is (= 2 @counter)))
     (testing "Result is from the the first services to response"
-      (reset! counter 0)
-      (reset! action-blocking-latch (CountDownLatch. 1))
-      (reset! test-blocking-latch (CountDownLatch. 1))
-      (let [f (patterns/submit-action-map shotgun
-                                          {:service1 action-fn
-                                           :service2 action-fn
-                                           :service3 action-fn}
-                                          Long/MAX_VALUE)]
-        @f
-        (.countDown ^CountDownLatch @action-blocking-latch)
-        (.await ^CountDownLatch @test-blocking-latch)
-        (is (= 1 @f)))
-
       (reset! counter 0)
       (reset! action-blocking-latch (CountDownLatch. 1))
       (reset! test-blocking-latch (CountDownLatch. 1))
@@ -133,23 +110,7 @@
                                        :service3 service3}
                                       3
                                       {})
-            action-fn (fn [_] (.await ^CountDownLatch @action-blocking-latch))
-            action-map-fn (partial action-fn nil)]
+            action-fn (fn [_] (.await ^CountDownLatch @action-blocking-latch))]
         (is (not (nil? (patterns/submit-action shotgun action-fn Long/MAX_VALUE))))
         (is (nil? (patterns/submit-action shotgun action-fn Long/MAX_VALUE)))
-        (.countDown ^CountDownLatch @action-blocking-latch)
-
-        (reset! counter 0)
-        (reset! action-blocking-latch (CountDownLatch. 1))
-        (reset! test-blocking-latch (CountDownLatch. 1))
-        (is (not (nil? (patterns/submit-action-map shotgun
-                                                   {:service1 action-map-fn
-                                                    :service2 action-map-fn
-                                                    :service3 action-map-fn}
-                                                   Long/MAX_VALUE))))
-        (is (nil? (patterns/submit-action-map shotgun
-                                              {:service1 action-map-fn
-                                               :service2 action-map-fn
-                                               :service3 action-map-fn}
-                                              Long/MAX_VALUE)))
         (.countDown ^CountDownLatch @action-blocking-latch)))))

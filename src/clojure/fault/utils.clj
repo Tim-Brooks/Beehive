@@ -12,6 +12,7 @@
     time-unit
     (throw
       (IllegalArgumentException.
+        ^String
         (format "Invalid time unit argument: %s. Valid arguments are: %s."
                 unit-in-keyword
                 (vec (keys time-units)))))))
