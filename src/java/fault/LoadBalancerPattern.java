@@ -9,14 +9,14 @@ import java.util.Map;
 /**
  * Created by timbrooks on 6/4/15.
  */
-public class DefaultLoadBalancer<C> implements Pattern<C> {
+public class LoadBalancerPattern<C> implements Pattern<C> {
 
     private final ServiceExecutor[] services;
     private final C[] contexts;
     private final LoadBalancerStrategy strategy;
 
     @SuppressWarnings("unchecked")
-    public DefaultLoadBalancer(LoadBalancerStrategy strategy, Map<ServiceExecutor, C> executorToContext) {
+    public LoadBalancerPattern(LoadBalancerStrategy strategy, Map<ServiceExecutor, C> executorToContext) {
         if (executorToContext.size() == 0) {
             throw new IllegalArgumentException("Cannot create LoadBalancer with 0 Executors.");
         }

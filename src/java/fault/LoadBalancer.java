@@ -8,6 +8,6 @@ import java.util.Map;
 public class LoadBalancer {
 
     public static <C> Pattern<C> roundRobin(Map<ServiceExecutor, C> executorToContext) {
-        return new DefaultLoadBalancer<>(new RoundRobinStrategy(executorToContext.size()), executorToContext);
+        return new LoadBalancerPattern<>(new RoundRobinStrategy(executorToContext.size()), executorToContext);
     }
 }
