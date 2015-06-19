@@ -51,28 +51,53 @@ Second, if a certain threshold is passed for failures (timeouts + errors) the ci
 
 All components of the library are designed to be composable. If you would like to provide your own circuit breaker implementation or metrics implementation you are free to do so. The default metrics implementation is designed to be performant, avoid unnecessary allocations, and be lock free. It should be sufficient for most use cases.
 
-Here are some common options for create a service:
+Here are some common options for creating a service:
 ```java
 String name = "Identity Service";
 int poolSize = 10;
 int concurrencyLevel = 1000;
 
-\\ This creates a no op circuit breaker. The circuit will never open based on failures.
-\\ However, the circuit can still be opened and closed manually be calling 
-\\ forceOpen or forceClosed.
+// This creates a no op circuit breaker. The circuit will never open based on failures.
+// However, the circuit can still be opened and closed manually be calling 
+// forceOpen or forceClosed.
 ServiceExecutor service = Service.defaultServiceWithNoOpBreaker(name, poolSize, concurrencyLevel);
 
-\\
-
+// Service with user provided metrics.
 ActionMetrics metrics = new UserCreatedMetrics();
-
-\\ Service with user provided metrics.
 ServiceExecutor service = Service.defaultService(name, poolSize, concurrencyLevel, metrics);
 
+// Service with user provided metrics and circuit breaker.
 CircuitBreaker breaker = new UserProvidedBreaker();
-
-\\ Service with user provided metrics and circuit breaker.
 ServiceExecutor service = Service.defaultService(name, poolSize, concurrencyLevel, metrics, breaker);
+```
+
+Often, you will want to use the default metrics and breaker. There are a number of configurations of which you might want to be aware.
+
+```java
+// Circuit Breaker
+
+BreakerConfigBuilder configBuilder = BreakerConfigBuilder();
+configBuilder.trailingPeriodMillis = 1000L;
+configBuilder.failureThreshold = Long.MAX_VALUE;
+configBuilder.failurePercentageThreshold = 50;
+configBuilder.healthRefreshMillis = 500L;
+configBuilder.backOffTimeMillis = 1000L;
+CircuitBreaker config = configBuilder.build();
+
+// Action Metrics
+
+// The default implementation is a circular array composed of slots.
+// Slots to track is the size of the array.
+int slotsToTrack = 3600;
+
+// This this the resolution for the array. It is combined with the TimeUnit to determined
+// when to move to the next slot. So a resolution of 1 combined with a TimeUnit.SECONDS
+// means that each array slot contains the data for one second. A resolution of 500 with a 
+// TimeUnit.MILLISECONDS means that each array slot contains the data for 500
+// milliseconds.
+long resolution = 1;
+TimeUnit slotUnit = TimeUnit.SECONDS;
+ActionMetrics metrics = DefaultActionMetrics(slotsToTrack, resolution, slotUnit)
 ```
 
 ## License

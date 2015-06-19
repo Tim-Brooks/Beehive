@@ -9,6 +9,7 @@
                                   [clj-http "1.0.1"]
                                   [criterium "0.4.3"]]
                    :junit ["test/java"]
+                   :source-paths ["src/clojure" "test/clojure"]
                    :java-source-paths ["src/java" "test/java"]
                    :plugins [[lein-junit "1.1.3"]]
                    :junit-formatter "brief"}}
