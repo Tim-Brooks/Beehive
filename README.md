@@ -49,6 +49,32 @@ First, the concurrencyLevel is the maximum amount of uncompleted actions that a 
 
 Second, if a certain threshold is passed for failures (timeouts + errors) the circuit will open for a configurable time. Actions will be rejected while the circuit is open.
 
+All components of the library are designed to be composable. If you would like to provide your own circuit breaker implementation or metrics implementation you are free to do so. The default metrics implementation is designed to be performant, avoid unnecessary allocations, and be lock free. It should be sufficient for most use cases.
+
+Here are some common options for create a service:
+```java
+String name = "Identity Service";
+int poolSize = 10;
+int concurrencyLevel = 1000;
+
+\\ This creates a no op circuit breaker. The circuit will never open based on failures.
+\\ However, the circuit can still be opened and closed manually be calling 
+\\ forceOpen or forceClosed.
+ServiceExecutor service = Service.defaultServiceWithNoOpBreaker(name, poolSize, concurrencyLevel);
+
+\\
+
+ActionMetrics metrics = new UserCreatedMetrics();
+
+\\ Service with user provided metrics.
+ServiceExecutor service = Service.defaultService(name, poolSize, concurrencyLevel, metrics);
+
+CircuitBreaker breaker = new UserProvidedBreaker();
+
+\\ Service with user provided metrics and circuit breaker.
+ServiceExecutor service = Service.defaultService(name, poolSize, concurrencyLevel, metrics, breaker);
+```
+
 ## License
 
 Copyright © 2014 Tim Brooks

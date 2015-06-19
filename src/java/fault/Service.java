@@ -1,6 +1,7 @@
 package fault;
 
 import fault.circuit.CircuitBreaker;
+import fault.circuit.NoOpCircuitBreaker;
 import fault.metrics.ActionMetrics;
 import fault.utils.ServiceThreadFactory;
 
@@ -19,6 +20,11 @@ public class Service {
     public static ServiceExecutor defaultService(String name, int poolSize, int concurrencyLevel) {
         ExecutorService service = createExecutor(name, poolSize, concurrencyLevel);
         return new DefaultExecutor(service, concurrencyLevel);
+    }
+
+    public static ServiceExecutor defaultServiceWithNoOpBreaker(String name, int poolSize, int concurrencyLevel) {
+        ExecutorService service = createExecutor(name, poolSize, concurrencyLevel);
+        return new DefaultExecutor(service, concurrencyLevel, new NoOpCircuitBreaker());
     }
 
     public static ServiceExecutor defaultService(String name, int poolSize, int concurrencyLevel, ActionMetrics
