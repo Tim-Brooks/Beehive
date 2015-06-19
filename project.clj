@@ -1,4 +1,4 @@
-(defproject fault "0.2.0"
+(defproject net.uncontended/fault "0.2.0"
   :description "FIXME: write description"
   :url "http://example.com/FIXME"
   :license {:name "Apache License, Version 2.0"
