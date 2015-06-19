@@ -8,7 +8,7 @@ import net.uncontended.fault.concurrent.ResilientPromise;
  */
 public interface Pattern<C> {
     /**
-     * Submits a {@link ResilientPatternAction} that will be ran asynchronously.
+     * Submits a {@link ResilientPatternAction} that will be run asynchronously.
      * The result of the action will be delivered to the future returned
      * by this call. An attempt to cancel the action will be made if it
      * does not complete before the timeout.
@@ -21,7 +21,7 @@ public interface Pattern<C> {
     <T> ResilientFuture<T> submitAction(ResilientPatternAction<T, C> action, long millisTimeout);
 
     /**
-     * Submits a {@link ResilientPatternAction} that will be ran asynchronously similar to
+     * Submits a {@link ResilientPatternAction} that will be run asynchronously similar to
      * {@link #submitAction(ResilientPatternAction, long)}. However, at the completion of the
      * task, the provided callback will be executed. The callback will be run regardless of
      * the result of the action.
@@ -35,7 +35,7 @@ public interface Pattern<C> {
     <T> ResilientFuture<T> submitAction(ResilientPatternAction<T, C> action, ResilientCallback<T> callback, long millisTimeout);
 
     /**
-     * Submits a {@link ResilientPatternAction} that will be ran asynchronously similar to
+     * Submits a {@link ResilientPatternAction} that will be run asynchronously similar to
      * {@link #submitAction(ResilientPatternAction, long)}. However, at the completion of
      * the task, the result will be delivered to the promise provided.
      *
@@ -49,7 +49,7 @@ public interface Pattern<C> {
             millisTimeout);
 
     /**
-     * Submits a {@link ResilientPatternAction} that will be ran asynchronously similar to
+     * Submits a {@link ResilientPatternAction} that will be run asynchronously similar to
      * {@link #submitAction(ResilientPatternAction, long)}. However, at the completion
      * of the task, the result will be delivered to the promise provided. And the provided
      * callback will be executed.
@@ -65,7 +65,7 @@ public interface Pattern<C> {
                                         ResilientCallback<T> callback, long millisTimeout);
 
     /**
-     * Performs a {@link ResilientPatternAction} that will be ran synchronously on the
+     * Performs a {@link ResilientPatternAction} that will be run synchronously on the
      * calling thread. However, at the completion of the task, the result will be delivered
      * to the promise provided. And the provided callback will be executed.
      * <p/>

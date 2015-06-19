@@ -6,13 +6,16 @@ import net.uncontended.fault.concurrent.ResilientPromise;
 import net.uncontended.fault.metrics.ActionMetrics;
 
 /**
- * Created by timbrooks on 12/22/14.
+ * A service that actions can be submitted to or performed on. A service
+ * has associated metrics and a circuit breaker. If actions are failing or
+ * the service is being overloaded with submissions, the service will
+ * apply backpressure.
  */
 public interface ServiceExecutor {
     long MAX_TIMEOUT_MILLIS = 1000 * 60 * 60 * 24;
 
     /**
-     * Submits a {@link ResilientAction} that will be ran asynchronously.
+     * Submits a {@link ResilientAction} that will be run asynchronously.
      * The result of the action will be delivered to the future returned
      * by this call. An attempt to cancel the action will be made if it
      * does not complete before the timeout.
@@ -25,7 +28,7 @@ public interface ServiceExecutor {
     <T> ResilientFuture<T> submitAction(ResilientAction<T> action, long millisTimeout);
 
     /**
-     * Submits a {@link ResilientAction} that will be ran asynchronously similar to
+     * Submits a {@link ResilientAction} that will be run asynchronously similar to
      * {@link #submitAction(ResilientAction, long)}. However, at the completion of the task,
      * the provided callback will be executed. The callback will be run regardless of the result
      * of the action.
@@ -40,7 +43,7 @@ public interface ServiceExecutor {
             millisTimeout);
 
     /**
-     * Submits a {@link ResilientAction} that will be ran asynchronously
+     * Submits a {@link ResilientAction} that will be run asynchronously
      * similar to {@link #submitAction(ResilientAction, long)}. However, at the
      * completion of the task, the result will be delivered to the promise provided.
      *
@@ -54,8 +57,8 @@ public interface ServiceExecutor {
             millisTimeout);
 
     /**
-     * Submits a {@link ResilientAction} that will be ran asynchronously
-     * similar to {@link #submitAction(ResilientAction, long)}. However, at the completion
+     * Submits a {@link ResilientAction} that will be run asynchronously similar to
+     * {@link #submitAction(ResilientAction, long)}. However, at the completion
      * of the task, the result will be delivered to the promise provided. And the provided
      * callback will be executed.
      *
@@ -70,10 +73,9 @@ public interface ServiceExecutor {
                                         ResilientCallback<T> callback, long millisTimeout);
 
     /**
-     * Performs a {@link ResilientAction} that will be ran synchronously on the calling
+     * Performs a {@link ResilientAction} that will be run synchronously on the calling
      * thread. However, at the completion of the task, the result will be delivered to
      * the promise provided. And the provided callback will be executed.
-     * <p/>
      * <p/>
      * If the ResilientAction throws a {@link ActionTimeoutException}, the result of
      * the action will be a timeout. Any other exception and the result of the action
