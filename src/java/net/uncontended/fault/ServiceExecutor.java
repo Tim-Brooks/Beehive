@@ -22,6 +22,7 @@ public interface ServiceExecutor {
      *
      * @param action        the action to submit
      * @param millisTimeout milliseconds before the action times out
+     * @param <T>           the type of the result of the action
      * @return a {@link ResilientFuture} representing pending completion of the action
      * @throws RejectedActionException if the action is rejected
      */
@@ -36,6 +37,7 @@ public interface ServiceExecutor {
      * @param action        the action to submit
      * @param callback      to run on action completion
      * @param millisTimeout milliseconds before the action times out
+     * @param <T>           the type of the result of the action
      * @return a {@link ResilientFuture} representing pending completion of the action
      * @throws RejectedActionException if the action is rejected
      */
@@ -50,6 +52,7 @@ public interface ServiceExecutor {
      * @param action        the action to submit
      * @param promise       a promise to which deliver the result
      * @param millisTimeout milliseconds before the action times out
+     * @param <T>           the type of the result of the action
      * @return a {@link ResilientFuture} representing pending completion of the action
      * @throws RejectedActionException if the action is rejected
      */
@@ -66,6 +69,7 @@ public interface ServiceExecutor {
      * @param promise       a promise to which deliver the result
      * @param callback      to run on action completion
      * @param millisTimeout milliseconds before the action times out
+     * @param <T>           the type of the result of the action
      * @return a {@link ResilientFuture} representing pending completion of the action
      * @throws RejectedActionException if the action is rejected
      */
@@ -82,6 +86,7 @@ public interface ServiceExecutor {
      * will be an error.
      *
      * @param action the action to run
+     * @param <T>    the type of the result of the action
      * @return a {@link ResilientPromise} representing result of the action
      * @throws RejectedActionException if the action is rejected
      */
