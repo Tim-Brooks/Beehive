@@ -1,5 +1,6 @@
 package net.uncontended.fault;
 
+import net.uncontended.fault.concurrent.DefaultResilientPromise;
 import net.uncontended.fault.concurrent.ResilientFuture;
 import net.uncontended.fault.concurrent.ResilientPromise;
 
@@ -11,6 +12,7 @@ import java.util.Map;
 public class ShotgunPattern<C> implements Pattern<C> {
 
     private final ServiceExecutor[] services;
+    private final ShotgunStrategy strategy;
     private final C[] contexts;
 
     @SuppressWarnings("unchecked")
@@ -27,29 +29,49 @@ public class ShotgunPattern<C> implements Pattern<C> {
             contexts[i] = entry.getValue();
             ++i;
         }
+
+        this.strategy = new ShotgunStrategy(services.length, 1);
     }
 
     @Override
     public <T> ResilientFuture<T> submitAction(ResilientPatternAction<T, C> action, long millisTimeout) {
-        return null;
+        return submitAction(action, new DefaultResilientPromise<T>(), null, millisTimeout);
     }
 
     @Override
     public <T> ResilientFuture<T> submitAction(ResilientPatternAction<T, C> action, ResilientCallback<T> callback,
                                                long millisTimeout) {
-        return null;
+        return submitAction(action, new DefaultResilientPromise<T>(), callback, millisTimeout);
     }
 
     @Override
     public <T> ResilientFuture<T> submitAction(ResilientPatternAction<T, C> action, ResilientPromise<T> promise,
                                                long millisTimeout) {
-        return null;
+        return submitAction(action, promise, null, millisTimeout);
     }
 
     @Override
     public <T> ResilientFuture<T> submitAction(ResilientPatternAction<T, C> action, ResilientPromise<T> promise,
                                                ResilientCallback<T> callback, long millisTimeout) {
-        return null;
+        final int[] servicesToTry = strategy.executorIndices();
+        ResilientActionWithContext<T, C> actionWithContext = new ResilientActionWithContext<>(action);
+
+        int submittedCount = 0;
+        for (int serviceIndex : servicesToTry) {
+            try {
+                actionWithContext.context = contexts[serviceIndex];
+                services[serviceIndex].submitAction(actionWithContext, promise, callback, millisTimeout);
+                ++submittedCount;
+            } catch (RejectedActionException e) {
+            }
+            if (submittedCount == strategy.submissionCount) {
+                break;
+            }
+        }
+        if (submittedCount == 0) {
+            throw new RejectedActionException(RejectionReason.ALL_SERVICES_REJECTED);
+        }
+        return new ResilientFuture<>(promise);
     }
 
     @Override
@@ -59,6 +81,9 @@ public class ShotgunPattern<C> implements Pattern<C> {
 
     @Override
     public void shutdown() {
+        for (ServiceExecutor service : services) {
+            service.shutdown();
+        }
 
     }
 }
