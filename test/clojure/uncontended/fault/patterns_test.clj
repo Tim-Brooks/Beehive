@@ -62,11 +62,10 @@
         (.countDown latch)))))
 
 (deftest shotgun
-  (let [shotgun (patterns/shotgun {:service1 service1
-                                   :service2 service2
-                                   :service3 service3}
-                                  2
-                                  {})
+  (let [shotgun (patterns/shotgun {service1 {}
+                                   service2 {}
+                                   service3 {}}
+                                  2)
         action-blocking-latch (atom (CountDownLatch. 1))
         test-blocking-latch (atom (CountDownLatch. 1))
         counter (atom 0)
@@ -105,12 +104,16 @@
       (reset! counter 0)
       (reset! action-blocking-latch (CountDownLatch. 1))
       (reset! test-blocking-latch (CountDownLatch. 1))
-      (let [shotgun (patterns/shotgun {:service1 service1
-                                       :service2 service2
-                                       :service3 service3}
-                                      3
-                                      {})
+      (let [shotgun (patterns/shotgun {service1 {}
+                                       service2 {}
+                                       service3 {}}
+                                      3)
             action-fn (fn [_] (.await ^CountDownLatch @action-blocking-latch))]
-        (is (not (nil? (patterns/submit-action shotgun action-fn Long/MAX_VALUE))))
-        (is (nil? (patterns/submit-action shotgun action-fn Long/MAX_VALUE)))
+        (is (not (:rejected? (patterns/submit-action shotgun
+                                                     action-fn
+                                                     Long/MAX_VALUE))))
+        (is (= :all-services-rejected @(patterns/submit-action
+                                         shotgun
+                                         action-fn
+                                         Long/MAX_VALUE)))
         (.countDown ^CountDownLatch @action-blocking-latch)))))

@@ -16,9 +16,11 @@ public class ShotgunPattern<C> implements Pattern<C> {
     private final C[] contexts;
 
     @SuppressWarnings("unchecked")
-    public ShotgunPattern(Map<ServiceExecutor, C> executorToContext) {
+    public ShotgunPattern(Map<ServiceExecutor, C> executorToContext, int submissionCount) {
         if (executorToContext.size() == 0) {
-            throw new IllegalArgumentException("Cannot create LoadBalancer with 0 Executors.");
+            throw new IllegalArgumentException("Cannot create Shotgun with 0 Executors.");
+        } else if (submissionCount > executorToContext.size()) {
+            throw new IllegalArgumentException("Submission count cannot be fewer than number of services provided.");
         }
 
         services = new ServiceExecutor[executorToContext.size()];
@@ -30,7 +32,7 @@ public class ShotgunPattern<C> implements Pattern<C> {
             ++i;
         }
 
-        this.strategy = new ShotgunStrategy(services.length, 1);
+        this.strategy = new ShotgunStrategy(services.length, submissionCount);
     }
 
     @Override
