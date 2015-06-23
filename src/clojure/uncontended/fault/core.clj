@@ -14,7 +14,9 @@
 (defn service
   [name pool-size max-concurrency
    & {:keys [breaker metrics]
-      :or {breaker {} metrics {:seconds 3600}}}]
+      :or {breaker {} metrics {:slots-to-track 3600
+                               :resolution 1
+                               :time-unit :seconds}}}]
   (if (empty? breaker)
     (s/executor-with-no-opt-breaker name pool-size max-concurrency metrics)
     (s/service-executor name pool-size max-concurrency breaker metrics)))

@@ -4,14 +4,14 @@
             [uncontended.fault.utils :as utils])
   (:import (clojure.lang ILookup)
            (net.uncontended.fault ServiceExecutor
-                  ResilientAction
-                  RejectedActionException
-                  ResilientCallback)
+                                  ResilientAction
+                                  RejectedActionException
+                                  ResilientCallback)
            (net.uncontended.fault.concurrent ResilientFuture ResilientPromise)
            (net.uncontended.fault.circuit CircuitBreaker
-                          BreakerConfig
-                          BreakerConfigBuilder
-                          NoOpCircuitBreaker)
+                                          BreakerConfig
+                                          BreakerConfigBuilder
+                                          NoOpCircuitBreaker)
            (net.uncontended.fault.metrics ActionMetrics
                                           DefaultActionMetrics
                                           Metric)
@@ -172,18 +172,26 @@
   (let [metrics (DefaultActionMetrics. slots-to-track resolution (utils/->time-unit time-unit))
         executor (Service/defaultService name (int pool-size) (int max-concurrency) metrics)]
     (->CLJServiceImpl executor
-                      (->CLJMetrics (.getActionMetrics executor) slots-to-track)
+                      (->CLJMetrics (.getActionMetrics executor)
+                                    (.convert TimeUnit/SECONDS
+                                              slots-to-track
+                                              (utils/->time-unit time-unit)))
                       (->CLJBreaker (.getCircuitBreaker executor)))))
 
 (defn executor-with-no-opt-breaker
-  [name pool-size max-concurrency {:keys [seconds]}]
+  [name pool-size max-concurrency {:keys [slots-to-track resolution time-unit]}]
   (let [breaker (NoOpCircuitBreaker.)
-        metrics (DefaultActionMetrics. seconds 1 TimeUnit/SECONDS)
+        metrics (DefaultActionMetrics. slots-to-track
+                                       resolution
+                                       (utils/->time-unit time-unit))
         executor (Service/defaultService name
                                          (int pool-size)
                                          (int max-concurrency)
                                          metrics
                                          breaker)]
     (->CLJServiceImpl executor
-                      (->CLJMetrics (.getActionMetrics executor) seconds)
+                      (->CLJMetrics (.getActionMetrics executor)
+                                    (.convert TimeUnit/SECONDS
+                                              slots-to-track
+                                              (utils/->time-unit time-unit)))
                       (->CLJBreaker (.getCircuitBreaker executor)))))

@@ -2,13 +2,33 @@
   (:require [clojure.core.async :as async :refer [<! >! <!! >!! go]]
             [clj-http.client :as http]
             [uncontended.fault.async :as fa]
-            [uncontended.fault.core :as fault]
+            [uncontended.fault.core :as beehive]
             [uncontended.fault.service :as service]))
 
 (def api-route (str "http://www.broadbandmap.gov/broadbandmap/"
                     "census/county/%s?format=json"))
 
 (defonce service (atom nil))
+(defonce service2 (atom nil))
+
+(defn start-service []
+  (let [service-name "Service with no circuit breaker"
+        num-of-threads 1
+        max-concurrency 100]
+    (reset! service
+            (beehive/service service-name num-of-threads max-concurrency)))
+  (let [service-name "Service with circuit breaker"
+        num-of-threads 1
+        max-concurrency 100]
+    (reset! service2
+            (beehive/service service-name
+                             num-of-threads
+                             max-concurrency
+                             :breaker {:failure-percentage-threshold 20
+                                       :backoff-time-millis 2000}
+                             :metrics {:slots-to-track 3600
+                                       :resolution 500
+                                       :time-unit :milliseconds}))))
 
 (defn lookup-state-action [county]
   (fn [] (-> (http/get (format api-route county) {:as :json})
@@ -45,7 +65,7 @@
         (recur)))))
 
 (defn run []
-  (reset! service (fault/service "example" 10 90))
+  (reset! service (beehive/service "example" 10 90))
   (let [in-channel (async/chan 10)
         out-channel (async/chan 10)
         err-channel (async/chan 10)]

@@ -13,10 +13,14 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
 (ns your-namespace
   (:require [uncontended.beehive.core :as beehive]))
 
-(def service (beehive/service))
+(def service (beehive/service "Service" 1 1))
 
-(defn submit []
-  @(beehive/submit-action (fn [] (* 8 8)) 10))
+@(beehive/submit-action (fn [] (* 8 8)) 10)
+;; Returns 10
+
+@(beehive/submit-action (fn [] (throw (RuntimeException.))) 10)
+;; Returns #<RuntimeException java.lang.RuntimeException>
+
 
 (defn perform []
   (beehive/perform-action (fn [] (throw (RuntimeException.)))))
