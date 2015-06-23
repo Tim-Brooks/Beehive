@@ -1,7 +1,8 @@
 (ns uncontended.fault.future
-  (:import (net.uncontended.fault Status RejectionReason)
-           (net.uncontended.fault.concurrent ResilientPromise)
-           (clojure.lang IDeref IBlockingDeref IPending ILookup)))
+  (:import (net.uncontended.precipice Status RejectionReason)
+           (net.uncontended.precipice.concurrent ResilientPromise)
+           (clojure.lang IDeref IBlockingDeref IPending ILookup)
+           (java.util.concurrent TimeUnit)))
 
 (set! *warn-on-reflection* true)
 
@@ -18,7 +19,7 @@
   IBlockingDeref
   (deref
     [this timeout-ms timeout-val]
-    (if (.await promise timeout-ms)
+    (if (.await promise timeout-ms TimeUnit/MILLISECONDS)
       (or (.getResult promise) (.getError promise) (:status this))
       timeout-val))
   IPending

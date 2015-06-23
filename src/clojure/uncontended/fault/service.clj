@@ -3,19 +3,19 @@
             [uncontended.fault.future :as f]
             [uncontended.fault.utils :as utils])
   (:import (clojure.lang ILookup)
-           (net.uncontended.fault ServiceExecutor
-                                  ResilientAction
-                                  RejectedActionException
-                                  ResilientCallback)
-           (net.uncontended.fault.concurrent ResilientFuture ResilientPromise)
-           (net.uncontended.fault.circuit CircuitBreaker
-                                          BreakerConfig
-                                          BreakerConfigBuilder
-                                          NoOpCircuitBreaker)
-           (net.uncontended.fault.metrics ActionMetrics
-                                          DefaultActionMetrics
-                                          Metric)
-           (net.uncontended.fault Service)
+           (net.uncontended.precipice Services
+                                      ResilientAction
+                                      RejectedActionException
+                                      ResilientCallback
+                                      Service)
+           (net.uncontended.precipice.concurrent ResilientFuture ResilientPromise)
+           (net.uncontended.precipice.circuit CircuitBreaker
+                                              BreakerConfig
+                                              BreakerConfigBuilder
+                                              NoOpCircuitBreaker)
+           (net.uncontended.precipice.metrics ActionMetrics
+                                              DefaultActionMetrics
+                                              Metric)
            (java.util.concurrent TimeUnit)))
 
 (set! *warn-on-reflection* true)
@@ -107,7 +107,7 @@
                                             TimeUnit/SECONDS)})))
 
 (deftype CLJServiceImpl
-  [^ServiceExecutor executor ^CLJMetrics metrics ^CLJBreaker breaker]
+  [^Service executor ^CLJMetrics metrics ^CLJBreaker breaker]
   CLJService
   (submit-action [this action-fn timeout-millis]
     (submit-action this action-fn nil timeout-millis))
@@ -170,7 +170,10 @@
    {:keys [failure-percentage-threshold backoff-time-millis]}
    {:keys [slots-to-track resolution time-unit]}]
   (let [metrics (DefaultActionMetrics. slots-to-track resolution (utils/->time-unit time-unit))
-        executor (Service/defaultService name (int pool-size) (int max-concurrency) metrics)]
+        executor (Services/defaultService ^String name
+                                          (int pool-size)
+                                          (int max-concurrency)
+                                          metrics)]
     (->CLJServiceImpl executor
                       (->CLJMetrics (.getActionMetrics executor)
                                     (.convert TimeUnit/SECONDS
@@ -184,11 +187,11 @@
         metrics (DefaultActionMetrics. slots-to-track
                                        resolution
                                        (utils/->time-unit time-unit))
-        executor (Service/defaultService name
-                                         (int pool-size)
-                                         (int max-concurrency)
-                                         metrics
-                                         breaker)]
+        executor (Services/defaultService name
+                                          (int pool-size)
+                                          (int max-concurrency)
+                                          metrics
+                                          breaker)]
     (->CLJServiceImpl executor
                       (->CLJMetrics (.getActionMetrics executor)
                                     (.convert TimeUnit/SECONDS

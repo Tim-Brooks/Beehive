@@ -1,10 +1,11 @@
 (ns uncontended.fault.patterns
   (:require [uncontended.fault.compatibility :as c]
             [uncontended.fault.future :as f])
-  (:import (net.uncontended.fault RejectedActionException
-                                  LoadBalancer
-                                  Pattern ShotgunPattern)
-           (net.uncontended.fault.concurrent ResilientPromise)
+  (:import (net.uncontended.precipice RejectedActionException
+                                      LoadBalancers
+                                      Shotgun
+                                      ComposedService)
+           (net.uncontended.precipice.concurrent ResilientPromise)
            (uncontended.fault.service CLJServiceImpl)))
 
 (set! *warn-on-reflection* true)
@@ -12,12 +13,12 @@
 (defn- transform-map [service->context]
   (into {} (map (fn [[k v]] [(.executor ^CLJServiceImpl k) v]) service->context)))
 
-(defprotocol ComposedService
+(defprotocol CLJComposedService
   (submit-action [this action-fn timeout-millis])
   (perform-action [this action-fn]))
 
-(deftype CLJLoadBalancer [^Pattern balancer]
-  ComposedService
+(deftype CLJLoadBalancer [^ComposedService balancer]
+  CLJComposedService
   (submit-action [this action-fn timeout-millis]
     (try (f/->CLJResilientFuture
            ^ResilientPromise (.promise
@@ -35,11 +36,11 @@
 
 (defn load-balancer [service->context]
   (let [service->context (transform-map service->context)
-        balancer (LoadBalancer/roundRobin service->context)]
+        balancer (LoadBalancers/newRoundRobin service->context)]
     (->CLJLoadBalancer balancer)))
 
-(deftype CLJShotgun [^Pattern shotgun]
-  ComposedService
+(deftype CLJShotgun [^ComposedService shotgun]
+  CLJComposedService
   (submit-action [this action-fn timeout-millis]
     (try (f/->CLJResilientFuture
            ^ResilientPromise (.promise
@@ -54,5 +55,5 @@
 
 (defn shotgun [service->context submission-count]
   (let [service->context (transform-map service->context)
-        shotgun (ShotgunPattern. service->context (int submission-count))]
+        shotgun (Shotgun. service->context (int submission-count))]
     (->CLJShotgun shotgun)))

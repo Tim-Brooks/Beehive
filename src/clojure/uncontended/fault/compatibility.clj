@@ -1,8 +1,8 @@
 (ns uncontended.fault.compatibility
   (:require [uncontended.fault.future :as f])
-  (:import (net.uncontended.fault ResilientPatternAction
-                                  ResilientAction
-                                  ResilientCallback)))
+  (:import (net.uncontended.precipice ResilientPatternAction
+                                      ResilientAction
+                                      ResilientCallback)))
 
 (defn wrap-pattern-action-fn [action-fn]
   (reify ResilientPatternAction
