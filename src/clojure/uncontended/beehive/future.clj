@@ -1,4 +1,4 @@
-(ns uncontended.fault.future
+(ns uncontended.beehive.future
   (:import (net.uncontended.precipice Status RejectionReason)
            (net.uncontended.precipice.concurrent ResilientPromise)
            (clojure.lang IDeref IBlockingDeref IPending ILookup)

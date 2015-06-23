@@ -1,9 +1,9 @@
-(ns uncontended.fault.example-usage
+(ns uncontended.beehive.example-usage
   (:require [clojure.core.async :as async :refer [<! >! <!! >!! go]]
             [clj-http.client :as http]
-            [uncontended.fault.async :as fa]
-            [uncontended.fault.core :as beehive]
-            [uncontended.fault.service :as service]))
+            [uncontended.beehive.async :as fa]
+            [uncontended.beehive.core :as beehive]
+            [uncontended.beehive.service :as service]))
 
 (def api-route (str "http://www.broadbandmap.gov/broadbandmap/"
                     "census/county/%s?format=json"))

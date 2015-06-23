@@ -1,7 +1,7 @@
-(ns uncontended.fault.service
-  (:require [uncontended.fault.compatibility :as c]
-            [uncontended.fault.future :as f]
-            [uncontended.fault.utils :as utils])
+(ns uncontended.beehive.service
+  (:require [uncontended.beehive.compatibility :as c]
+            [uncontended.beehive.future :as f]
+            [uncontended.beehive.utils :as utils])
   (:import (clojure.lang ILookup)
            (net.uncontended.precipice Services
                                       ResilientAction

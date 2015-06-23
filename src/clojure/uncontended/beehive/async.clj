@@ -1,4 +1,4 @@
-(ns uncontended.fault.async
+(ns uncontended.beehive.async
   (:require [clojure.core.async :refer [>!!]]))
 
 

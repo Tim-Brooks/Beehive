@@ -1,6 +1,6 @@
-(ns uncontended.fault.demo
-  (:require [uncontended.fault.core :as c]
-            [uncontended.fault.future :as f])
+(ns uncontended.beehive.demo
+  (:require [uncontended.beehive.core :as c]
+            [uncontended.beehive.future :as f])
   (:import (java.util Random)))
 
 (defn thing [x]

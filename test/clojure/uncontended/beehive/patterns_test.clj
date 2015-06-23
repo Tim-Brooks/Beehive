@@ -1,8 +1,8 @@
-(ns uncontended.fault.patterns-test
+(ns uncontended.beehive.patterns-test
   (:use [clojure.test])
-  (:require [uncontended.fault.core :as fault]
-            [uncontended.fault.service :as service]
-            [uncontended.fault.patterns :as patterns])
+  (:require [uncontended.beehive.core :as beehive]
+            [uncontended.beehive.service :as service]
+            [uncontended.beehive.patterns :as patterns])
   (:import (java.util.concurrent CountDownLatch)))
 
 (set! *warn-on-reflection* true)
@@ -12,9 +12,9 @@
 (def service3 nil)
 
 (defn- start-and-stop [f]
-  (alter-var-root #'service1 (fn [_] (fault/service "1" 1 1)))
-  (alter-var-root #'service2 (fn [_] (fault/service "2" 1 1)))
-  (alter-var-root #'service3 (fn [_] (fault/service "3" 1 1)))
+  (alter-var-root #'service1 (fn [_] (beehive/service "1" 1 1)))
+  (alter-var-root #'service2 (fn [_] (beehive/service "2" 1 1)))
+  (alter-var-root #'service3 (fn [_] (beehive/service "3" 1 1)))
   (f)
   (service/shutdown service1)
   (service/shutdown service2)
@@ -37,8 +37,8 @@
                        load-balancer (fn [context] (:result context 10))))))))
     (testing "If action rejected, other services will be called."
       (let [latch (CountDownLatch. 1)]
-        (fault/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
-        (fault/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
+        (beehive/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
+        (beehive/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
         (is (= 2 @(patterns/submit-action load-balancer
                                           (fn [context] (:result context 10))
                                           1000)))
@@ -47,9 +47,9 @@
         (.countDown latch)))
     (testing ":all-services-rejected returned if all services reject action"
       (let [latch (CountDownLatch. 1)]
-        (fault/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
-        (fault/submit-action service2 (fn [] (.await latch)) Long/MAX_VALUE)
-        (fault/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
+        (beehive/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
+        (beehive/submit-action service2 (fn [] (.await latch)) Long/MAX_VALUE)
+        (beehive/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
         (is (= :all-services-rejected
                @(patterns/submit-action
                   load-balancer

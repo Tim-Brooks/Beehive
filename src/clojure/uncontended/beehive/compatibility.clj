@@ -1,5 +1,5 @@
-(ns uncontended.fault.compatibility
-  (:require [uncontended.fault.future :as f])
+(ns uncontended.beehive.compatibility
+  (:require [uncontended.beehive.future :as f])
   (:import (net.uncontended.precipice ResilientPatternAction
                                       ResilientAction
                                       ResilientCallback)))

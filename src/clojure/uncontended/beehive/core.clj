@@ -1,11 +1,11 @@
-(ns uncontended.fault.core
-  (:require [uncontended.fault.service :as s]))
+(ns uncontended.beehive.core
+  (:require [uncontended.beehive.service :as s]))
 
 (set! *warn-on-reflection* true)
 
 (when
   (try
-    (require '[clojure.core.async])
+    (require '[clojure.beehive.async])
     true
     (catch Exception _
       false))
