@@ -9,7 +9,7 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
 
 ## Usage
 
-```
+```clojure
 (ns your-namespace
   (:require [beehive.core :as beehive]))
 
