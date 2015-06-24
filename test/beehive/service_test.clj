@@ -1,7 +1,7 @@
-(ns uncontended.beehive.service-test
+(ns beehive.service-test
   (:require [clojure.test :refer :all]
-            [uncontended.beehive.core :as beehive]
-            [uncontended.beehive.service :as service])
+            [beehive.core :as beehive]
+            [beehive.service :as service])
   (:import (java.io IOException)
            (java.util.concurrent CountDownLatch)))
 

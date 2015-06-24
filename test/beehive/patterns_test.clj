@@ -1,8 +1,8 @@
-(ns uncontended.beehive.patterns-test
+(ns beehive.patterns-test
   (:use [clojure.test])
-  (:require [uncontended.beehive.core :as beehive]
-            [uncontended.beehive.service :as service]
-            [uncontended.beehive.patterns :as patterns])
+  (:require [beehive.core :as beehive]
+            [beehive.service :as service]
+            [beehive.patterns :as patterns])
   (:import (java.util.concurrent CountDownLatch)))
 
 (set! *warn-on-reflection* true)

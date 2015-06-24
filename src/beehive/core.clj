@@ -1,5 +1,5 @@
-(ns uncontended.beehive.core
-  (:require [uncontended.beehive.service :as s]))
+(ns beehive.core
+  (:require [beehive.service :as s]))
 
 (set! *warn-on-reflection* true)
 

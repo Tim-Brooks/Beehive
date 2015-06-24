@@ -1,12 +1,12 @@
-(ns uncontended.beehive.patterns
-  (:require [uncontended.beehive.compatibility :as c]
-            [uncontended.beehive.future :as f])
+(ns beehive.patterns
+  (:require [beehive.compatibility :as c]
+            [beehive.future :as f])
   (:import (net.uncontended.precipice RejectedActionException
                                       LoadBalancers
                                       Shotgun
                                       ComposedService)
            (net.uncontended.precipice.concurrent ResilientPromise)
-           (uncontended.beehive.service CLJServiceImpl)))
+           (beehive.service CLJServiceImpl)))
 
 (set! *warn-on-reflection* true)
 

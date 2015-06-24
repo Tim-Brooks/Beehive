@@ -11,7 +11,7 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
 
 ```
 (ns your-namespace
-  (:require [uncontended.beehive.core :as beehive]))
+  (:require [beehive.core :as beehive]))
 
 (def service (beehive/service "Service" 1 1))
 

@@ -1,6 +1,6 @@
-(ns uncontended.beehive.demo
-  (:require [uncontended.beehive.core :as c]
-            [uncontended.beehive.future :as f])
+(ns beehive.demo
+  (:require [beehive.core :as c]
+            [beehive.future :as f])
   (:import (java.util Random)))
 
 (defn thing [x]

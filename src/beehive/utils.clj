@@ -1,4 +1,4 @@
-(ns uncontended.beehive.utils
+(ns beehive.utils
   (:import (java.util.concurrent TimeUnit)))
 
 (def time-units {:milliseconds TimeUnit/MILLISECONDS
