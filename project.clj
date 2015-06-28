@@ -1,4 +1,4 @@
-(defproject net.uncontended/beehive "0.2.0"
+(defproject net.uncontended/beehive "0.2.1"
   :description "Beehive is a Clojure facade for the Precipice library."
   :url "https://github.com/tbrooks8/Beehive"
   :license {:name "Apache License, Version 2.0"
