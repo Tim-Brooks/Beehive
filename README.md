@@ -7,6 +7,8 @@ library designed to manage access to services.
 
 This library has not yet hit alpha. It is used in production at Staples SparX. However, the API may still change.
 
+[![Clojars Project](http://clojars.org/net.uncontended/beehive/latest-version.svg)]
+
 ## Usage
 
 ```clojure
