@@ -13,10 +13,10 @@
 ;; limitations under the License.
 
 (ns beehive.future
-  (:import (net.uncontended.precipice Status RejectionReason)
-           (net.uncontended.precipice.concurrent ResilientPromise)
-           (clojure.lang IDeref IBlockingDeref IPending ILookup)
-           (java.util.concurrent TimeUnit)))
+  (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
+           (java.util.concurrent TimeUnit)
+           (net.uncontended.precipice.core Status RejectionReason)
+           (net.uncontended.precipice.core.concurrent PrecipiceFuture)))
 
 (set! *warn-on-reflection* true)
 
@@ -27,29 +27,31 @@
     (= Status/ERROR status-enum) :error
     (= Status/TIMEOUT status-enum) :timeout))
 
-(deftype CLJResilientFuture [^ResilientPromise promise]
+(deftype CLJResilientFuture [^PrecipiceFuture future]
   IDeref
-  (deref [this] (or (.awaitResult promise) (.getError promise) (:status this)))
+  (deref [this]
+    (do (.await future)
+        (or (.result future) (.error future) (:status this))))
   IBlockingDeref
   (deref
     [this timeout-ms timeout-val]
-    (if (.await promise timeout-ms TimeUnit/MILLISECONDS)
-      (or (.getResult promise) (.getError promise) (:status this))
+    (if (.await future timeout-ms TimeUnit/MILLISECONDS)
+      (or (.result future) (.error future) (:status this))
       timeout-val))
   IPending
   (isRealized [_]
-    (.isDone promise))
+    (not= Status/PENDING (.getStatus future)))
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
     (case key
-      :status (status (.getStatus promise))
-      :success? (identical? :success (status (.getStatus promise)))
-      :timeout? (identical? :timeout (status (.getStatus promise)))
-      :error? (identical? :error (status (.getStatus promise)))
-      :pending? (identical? :pending (status (.getStatus promise)))
-      :result (.getResult promise)
-      :error (.getError promise)
+      :status (status (.getStatus future))
+      :success? (identical? :success (status (.getStatus future)))
+      :timeout? (identical? :timeout (status (.getStatus future)))
+      :error? (identical? :error (status (.getStatus future)))
+      :pending? (identical? :pending (status (.getStatus future)))
+      :result (.result future)
+      :error (.error future)
       :rejected? false
       default)))
 

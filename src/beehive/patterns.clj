@@ -15,12 +15,11 @@
 (ns beehive.patterns
   (:require [beehive.compatibility :as c]
             [beehive.future :as f])
-  (:import (net.uncontended.precipice RejectedActionException
-                                      LoadBalancers
-                                      Shotgun
-                                      ComposedService)
-           (net.uncontended.precipice.concurrent ResilientPromise)
-           (beehive.service CLJServiceImpl)))
+  (:import (beehive.service CLJServiceImpl)
+           (net.uncontended.precipice.core RejectedActionException)
+           (net.uncontended.precipice.core.pattern MultiLoadBalancer
+                                                   Shotgun
+                                                   LoadBalancers)))
 
 (set! *warn-on-reflection* true)
 
@@ -29,42 +28,36 @@
 
 (defprotocol CLJComposedService
   (submit-action [this action-fn timeout-millis])
-  (perform-action [this action-fn]))
+  (run-action [this action-fn]))
 
-(deftype CLJLoadBalancer [^ComposedService balancer]
+(deftype CLJLoadBalancer [^MultiLoadBalancer balancer]
   CLJComposedService
   (submit-action [this action-fn timeout-millis]
     (try (f/->CLJResilientFuture
-           ^ResilientPromise (.promise
-                               (.submitAction balancer
-                                              (c/wrap-pattern-action-fn action-fn)
-                                              timeout-millis)))
+           (.submit balancer
+                    (c/wrap-pattern-action-fn action-fn)
+                    timeout-millis))
          (catch RejectedActionException e
            (f/rejected-action-future (.reason e)))))
-  (perform-action [this action-fn]
-    (try (f/->CLJResilientFuture
-           ^ResilientPromise (.performAction balancer
-                                             (c/wrap-pattern-action-fn action-fn)))
-         (catch RejectedActionException e
-           (f/rejected-action-future (.reason e))))))
+  (run-action [this action-fn]
+    (.run balancer (c/wrap-pattern-action-fn action-fn))))
 
 (defn load-balancer [service->context]
   (let [service->context (transform-map service->context)
-        balancer (LoadBalancers/newRoundRobin service->context)]
+        balancer (LoadBalancers/multiRoundRobin service->context)]
     (->CLJLoadBalancer balancer)))
 
-(deftype CLJShotgun [^ComposedService shotgun]
+(deftype CLJShotgun [^Shotgun shotgun]
   CLJComposedService
   (submit-action [this action-fn timeout-millis]
     (try (f/->CLJResilientFuture
-           ^ResilientPromise (.promise
-                               (.submitAction shotgun
-                                              (c/wrap-pattern-action-fn action-fn)
-                                              timeout-millis)))
+           (.submit shotgun
+                    (c/wrap-pattern-action-fn action-fn)
+                    timeout-millis))
          (catch RejectedActionException e
            (f/rejected-action-future (.reason e)))))
 
-  (perform-action [this action-fn]
+  (run-action [this action-fn]
     (throw (UnsupportedOperationException. "Cannot perform action with Shotgun"))))
 
 (defn shotgun [service->context submission-count]

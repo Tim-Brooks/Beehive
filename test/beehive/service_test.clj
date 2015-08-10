@@ -102,8 +102,10 @@
       (is (= 1 (-> metrics-service :metrics :successes)))
       (is (= 1 (-> metrics-service :metrics :timeouts)))
       (is (= 1 (-> metrics-service :metrics :errors)))
-      (is (= {"circuit-open" 0
+      (is (= {"all-rejected" 0
+              "circuit-open" 0
               "errors" 1
+              "max-1-all-rejected" 0
               "max-1-circuit-open" 0
               "max-1-errors" 1
               "max-1-max-concurrency" 0
@@ -111,6 +113,7 @@
               "max-1-successes" 1
               "max-1-timeouts" 1
               "max-1-total" 3
+              "max-2-all-rejected" 0
               "max-2-circuit-open" 0
               "max-2-errors" 1
               "max-2-max-concurrency" 0

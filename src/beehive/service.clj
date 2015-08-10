@@ -17,26 +17,20 @@
             [beehive.future :as f]
             [beehive.utils :as utils])
   (:import (clojure.lang ILookup)
-           (net.uncontended.precipice Services
-                                      ResilientAction
-                                      RejectedActionException
-                                      ResilientCallback
-                                      Service)
-           (net.uncontended.precipice.concurrent ResilientFuture ResilientPromise)
-           (net.uncontended.precipice.circuit CircuitBreaker
-                                              BreakerConfig
-                                              BreakerConfigBuilder
-                                              NoOpCircuitBreaker)
-           (net.uncontended.precipice.metrics ActionMetrics
-                                              DefaultActionMetrics
-                                              Metric)
-           (java.util.concurrent TimeUnit)))
+           (java.util.concurrent TimeUnit)
+           (net.uncontended.precipice.core.circuit BreakerConfig
+                                                   CircuitBreaker BreakerConfigBuilder NoOpCircuitBreaker)
+           (net.uncontended.precipice.core.metrics ActionMetrics Metric DefaultActionMetrics)
+           (net.uncontended.precipice.core.concurrent PrecipiceFuture)
+           (net.uncontended.precipice.core MultiService
+                                           ResilientAction
+                                           RejectedActionException Services ServiceProperties)))
 
 (set! *warn-on-reflection* true)
 
 (defprotocol CLJService
   (submit-action [this action-fn timeout-millis] [this action-fn callback timeout-millis])
-  (perform-action [this action-fn])
+  (run-action [this action-fn])
   (shutdown [this]))
 
 (deftype CLJBreaker [^CircuitBreaker breaker]
@@ -121,29 +115,19 @@
                                             TimeUnit/SECONDS)})))
 
 (deftype CLJServiceImpl
-  [^Service executor ^CLJMetrics metrics ^CLJBreaker breaker]
+  [^MultiService executor ^CLJMetrics metrics ^CLJBreaker breaker]
   CLJService
   (submit-action [this action-fn timeout-millis]
-    (submit-action this action-fn nil timeout-millis))
-  (submit-action [_ action-fn callback timeout-millis]
     (try
       (f/->CLJResilientFuture
-        (.promise ^ResilientFuture
-                  (if callback
-                    (.submitAction executor
-                                   ^ResilientAction (c/wrap-action-fn action-fn)
-                                   ^ResilientCallback (c/wrap-callback-fn callback)
-                                   (long timeout-millis))
-                    (.submitAction executor
-                                   ^ResilientAction (c/wrap-action-fn action-fn)
-                                   (long timeout-millis)))))
+        ^PrecipiceFuture
+        (.submit executor
+                 ^ResilientAction (c/wrap-action-fn action-fn)
+                 (long timeout-millis)))
       (catch RejectedActionException e
         (f/rejected-action-future (.reason e)))))
-  (perform-action [_ action-fn]
-    (try (f/->CLJResilientFuture
-           ^ResilientPromise (.performAction executor (c/wrap-action-fn action-fn)))
-         (catch RejectedActionException e
-           (f/rejected-action-future (.reason e)))))
+  (run-action [_ action-fn]
+    (.run executor (c/wrap-action-fn action-fn)))
   (shutdown [_] (.shutdown executor))
   ILookup
   (valAt [this key] (.valAt this key nil))
@@ -184,10 +168,12 @@
    {:keys [failure-percentage-threshold backoff-time-millis]}
    {:keys [slots-to-track resolution time-unit]}]
   (let [metrics (DefaultActionMetrics. slots-to-track resolution (utils/->time-unit time-unit))
+        properties (doto (ServiceProperties.)
+                     (.actionMetrics metrics)
+                     (.concurrencyLevel (int max-concurrency)))
         executor (Services/defaultService ^String name
                                           (int pool-size)
-                                          (int max-concurrency)
-                                          metrics)]
+                                          properties)]
     (->CLJServiceImpl executor
                       (->CLJMetrics (.getActionMetrics executor)
                                     (.convert TimeUnit/SECONDS
@@ -197,15 +183,16 @@
 
 (defn executor-with-no-opt-breaker
   [name pool-size max-concurrency {:keys [slots-to-track resolution time-unit]}]
-  (let [breaker (NoOpCircuitBreaker.)
-        metrics (DefaultActionMetrics. slots-to-track
+  (let [metrics (DefaultActionMetrics. slots-to-track
                                        resolution
                                        (utils/->time-unit time-unit))
-        executor (Services/defaultService name
+        properties (doto (ServiceProperties.)
+                     (.actionMetrics metrics)
+                     (.concurrencyLevel (int max-concurrency))
+                     (.circuitBreaker (NoOpCircuitBreaker.)))
+        executor (Services/defaultService ^String name
                                           (int pool-size)
-                                          (int max-concurrency)
-                                          metrics
-                                          breaker)]
+                                          properties)]
     (->CLJServiceImpl executor
                       (->CLJMetrics (.getActionMetrics executor)
                                     (.convert TimeUnit/SECONDS

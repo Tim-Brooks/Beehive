@@ -13,10 +13,8 @@
 ;; limitations under the License.
 
 (ns beehive.compatibility
-  (:require [beehive.future :as f])
-  (:import (net.uncontended.precipice ResilientPatternAction
-                                      ResilientAction
-                                      ResilientCallback)))
+  (:import (net.uncontended.precipice.core ResilientAction)
+           (net.uncontended.precipice.core.pattern ResilientPatternAction)))
 
 (defn wrap-pattern-action-fn [action-fn]
   (reify ResilientPatternAction
@@ -25,7 +23,3 @@
 (defn wrap-action-fn [action-fn]
   (reify ResilientAction
     (run [_] (action-fn))))
-
-(defn wrap-callback-fn [callback-fn]
-  (reify ResilientCallback
-    (run [_ promise] (callback-fn (f/->CLJResilientFuture promise)))))

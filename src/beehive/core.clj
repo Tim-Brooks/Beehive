@@ -42,4 +42,4 @@
   (s/submit-action service f time-out-ms))
 
 (defn perform-action [service f]
-  (s/perform-action service f))
+  (s/run-action service f))
