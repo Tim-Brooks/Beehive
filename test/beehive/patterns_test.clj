@@ -49,6 +49,7 @@
              (set (for [_ (range 3)]
                     (patterns/run-action
                       load-balancer (fn [context] (:result context 10))))))))
+
     (testing "If action rejected, other services will be called."
       (let [latch (CountDownLatch. 1)]
         (beehive/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
@@ -59,23 +60,21 @@
         (is (= 2 (patterns/run-action load-balancer
                                       (fn [context] (:result context 10)))))
         (.countDown latch)))
-    ;(testing ":all-services-rejected returned if all services reject action"
-    ;  (let [latch (CountDownLatch. 1)]
-    ;    (beehive/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
-    ;    (beehive/submit-action service2 (fn [] (.await latch)) Long/MAX_VALUE)
-    ;    (beehive/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
-    ;    (is (= :all-services-rejected
-    ;           @(patterns/submit-action
-    ;              load-balancer
-    ;              (fn [context] (:result context 10))
-    ;              1000)))
-    ;    (is (= :all-services-rejected
-    ;           (patterns/run-action
-    ;             load-balancer
-    ;             (fn [context] (:result context 10)))))
-    ;    (.countDown latch)))
-
-    ))
+    (testing ":all-services-rejected returned if all services reject action"
+      (let [latch (CountDownLatch. 1)]
+        (beehive/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
+        (beehive/submit-action service2 (fn [] (.await latch)) Long/MAX_VALUE)
+        (beehive/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
+        (is (= :all-services-rejected
+               @(patterns/submit-action
+                  load-balancer
+                  (fn [context] (:result context 10))
+                  1000)))
+        (is (= :all-services-rejected
+               (patterns/run-action
+                 load-balancer
+                 (fn [context] (:result context 10)))))
+        (.countDown latch)))))
 
 (deftest shotgun
   (let [shotgun (patterns/shotgun {service1 {}
