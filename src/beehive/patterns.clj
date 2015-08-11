@@ -40,7 +40,10 @@
          (catch RejectedActionException e
            (f/rejected-action-future (.reason e)))))
   (run-action [this action-fn]
-    (.run balancer (c/wrap-pattern-action-fn action-fn))))
+    (try
+      (.run balancer (c/wrap-pattern-action-fn action-fn))
+      (catch RejectedActionException e
+        :all-services-rejected))))
 
 (defn load-balancer [service->context]
   (let [service->context (transform-map service->context)

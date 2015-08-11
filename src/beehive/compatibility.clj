@@ -13,7 +13,9 @@
 ;; limitations under the License.
 
 (ns beehive.compatibility
-  (:import (net.uncontended.precipice.core ResilientAction)
+  (:import (net.uncontended.precipice.core ResilientAction
+                                           RejectedActionException
+                                           RejectionReason)
            (net.uncontended.precipice.core.pattern ResilientPatternAction)))
 
 (defn wrap-pattern-action-fn [action-fn]
@@ -23,3 +25,11 @@
 (defn wrap-action-fn [action-fn]
   (reify ResilientAction
     (run [_] (action-fn))))
+
+(defn rejected-exception->reason [^RejectedActionException e]
+  (case (.reason e)
+    RejectionReason/CIRCUIT_OPEN :circuit-open
+    RejectionReason/MAX_CONCURRENCY_LEVEL_EXCEEDED :max-concurrency-level-exceeded
+    RejectionReason/QUEUE_FULL :queue-full
+    RejectionReason/SERVICE_SHUTDOWN :service-shutdown
+    RejectionReason/ALL_SERVICES_REJECTED :all-services-rejected))

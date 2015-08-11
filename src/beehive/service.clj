@@ -127,7 +127,10 @@
       (catch RejectedActionException e
         (f/rejected-action-future (.reason e)))))
   (run-action [_ action-fn]
-    (.run executor (c/wrap-action-fn action-fn)))
+    (try
+      (.run executor (c/wrap-action-fn action-fn))
+      (catch RejectedActionException e
+        (c/rejected-exception->reason e))))
   (shutdown [_] (.shutdown executor))
   ILookup
   (valAt [this key] (.valAt this key nil))
