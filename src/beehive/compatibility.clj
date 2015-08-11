@@ -13,10 +13,10 @@
 ;; limitations under the License.
 
 (ns beehive.compatibility
-  (:import (net.uncontended.precipice.core ResilientAction
-                                           RejectedActionException
-                                           RejectionReason)
-           (net.uncontended.precipice.core.pattern ResilientPatternAction)))
+  (:import (net.uncontended.precipice ResilientAction
+                                      RejectedActionException
+                                      RejectionReason)
+           (net.uncontended.precipice.pattern ResilientPatternAction)))
 
 (defn wrap-pattern-action-fn [action-fn]
   (reify ResilientPatternAction

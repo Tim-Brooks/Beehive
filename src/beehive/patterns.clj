@@ -16,10 +16,10 @@
   (:require [beehive.compatibility :as c]
             [beehive.future :as f])
   (:import (beehive.service CLJServiceImpl)
-           (net.uncontended.precipice.core RejectedActionException)
-           (net.uncontended.precipice.core.pattern MultiLoadBalancer
-                                                   Shotgun
-                                                   LoadBalancers)))
+           (net.uncontended.precipice RejectedActionException)
+           (net.uncontended.precipice.pattern MultiLoadBalancer
+                                              Shotgun
+                                              LoadBalancers)))
 
 (set! *warn-on-reflection* true)
 

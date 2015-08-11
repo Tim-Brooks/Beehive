@@ -15,8 +15,8 @@
 (ns beehive.future
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
-           (net.uncontended.precipice.core Status RejectionReason)
-           (net.uncontended.precipice.core.concurrent PrecipiceFuture)))
+           (net.uncontended.precipice Status RejectionReason)
+           (net.uncontended.precipice.concurrent PrecipiceFuture)))
 
 (set! *warn-on-reflection* true)
 

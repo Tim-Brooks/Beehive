@@ -18,13 +18,19 @@
             [beehive.utils :as utils])
   (:import (clojure.lang ILookup)
            (java.util.concurrent TimeUnit)
-           (net.uncontended.precipice.core.circuit BreakerConfig
-                                                   CircuitBreaker BreakerConfigBuilder NoOpCircuitBreaker)
-           (net.uncontended.precipice.core.metrics ActionMetrics Metric DefaultActionMetrics)
-           (net.uncontended.precipice.core.concurrent PrecipiceFuture)
-           (net.uncontended.precipice.core MultiService
-                                           ResilientAction
-                                           RejectedActionException Services ServiceProperties)))
+           (net.uncontended.precipice.circuit BreakerConfig
+                                              CircuitBreaker
+                                              BreakerConfigBuilder
+                                              NoOpCircuitBreaker)
+           (net.uncontended.precipice.metrics ActionMetrics
+                                              Metric
+                                              DefaultActionMetrics)
+           (net.uncontended.precipice.concurrent PrecipiceFuture)
+           (net.uncontended.precipice MultiService
+                                      ResilientAction
+                                      RejectedActionException
+                                      Services
+                                      ServiceProperties)))
 
 (set! *warn-on-reflection* true)
 
