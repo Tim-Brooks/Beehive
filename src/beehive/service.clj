@@ -67,59 +67,26 @@
   (valAt [_ key default]
     (case key
       :snapshot (.snapshot metrics 3600 TimeUnit/SECONDS)
-      :errors (.getMetricCountForTimePeriod metrics
-                                            Metric/ERROR
-                                            3600
-                                            TimeUnit/SECONDS)
-      :successes (.getMetricCountForTimePeriod metrics
-                                               Metric/SUCCESS
-                                               3600
-                                               TimeUnit/SECONDS)
-      :timeouts (.getMetricCountForTimePeriod metrics
-                                              Metric/TIMEOUT
-                                              3600
-                                              TimeUnit/SECONDS)
-      :circuit-open (.getMetricCountForTimePeriod metrics
-                                                  Metric/CIRCUIT_OPEN
-                                                  3600
-                                                  TimeUnit/SECONDS)
-      :queue-full (.getMetricCountForTimePeriod metrics
-                                                Metric/QUEUE_FULL
-                                                3600
-                                                TimeUnit/SECONDS)
-      :max-concurrency-level-exceeded (.getMetricCountForTimePeriod
+      :errors (.getMetricCount metrics Metric/ERROR)
+      :successes (.getMetricCount metrics Metric/SUCCESS)
+      :timeouts (.getMetricCount metrics Metric/TIMEOUT)
+      :circuit-open (.getMetricCount metrics Metric/CIRCUIT_OPEN)
+      :queue-full (.getMetricCount metrics Metric/QUEUE_FULL)
+      :max-concurrency-level-exceeded (.getMetricCount
                                         metrics
-                                        Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
-                                        3600
-                                        TimeUnit/SECONDS)
+                                        Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED)
       default))
   Object
   (toString [this]
-    (str {:errors (.getMetricCountForTimePeriod metrics
-                                                Metric/ERROR
-                                                3600
-                                                TimeUnit/SECONDS)
-          :successes (.getMetricCountForTimePeriod metrics
-                                                   Metric/SUCCESS
-                                                   3600
-                                                   TimeUnit/SECONDS)
-          :timeouts (.getMetricCountForTimePeriod metrics
-                                                  Metric/TIMEOUT
-                                                  3600
-                                                  TimeUnit/SECONDS)
-          :circuit-open (.getMetricCountForTimePeriod metrics
-                                                      Metric/CIRCUIT_OPEN
-                                                      3600
-                                                      TimeUnit/SECONDS)
-          :queue-full (.getMetricCountForTimePeriod metrics
-                                                    Metric/QUEUE_FULL
-                                                    3600
-                                                    TimeUnit/SECONDS)
-          :max-concurrency-level-exceeded (.getMetricCountForTimePeriod
-                                            metrics
-                                            Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
-                                            3600
-                                            TimeUnit/SECONDS)})))
+    (str {:errors (.getMetricCount metrics Metric/ERROR)
+          :successes (.getMetricCount metrics Metric/SUCCESS)
+          :timeouts (.getMetricCount metrics Metric/TIMEOUT)
+          :circuit-open (.getMetricCount metrics Metric/CIRCUIT_OPEN)
+          :queue-full (.getMetricCount metrics Metric/QUEUE_FULL)
+          :max-concurrency-level-exceeded
+          (.getMetricCount
+            metrics
+            Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED)})))
 
 (deftype CLJServiceImpl
   [^MultiService service ^CLJMetrics metrics ^CLJBreaker breaker]
