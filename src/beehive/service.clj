@@ -30,7 +30,8 @@
                                       ResilientAction
                                       RejectedActionException
                                       Services
-                                      ServiceProperties)))
+                                      ServiceProperties
+                                      Service)))
 
 (set! *warn-on-reflection* true)
 
@@ -60,90 +61,90 @@
                      :failure-percentage-threshold (.failurePercentageThreshold config)
                      :health-refresh-millis (.healthRefreshMillis config)})})))
 
-(deftype CLJMetrics [^ActionMetrics metrics seconds-tracked]
+(deftype CLJMetrics [^ActionMetrics metrics]
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
     (case key
-      :snapshot (.snapshot metrics seconds-tracked TimeUnit/SECONDS)
+      :snapshot (.snapshot metrics 3600 TimeUnit/SECONDS)
       :errors (.getMetricCountForTimePeriod metrics
                                             Metric/ERROR
-                                            seconds-tracked
+                                            3600
                                             TimeUnit/SECONDS)
       :successes (.getMetricCountForTimePeriod metrics
                                                Metric/SUCCESS
-                                               seconds-tracked
+                                               3600
                                                TimeUnit/SECONDS)
       :timeouts (.getMetricCountForTimePeriod metrics
                                               Metric/TIMEOUT
-                                              seconds-tracked
+                                              3600
                                               TimeUnit/SECONDS)
       :circuit-open (.getMetricCountForTimePeriod metrics
                                                   Metric/CIRCUIT_OPEN
-                                                  seconds-tracked
+                                                  3600
                                                   TimeUnit/SECONDS)
       :queue-full (.getMetricCountForTimePeriod metrics
                                                 Metric/QUEUE_FULL
-                                                seconds-tracked
+                                                3600
                                                 TimeUnit/SECONDS)
       :max-concurrency-level-exceeded (.getMetricCountForTimePeriod
                                         metrics
                                         Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
-                                        seconds-tracked
+                                        3600
                                         TimeUnit/SECONDS)
       default))
   Object
   (toString [this]
     (str {:errors (.getMetricCountForTimePeriod metrics
                                                 Metric/ERROR
-                                                seconds-tracked
+                                                3600
                                                 TimeUnit/SECONDS)
           :successes (.getMetricCountForTimePeriod metrics
                                                    Metric/SUCCESS
-                                                   seconds-tracked
+                                                   3600
                                                    TimeUnit/SECONDS)
           :timeouts (.getMetricCountForTimePeriod metrics
                                                   Metric/TIMEOUT
-                                                  seconds-tracked
+                                                  3600
                                                   TimeUnit/SECONDS)
           :circuit-open (.getMetricCountForTimePeriod metrics
                                                       Metric/CIRCUIT_OPEN
-                                                      seconds-tracked
+                                                      3600
                                                       TimeUnit/SECONDS)
           :queue-full (.getMetricCountForTimePeriod metrics
                                                     Metric/QUEUE_FULL
-                                                    seconds-tracked
+                                                    3600
                                                     TimeUnit/SECONDS)
           :max-concurrency-level-exceeded (.getMetricCountForTimePeriod
                                             metrics
                                             Metric/MAX_CONCURRENCY_LEVEL_EXCEEDED
-                                            seconds-tracked
+                                            3600
                                             TimeUnit/SECONDS)})))
 
 (deftype CLJServiceImpl
-  [^MultiService executor ^CLJMetrics metrics ^CLJBreaker breaker]
+  [^MultiService service ^CLJMetrics metrics ^CLJBreaker breaker]
   CLJService
   (submit-action [this action-fn timeout-millis]
     (try
       (f/->CLJResilientFuture
         ^PrecipiceFuture
-        (.submit executor
+        (.submit service
                  ^ResilientAction (c/wrap-action-fn action-fn)
                  (long timeout-millis)))
       (catch RejectedActionException e
         (f/rejected-action-future (.reason e)))))
   (run-action [_ action-fn]
     (try
-      (.run executor (c/wrap-action-fn action-fn))
+      (.run service (c/wrap-action-fn action-fn))
       (catch RejectedActionException e
         (c/rejected-exception->reason e))))
-  (shutdown [_] (.shutdown executor))
+  (shutdown [_] (.shutdown service))
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
     (case key
       :metrics metrics
-      :service-executor executor
+      :service service
       :breaker breaker
       default)))
 
@@ -170,7 +171,12 @@
 (defn open-circuit! [^CLJServiceImpl service]
   (.forceOpen ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
-(defn service-executor
+(defn java-service->clj-service [^Service service]
+  (->CLJServiceImpl service
+                    (->CLJMetrics (.getActionMetrics service))
+                    (->CLJBreaker (.getCircuitBreaker service))))
+
+(defn service
   [name
    pool-size
    max-concurrency
@@ -180,17 +186,12 @@
         properties (doto (ServiceProperties.)
                      (.actionMetrics metrics)
                      (.concurrencyLevel (int max-concurrency)))
-        executor (Services/defaultService ^String name
-                                          (int pool-size)
-                                          properties)]
-    (->CLJServiceImpl executor
-                      (->CLJMetrics (.getActionMetrics executor)
-                                    (.convert TimeUnit/SECONDS
-                                              slots-to-track
-                                              (utils/->time-unit time-unit)))
-                      (->CLJBreaker (.getCircuitBreaker executor)))))
+        service (Services/defaultService ^String name
+                                         (int pool-size)
+                                         properties)]
+    (java-service->clj-service service)))
 
-(defn executor-with-no-opt-breaker
+(defn service-with-no-opt-breaker
   [name pool-size max-concurrency {:keys [slots-to-track resolution time-unit]}]
   (let [metrics (DefaultActionMetrics. slots-to-track
                                        resolution
@@ -199,12 +200,7 @@
                      (.actionMetrics metrics)
                      (.concurrencyLevel (int max-concurrency))
                      (.circuitBreaker (NoOpCircuitBreaker.)))
-        executor (Services/defaultService ^String name
-                                          (int pool-size)
-                                          properties)]
-    (->CLJServiceImpl executor
-                      (->CLJMetrics (.getActionMetrics executor)
-                                    (.convert TimeUnit/SECONDS
-                                              slots-to-track
-                                              (utils/->time-unit time-unit)))
-                      (->CLJBreaker (.getCircuitBreaker executor)))))
+        service (Services/defaultService ^String name
+                                         (int pool-size)
+                                         properties)]
+    (java-service->clj-service service)))

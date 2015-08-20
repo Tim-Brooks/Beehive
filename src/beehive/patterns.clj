@@ -24,7 +24,7 @@
 (set! *warn-on-reflection* true)
 
 (defn- transform-map [service->context]
-  (into {} (map (fn [[k v]] [(.executor ^CLJServiceImpl k) v]) service->context)))
+  (into {} (map (fn [[k v]] [(.service ^CLJServiceImpl k) v]) service->context)))
 
 (defprotocol CLJComposedService
   (submit-action [this action-fn timeout-millis])
