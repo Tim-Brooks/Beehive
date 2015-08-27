@@ -17,7 +17,8 @@
             [beehive.core :as beehive]
             [beehive.service :as service])
   (:import (java.io IOException)
-           (java.util.concurrent CountDownLatch)))
+           (java.util.concurrent CountDownLatch)
+           (java.util Map)))
 
 (set! *warn-on-reflection* true)
 
@@ -91,6 +92,17 @@
       (is (= :rejected (:status f)))
       (.countDown latch))))
 
+(defn remove-latency [^Map snapshot]
+  (doto snapshot
+    (.remove "latency-max")
+    (.remove "latency-mean")
+    (.remove "latency-50")
+    (.remove "latency-90")
+    (.remove "latency-99")
+    (.remove "latency-99.9")
+    (.remove "latency-99.99")
+    (.remove "latency-99.999")))
+
 (deftest metrics-test
   (testing "Testing that metrics are updated with result of action"
     (let [metrics-service (beehive/service "test" 1 100)
@@ -125,8 +137,16 @@
               "queue-full" 0
               "successes" 1
               "timeouts" 1
-              "total" 3}
-             (-> metrics-service :metrics :snapshot)))))
+              "total" 3
+              "total-all-rejected" 0
+              "total-circuit-open" 0
+              "total-errors" 1
+              "total-max-concurrency" 0
+              "total-queue-full" 0
+              "total-successes" 1
+              "total-timeouts" 1
+              "total-total" 3}
+             (-> metrics-service :metrics :snapshot remove-latency)))))
   (testing "Testing that rejection reasons are updated"
     (let [metrics-service (beehive/service "test" 1 1)
           latch (CountDownLatch. 1)]
