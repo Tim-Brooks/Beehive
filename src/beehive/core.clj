@@ -41,5 +41,5 @@
 (defn submit-action [service f time-out-ms]
   (s/submit-action service f time-out-ms))
 
-(defn perform-action [service f]
+(defn run-action [service f]
   (s/run-action service f))
