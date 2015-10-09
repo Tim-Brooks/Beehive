@@ -160,3 +160,18 @@
       (.countDown latch)
       (is (= 1 (-> metrics-service :metrics :max-concurrency-level-exceeded)))
       (service/shutdown metrics-service))))
+
+(deftest circuit-breaker-config-test
+  (testing "Testing that the service is created with the correct circuit breaker config"
+    (let [svc (beehive/service "test"
+                               1
+                               100
+                               :breaker {:trailing-period-millis 999
+                                         :failure-threshold Long/MAX_VALUE})]
+      (is (= 999
+             (:time-period-in-millis (:config (:breaker svc)))))
+      (is (= Long/MAX_VALUE
+             (:failure-threshold (:config (:breaker svc)))))
+      ;; Defaults if the key is not passed in the config
+      (is (= 1000
+             (:time-to-pause-millis (:config (:breaker svc))))))))

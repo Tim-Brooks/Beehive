@@ -20,6 +20,7 @@
            (java.util.concurrent TimeUnit)
            (net.uncontended.precipice.circuit BreakerConfig
                                               CircuitBreaker
+                                              DefaultCircuitBreaker
                                               BreakerConfigBuilder
                                               NoOpCircuitBreaker)
            (net.uncontended.precipice.metrics ActionMetrics
@@ -113,23 +114,6 @@
       :breaker breaker
       default)))
 
-(defn swap-breaker-config!
-  [{:keys [circuit-breaker]}
-   {:keys [trailing-period-millis
-           failure-threshold
-           failure-percentage-threshold
-           backoff-time-millis
-           health-refresh-millis]}]
-  (.setBreakerConfig
-    ^CircuitBreaker circuit-breaker
-    ^BreakerConfig (doto (BreakerConfigBuilder.)
-                     (.trailingPeriodMillis trailing-period-millis)
-                     (.failureThreshold failure-threshold)
-                     (.failurePercentageThreshold failure-percentage-threshold)
-                     (.backOffTimeMillis backoff-time-millis)
-                     (.healthRefreshMillis health-refresh-millis)
-                     (.build))))
-
 (defn close-circuit! [^CLJServiceImpl service]
   (.forceClosed ^CircuitBreaker (.breaker ^CLJBreaker (.breaker service))))
 
@@ -141,15 +125,32 @@
                     (->CLJMetrics (.getActionMetrics service))
                     (->CLJBreaker (.getCircuitBreaker service))))
 
+(defn circuit-breaker
+  [{:keys [trailing-period-millis
+           failure-threshold
+           failure-percentage-threshold
+           backoff-time-millis
+           health-refresh-millis]
+    :as breaker-config}]
+  (DefaultCircuitBreaker.
+    ^BreakerConfig (.build (cond-> (BreakerConfigBuilder.)
+                             trailing-period-millis (.trailingPeriodMillis trailing-period-millis)
+                             failure-threshold  (.failureThreshold failure-threshold)
+                             failure-percentage-threshold (.failurePercentageThreshold failure-percentage-threshold)
+                             backoff-time-millis (.backOffTimeMillis backoff-time-millis)
+                             health-refresh-millis (.healthRefreshMillis health-refresh-millis)))))
+
 (defn service
   [name
    pool-size
    max-concurrency
-   {:keys [failure-percentage-threshold backoff-time-millis]}
+   breaker-config
    {:keys [slots-to-track resolution time-unit]}]
   (let [metrics (DefaultActionMetrics. slots-to-track resolution (utils/->time-unit time-unit))
+        breaker (circuit-breaker breaker-config)
         properties (doto (ServiceProperties.)
                      (.actionMetrics metrics)
+                     (.circuitBreaker breaker)
                      (.concurrencyLevel (int max-concurrency)))
         service (Services/defaultService ^String name
                                          (int pool-size)
