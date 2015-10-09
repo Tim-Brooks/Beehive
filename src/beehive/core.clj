@@ -19,11 +19,11 @@
 
 (when
   (try
-    (require '[clojure.beehive.async])
+    (require '[clojure.core.async])
     true
     (catch Exception _
       false))
-  (do (require '[uncontended.fault.async])))
+  (do (require '[beehive.async])))
 
 (defn service
   [name pool-size max-concurrency
