@@ -92,17 +92,6 @@
       (is (= :rejected (:status f)))
       (.countDown latch))))
 
-(defn remove-latency [^Map snapshot]
-  (doto snapshot
-    (.remove "latency-max")
-    (.remove "latency-mean")
-    (.remove "latency-50")
-    (.remove "latency-90")
-    (.remove "latency-99")
-    (.remove "latency-99.9")
-    (.remove "latency-99.99")
-    (.remove "latency-99.999")))
-
 (deftest metrics-test
   (testing "Testing that metrics are updated with result of action"
     (let [metrics-service (beehive/service "test" 1 100)
@@ -146,7 +135,7 @@
               "total-successes" 1
               "total-timeouts" 1
               "total-total" 3}
-             (-> metrics-service :metrics :snapshot remove-latency)))))
+             (-> metrics-service :metrics :snapshot)))))
   (testing "Testing that rejection reasons are updated"
     (let [metrics-service (beehive/service "test" 1 1)
           latch (CountDownLatch. 1)]
