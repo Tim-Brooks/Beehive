@@ -130,8 +130,7 @@
            failure-threshold
            failure-percentage-threshold
            backoff-time-millis
-           health-refresh-millis]
-    :as breaker-config}]
+           health-refresh-millis]}]
   (DefaultCircuitBreaker.
     ^BreakerConfig (.build (cond-> (BreakerConfigBuilder.)
                              trailing-period-millis (.trailingPeriodMillis trailing-period-millis)
