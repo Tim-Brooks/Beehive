@@ -37,6 +37,7 @@
   (submit-action [this action-fn timeout-millis] [this action-fn callback timeout-millis])
   (run-action [this action-fn])
   (metrics [this] [this time time-unit])
+  (latency [this])
   (shutdown [this]))
 
 (deftype CLJBreaker [^CircuitBreaker breaker]
@@ -85,6 +86,16 @@
                   (.snapshot (.getActionMetrics service)
                              time
                              (utils/->time-unit time-unit)))))
+  (latency [_]
+    (let [snapshot (.latencySnapshot (.getLatencyMetrics service))]
+      {:latency-max (.latencyMax snapshot)
+       :latency-50 (.latency50 snapshot)
+       :latency-90 (.latency90 snapshot)
+       :latency-99 (.latency99 snapshot)
+       :latency-99.9 (.latency999 snapshot)
+       :latency-99.99 (.latency9999 snapshot)
+       :latency-99.999 (.latency99999 snapshot)
+       :latency-mean (.latencyMean snapshot)}))
   (shutdown [_] (.shutdown service))
   ILookup
   (valAt [this key] (.valAt this key nil))
