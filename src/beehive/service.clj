@@ -92,9 +92,9 @@
        :latency-50 (.latency50 snapshot)
        :latency-90 (.latency90 snapshot)
        :latency-99 (.latency99 snapshot)
-       :latency-99.9 (.latency999 snapshot)
-       :latency-99.99 (.latency9999 snapshot)
-       :latency-99.999 (.latency99999 snapshot)
+       :latency-99-9 (.latency999 snapshot)
+       :latency-99-99 (.latency9999 snapshot)
+       :latency-99-999 (.latency99999 snapshot)
        :latency-mean (.latencyMean snapshot)}))
   (shutdown [_] (.shutdown service))
   ILookup
