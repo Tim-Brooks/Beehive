@@ -35,9 +35,6 @@
     (s/service-with-no-opt-breaker name pool-size max-concurrency metrics)
     (s/service name pool-size max-concurrency breaker metrics)))
 
-(defn metrics [{:keys [metrics]}]
-  (-> metrics :snapshot))
-
 (defn submit-action [service f time-out-ms]
   (s/submit-action service f time-out-ms))
 

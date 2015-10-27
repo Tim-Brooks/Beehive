@@ -22,8 +22,12 @@
                  :days TimeUnit/DAYS})
 
 (defn ->time-unit [unit-in-keyword]
-  (if-let [time-unit (get time-units unit-in-keyword)]
-    time-unit
+  (case unit-in-keyword
+    :milliseconds TimeUnit/MILLISECONDS
+    :seconds TimeUnit/SECONDS
+    :minutes TimeUnit/MINUTES
+    :hours TimeUnit/HOURS
+    :days TimeUnit/DAYS
     (throw
       (IllegalArgumentException.
         ^String

@@ -17,8 +17,7 @@
             [beehive.core :as beehive]
             [beehive.service :as service])
   (:import (java.io IOException)
-           (java.util.concurrent CountDownLatch)
-           (java.util Map)))
+           (java.util.concurrent CountDownLatch)))
 
 (set! *warn-on-reflection* true)
 
@@ -100,54 +99,54 @@
       @(service/submit-action metrics-service (error-fn (IOException.)) Long/MAX_VALUE)
       @(service/submit-action metrics-service (block-fn 1 latch) 10)
       (.countDown latch)
-      (is (= 1 (-> metrics-service :metrics :successes)))
-      (is (= 1 (-> metrics-service :metrics :timeouts)))
-      (is (= 1 (-> metrics-service :metrics :errors)))
-      (is (= {"all-rejected" 0
-              "circuit-open" 0
-              "errors" 1
-              "max-1-all-rejected" 0
-              "max-1-circuit-open" 0
-              "max-1-errors" 1
-              "max-1-max-concurrency" 0
-              "max-1-queue-full" 0
-              "max-1-successes" 1
-              "max-1-timeouts" 1
-              "max-1-total" 3
-              "max-2-all-rejected" 0
-              "max-2-circuit-open" 0
-              "max-2-errors" 1
-              "max-2-max-concurrency" 0
-              "max-2-queue-full" 0
-              "max-2-successes" 1
-              "max-2-timeouts" 1
-              "max-2-total" 3
-              "max-concurrency" 0
-              "queue-full" 0
-              "successes" 1
-              "timeouts" 1
-              "total" 3
-              "total-all-rejected" 0
-              "total-circuit-open" 0
-              "total-errors" 1
-              "total-max-concurrency" 0
-              "total-queue-full" 0
-              "total-successes" 1
-              "total-timeouts" 1
-              "total-total" 3}
-             (-> metrics-service :metrics :snapshot)))))
+      (is (= 1 (-> metrics-service service/metrics :successes)))
+      (is (= 1 (-> metrics-service service/metrics :timeouts)))
+      (is (= 1 (-> metrics-service service/metrics :errors)))
+      (is (= {:all-rejected 0
+              :circuit-open 0
+              :errors 1
+              :max-1-all-rejected 0
+              :max-1-circuit-open 0
+              :max-1-errors 1
+              :max-1-max-concurrency 0
+              :max-1-queue-full 0
+              :max-1-successes 1
+              :max-1-timeouts 1
+              :max-1-total 3
+              :max-2-all-rejected 0
+              :max-2-circuit-open 0
+              :max-2-errors 1
+              :max-2-max-concurrency 0
+              :max-2-queue-full 0
+              :max-2-successes 1
+              :max-2-timeouts 1
+              :max-2-total 3
+              :max-concurrency 0
+              :queue-full 0
+              :successes 1
+              :timeouts 1
+              :total 3
+              :total-all-rejected 0
+              :total-circuit-open 0
+              :total-errors 1
+              :total-max-concurrency 0
+              :total-queue-full 0
+              :total-successes 1
+              :total-timeouts 1
+              :total-total 3}
+             (service/metrics metrics-service)))))
   (testing "Testing that rejection reasons are updated"
     (let [metrics-service (beehive/service "test" 1 1)
           latch (CountDownLatch. 1)]
       (service/open-circuit! metrics-service)
       @(service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
-      (is (= 1 (-> metrics-service :metrics :circuit-open)))
+      (is (= 1 (-> metrics-service service/metrics :circuit-open)))
       (service/close-circuit! metrics-service)
 
       (service/submit-action metrics-service (block-fn 1 latch) Long/MAX_VALUE)
       (service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
       (.countDown latch)
-      (is (= 1 (-> metrics-service :metrics :max-concurrency-level-exceeded)))
+      (is (= 1 (-> metrics-service service/metrics :max-concurrency)))
       (service/shutdown metrics-service))))
 
 (deftest circuit-breaker-config-test
