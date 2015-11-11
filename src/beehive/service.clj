@@ -34,7 +34,7 @@
 (set! *warn-on-reflection* true)
 
 (defprotocol CLJService
-  (submit-action [this action-fn timeout-millis] [this action-fn callback timeout-millis])
+  (submit-action [this action-fn timeout-millis])
   (run-action [this action-fn])
   (metrics [this] [this time time-unit])
   (latency [this])
