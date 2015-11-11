@@ -25,7 +25,8 @@
     (= Status/PENDING status-enum) :pending
     (= Status/SUCCESS status-enum) :success
     (= Status/ERROR status-enum) :error
-    (= Status/TIMEOUT status-enum) :timeout))
+    (= Status/TIMEOUT status-enum) :timeout
+    (= Status/CANCELLED status-enum) :cancelled))
 
 (deftype CLJResilientFuture [^PrecipiceFuture future]
   IDeref
@@ -50,6 +51,7 @@
       :timeout? (identical? :timeout (status (.getStatus future)))
       :error? (identical? :error (status (.getStatus future)))
       :pending? (identical? :pending (status (.getStatus future)))
+      :cancelled (identical? :cancelled (status (.getStatus future)))
       :result (.result future)
       :error (.error future)
       :rejected? false
