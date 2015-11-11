@@ -71,8 +71,6 @@
       (let [county (<! in-channel)
             f (service/submit-action @service
                                      (lookup-state-action county)
-                                     (fa/return-channels {:success out-channel
-                                                          :failed err-channel})
                                      (+ 850 (rand-int 200)))]
         (when (:rejected? f)
           (println (:rejected-reason f)))
