@@ -15,7 +15,7 @@
 (ns beehive.future
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
-           (net.uncontended.precipice Status RejectionReason)
+           (net.uncontended.precipice Status RejectionReason PrecipiceFunction)
            (net.uncontended.precipice.concurrent PrecipiceFuture)))
 
 (set! *warn-on-reflection* true)
@@ -86,3 +86,15 @@
 
 (defn cancel [^CLJResilientFuture f]
   (.cancel ^PrecipiceFuture (.future f) true))
+
+(deftype CLJCallback [^PrecipiceFuture future fn]
+  PrecipiceFunction
+  (apply [this result]
+    (fn (:status future) result)))
+
+(defn on-complete [^CLJResilientFuture f fn]
+  (let [^PrecipiceFuture java-f (.future f)
+        cb (CLJCallback. java-f fn)]
+    (.onSuccess java-f cb)
+    (.onError java-f cb)
+    (.onTimeout java-f cb)))
