@@ -51,7 +51,7 @@
       :timeout? (identical? :timeout (status (.getStatus future)))
       :error? (identical? :error (status (.getStatus future)))
       :pending? (identical? :pending (status (.getStatus future)))
-      :cancelled (identical? :cancelled (status (.getStatus future)))
+      :cancelled? (identical? :cancelled (status (.getStatus future)))
       :result (.result future)
       :error (.error future)
       :rejected? false
@@ -83,3 +83,6 @@
 
 (defn rejected-action-future [reason]
   (->CLJRejectedFuture (get reject-enum->keyword reason)))
+
+(defn cancel [^CLJResilientFuture f]
+  (.cancel ^PrecipiceFuture (.future f) true))
