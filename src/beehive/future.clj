@@ -97,9 +97,11 @@
   (apply [this result]
     (fn (:status future) result)))
 
-(defn on-complete [^CLJResilientFuture f fn]
-  (let [^PrecipiceFuture java-f (.future f)
-        cb (CLJCallback. java-f fn)]
-    (.onSuccess java-f cb)
-    (.onError java-f cb)
-    (.onTimeout java-f cb)))
+(defn on-complete [f fn]
+  (if (instance? CLJRejectedFuture f)
+    (fn :rejected (.reason ^CLJRejectedFuture f))
+    (let [^PrecipiceFuture java-f (.future ^CLJResilientFuture f)
+          cb (CLJCallback. java-f fn)]
+      (.onSuccess java-f cb)
+      (.onError java-f cb)
+      (.onTimeout java-f cb))))
