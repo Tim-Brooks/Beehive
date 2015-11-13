@@ -86,10 +86,7 @@
         (.countDown latch)))))
 
 (deftest shotgun
-  (let [shotgun (patterns/shotgun {service1 {}
-                                   service2 {}
-                                   service3 {}}
-                                  2)
+  (let [shotgun (patterns/shotgun {service1 {} service2 {} service3 {}} 2)
         action-blocking-latch (atom (CountDownLatch. 1))
         test-blocking-latch (atom (CountDownLatch. 1))
         counter (atom 0)
@@ -98,18 +95,15 @@
                    (do (.await ^CountDownLatch @action-blocking-latch)
                        (inc current))
                    (inc current)))
-        action-fn (fn [] (let [result (swap! counter inc-fn)]
-                           (when (= result 2)
-                             (.countDown ^CountDownLatch @test-blocking-latch))
-                           result))]
+        action-fn (fn [_] (let [result (swap! counter inc-fn)]
+                            (when (= result 2)
+                              (.countDown ^CountDownLatch @test-blocking-latch))
+                            result))]
     (testing "Actions submitted to multiple services"
       (reset! counter 0)
       (reset! action-blocking-latch (CountDownLatch. 1))
       (reset! test-blocking-latch (CountDownLatch. 1))
-      (is (= 1
-             @(patterns/submit-action shotgun
-                                      (fn [_] (action-fn))
-                                      Long/MAX_VALUE)))
+      (is (= 1 @(patterns/submit-action shotgun action-fn Long/MAX_VALUE)))
       (.countDown ^CountDownLatch @action-blocking-latch)
       (.await ^CountDownLatch @test-blocking-latch)
       (is (= 2 @counter)))
@@ -117,9 +111,7 @@
       (reset! counter 0)
       (reset! action-blocking-latch (CountDownLatch. 1))
       (reset! test-blocking-latch (CountDownLatch. 1))
-      (let [f (patterns/submit-action shotgun
-                                      (fn [_] (action-fn))
-                                      Long/MAX_VALUE)]
+      (let [f (patterns/submit-action shotgun action-fn Long/MAX_VALUE)]
         @f
         (.countDown ^CountDownLatch @action-blocking-latch)
         (.await ^CountDownLatch @test-blocking-latch)
