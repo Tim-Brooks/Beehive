@@ -114,6 +114,7 @@
       (let [f (patterns/submit-action shotgun action-fn Long/MAX_VALUE)]
         @f
         (.countDown ^CountDownLatch @action-blocking-latch)
+        ;; TODO: Need to rework to avoid occasional race condition
         (.await ^CountDownLatch @test-blocking-latch)
         (is (= 1 @f))))
     (testing "Nil returned if all services reject action"
