@@ -17,7 +17,8 @@
   (:require [beehive.core :as beehive]
             [beehive.service :as service]
             [beehive.patterns :as patterns])
-  (:import (java.util.concurrent CountDownLatch)))
+  (:import (java.util.concurrent CountDownLatch)
+           (java.util.concurrent.atomic AtomicInteger)))
 
 (set! *warn-on-reflection* true)
 
@@ -26,9 +27,9 @@
 (def service3 nil)
 
 (defn- start-and-stop [f]
-  (alter-var-root #'service1 (fn [_] (beehive/service "1" 1 1)))
-  (alter-var-root #'service2 (fn [_] (beehive/service "2" 1 1)))
-  (alter-var-root #'service3 (fn [_] (beehive/service "3" 1 1)))
+  (alter-var-root #'service1 (fn [_] (beehive/service "1" 2 1)))
+  (alter-var-root #'service2 (fn [_] (beehive/service "2" 2 1)))
+  (alter-var-root #'service3 (fn [_] (beehive/service "3" 2 1)))
   (f)
   (service/shutdown service1)
   (service/shutdown service2)
@@ -87,38 +88,28 @@
 
 (deftest shotgun
   (let [shotgun (patterns/shotgun {service1 {} service2 {} service3 {}} 2)
+        all-done (atom (CountDownLatch. 2))
         action-blocking-latch (atom (CountDownLatch. 1))
         test-blocking-latch (atom (CountDownLatch. 1))
-        counter (atom 0)
-        inc-fn (fn [current]
-                 (if (= 1 current)
-                   (do (.await ^CountDownLatch @action-blocking-latch)
-                       (inc current))
-                   (inc current)))
-        action-fn (fn [_] (let [result (swap! counter inc-fn)]
-                            (when (= result 2)
+        counter (AtomicInteger. 0)
+        action-fn (fn [_] (let [result (.incrementAndGet counter)]
+                            (if (= 1 result)
+                              (.await ^CountDownLatch @action-blocking-latch)
                               (.countDown ^CountDownLatch @test-blocking-latch))
+                            (.countDown ^CountDownLatch @all-done)
                             result))]
     (testing "Actions submitted to multiple services"
-      (reset! counter 0)
+      (.set counter 0)
+      (reset! all-done (CountDownLatch. 2))
       (reset! action-blocking-latch (CountDownLatch. 1))
       (reset! test-blocking-latch (CountDownLatch. 1))
-      (is (= 1 @(patterns/submit-action shotgun action-fn Long/MAX_VALUE)))
+      (is (= 2 @(patterns/submit-action shotgun action-fn Long/MAX_VALUE)))
       (.countDown ^CountDownLatch @action-blocking-latch)
       (.await ^CountDownLatch @test-blocking-latch)
-      (is (= 2 @counter)))
-    (testing "Result is from the the first services to response"
-      (reset! counter 0)
-      (reset! action-blocking-latch (CountDownLatch. 1))
-      (reset! test-blocking-latch (CountDownLatch. 1))
-      (let [f (patterns/submit-action shotgun action-fn Long/MAX_VALUE)]
-        @f
-        (.countDown ^CountDownLatch @action-blocking-latch)
-        ;; TODO: Need to rework to avoid occasional race condition
-        (.await ^CountDownLatch @test-blocking-latch)
-        (is (= 1 @f))))
+      (is (= 2 (.get counter)))
+      (.await ^CountDownLatch @all-done))
     (testing "Nil returned if all services reject action"
-      (reset! counter 0)
+      (.set counter 0)
       (reset! action-blocking-latch (CountDownLatch. 1))
       (reset! test-blocking-latch (CountDownLatch. 1))
       (let [shotgun (patterns/shotgun {service1 {}
