@@ -26,23 +26,26 @@
 (defn- transform-map [service->context]
   (into {} (map (fn [[k v]] [(.service ^CLJServiceImpl k) v]) service->context)))
 
-(defprotocol CLJComposedService
-  (submit-action [this action-fn timeout-millis])
+(defprotocol CLJAsyncPattern
+  (submit-action [this action-fn timeout-millis]))
+
+(defprotocol CLJSyncPattern
   (run-action [this action-fn]))
 
 (deftype CLJLoadBalancer [^MultiLoadBalancer balancer]
-  CLJComposedService
-  (submit-action [this action-fn timeout-millis]
+  CLJAsyncPattern
+  (submit-action [_ action-fn timeout-millis]
     (try (f/->CLJResilientFuture
            (.submit balancer
                     (c/wrap-pattern-action-fn action-fn)
                     timeout-millis))
          (catch RejectedActionException e
            (f/rejected-action-future (.reason e)))))
-  (run-action [this action-fn]
+  CLJSyncPattern
+  (run-action [_ action-fn]
     (try
       (.run balancer (c/wrap-pattern-action-fn action-fn))
-      (catch RejectedActionException e
+      (catch RejectedActionException _
         :all-services-rejected))))
 
 (defn load-balancer [service->context]
@@ -51,17 +54,14 @@
     (->CLJLoadBalancer balancer)))
 
 (deftype CLJShotgun [^Shotgun shotgun]
-  CLJComposedService
-  (submit-action [this action-fn timeout-millis]
+  CLJAsyncPattern
+  (submit-action [_ action-fn timeout-millis]
     (try (f/->CLJResilientFuture
            (.submit shotgun
                     (c/wrap-pattern-action-fn action-fn)
                     timeout-millis))
          (catch RejectedActionException e
-           (f/rejected-action-future (.reason e)))))
-
-  (run-action [this action-fn]
-    (throw (UnsupportedOperationException. "Cannot perform action with Shotgun"))))
+           (f/rejected-action-future (.reason e))))))
 
 (defn shotgun [service->context submission-count]
   (let [service->context (transform-map service->context)
