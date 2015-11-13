@@ -52,9 +52,9 @@
       :error? (identical? :error (status (.getStatus future)))
       :pending? (identical? :pending (status (.getStatus future)))
       :cancelled? (identical? :cancelled (status (.getStatus future)))
+      :rejected? false
       :result (.result future)
       :error (.error future)
-      :rejected? false
       default)))
 
 (deftype CLJRejectedFuture [reason]
@@ -71,6 +71,11 @@
     (case key
       :status :rejected
       :rejected? true
+      :success? false
+      :timeout? false
+      :error? false
+      :pending? false
+      :cancelled? false
       :rejected-reason reason
       default)))
 
