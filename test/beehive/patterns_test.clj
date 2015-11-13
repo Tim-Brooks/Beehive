@@ -36,6 +36,9 @@
 
 (use-fixtures :each start-and-stop)
 
+(defn blocking-action [^CountDownLatch latch ^CountDownLatch submitted-latch]
+  (fn [] (.countDown submitted-latch) (.await latch)))
+
 (deftest load-balancer
   (let [load-balancer (patterns/load-balancer {service1 {:result 1}
                                                service2 {:result 2}
@@ -51,9 +54,12 @@
                       load-balancer (fn [context] (:result context 10))))))))
 
     (testing "If action rejected, other services will be called."
-      (let [latch (CountDownLatch. 1)]
-        (beehive/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
-        (beehive/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
+      (let [submitted-latch (CountDownLatch. 2)
+            latch (CountDownLatch. 1)
+            action (blocking-action latch submitted-latch)]
+        (beehive/submit-action service1 action Long/MAX_VALUE)
+        (beehive/submit-action service3 action Long/MAX_VALUE)
+        (.await submitted-latch)
         (is (= 2 @(patterns/submit-action load-balancer
                                           (fn [context] (:result context 10))
                                           1000)))
@@ -61,10 +67,13 @@
                                       (fn [context] (:result context 10)))))
         (.countDown latch)))
     (testing ":all-services-rejected returned if all services reject action"
-      (let [latch (CountDownLatch. 1)]
-        (beehive/submit-action service1 (fn [] (.await latch)) Long/MAX_VALUE)
-        (beehive/submit-action service2 (fn [] (.await latch)) Long/MAX_VALUE)
-        (beehive/submit-action service3 (fn [] (.await latch)) Long/MAX_VALUE)
+      (let [submitted-latch (CountDownLatch. 3)
+            latch (CountDownLatch. 1)
+            action (blocking-action latch submitted-latch)]
+        (beehive/submit-action service1 action Long/MAX_VALUE)
+        (beehive/submit-action service2 action Long/MAX_VALUE)
+        (beehive/submit-action service3 action Long/MAX_VALUE)
+        (.await submitted-latch)
         (is (= :all-services-rejected
                @(patterns/submit-action
                   load-balancer
