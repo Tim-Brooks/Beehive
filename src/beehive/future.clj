@@ -28,7 +28,7 @@
     (= Status/TIMEOUT status-enum) :timeout
     (= Status/CANCELLED status-enum) :cancelled))
 
-(deftype CLJResilientFuture [^PrecipiceFuture future]
+(deftype BeehiveFuture [^PrecipiceFuture future]
   IDeref
   (deref [this]
     (do (.await future)
@@ -57,7 +57,7 @@
       :error (.error future)
       default)))
 
-(deftype CLJRejectedFuture [reason]
+(deftype BeehiveRejectedFuture [reason]
   IDeref
   (deref [this] reason)
   IBlockingDeref
@@ -87,9 +87,9 @@
    RejectionReason/ALL_SERVICES_REJECTED :all-services-rejected})
 
 (defn rejected-action-future [reason]
-  (->CLJRejectedFuture (get reject-enum->keyword reason)))
+  (->BeehiveRejectedFuture (get reject-enum->keyword reason)))
 
-(defn cancel [^CLJResilientFuture f]
+(defn cancel [^BeehiveFuture f]
   (.cancel ^PrecipiceFuture (.future f) true))
 
 (deftype CLJCallback [^PrecipiceFuture future fn]
@@ -98,9 +98,9 @@
     (fn (:status future) result)))
 
 (defn on-complete [f fn]
-  (if (instance? CLJRejectedFuture f)
-    (fn :rejected (.reason ^CLJRejectedFuture f))
-    (let [^PrecipiceFuture java-f (.future ^CLJResilientFuture f)
+  (if (instance? BeehiveRejectedFuture f)
+    (fn :rejected (.reason ^BeehiveRejectedFuture f))
+    (let [^PrecipiceFuture java-f (.future ^BeehiveFuture f)
           cb (CLJCallback. java-f fn)]
       (.onSuccess java-f cb)
       (.onError java-f cb)

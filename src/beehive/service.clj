@@ -66,7 +66,7 @@
   CLJService
   (submit-action [this action-fn timeout-millis]
     (try
-      (f/->CLJResilientFuture
+      (f/->BeehiveFuture
         ^PrecipiceFuture
         (.submit service
                  ^ResilientAction (c/wrap-action-fn action-fn)

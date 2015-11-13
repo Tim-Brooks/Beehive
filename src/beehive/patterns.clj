@@ -35,7 +35,7 @@
 (deftype CLJLoadBalancer [^MultiLoadBalancer balancer]
   CLJAsyncPattern
   (submit-action [_ action-fn timeout-millis]
-    (try (f/->CLJResilientFuture
+    (try (f/->BeehiveFuture
            (.submit balancer
                     (c/wrap-pattern-action-fn action-fn)
                     timeout-millis))
@@ -56,7 +56,7 @@
 (deftype CLJShotgun [^Shotgun shotgun]
   CLJAsyncPattern
   (submit-action [_ action-fn timeout-millis]
-    (try (f/->CLJResilientFuture
+    (try (f/->BeehiveFuture
            (.submit shotgun
                     (c/wrap-pattern-action-fn action-fn)
                     timeout-millis))
