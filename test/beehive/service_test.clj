@@ -15,7 +15,8 @@
 (ns beehive.service-test
   (:require [clojure.test :refer :all]
             [beehive.core :as beehive]
-            [beehive.service :as service])
+            [beehive.service :as service]
+            [beehive.future :as f])
   (:import (java.io IOException)
            (java.util.concurrent CountDownLatch)))
 
@@ -90,6 +91,39 @@
       (is (not (:error? f)))
       (is (= :rejected (:status f)))
       (.countDown latch))))
+
+(deftest callback-test
+  (testing "Test that future callback is executed"
+    (let [status (atom nil)
+          result (atom nil)
+          blocker (CountDownLatch. 1)
+          f (service/submit-action service (success-fn 64) Long/MAX_VALUE)]
+      (f/on-complete
+        f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
+      (.await blocker)
+      (is (= :success @status))
+      (is (= 64 @result)))
+    (let [status (atom nil)
+          result (atom nil)
+          blocker (CountDownLatch. 1)
+          e (RuntimeException.)
+          f (service/submit-action service (error-fn e) Long/MAX_VALUE)]
+      (f/on-complete
+        f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
+      (.await blocker)
+      (is (= :error @status))
+      (is (= e @result)))
+    (let [action-blocker (CountDownLatch. 1)
+          status (atom nil)
+          result (atom nil)
+          blocker (CountDownLatch. 1)
+          f (service/submit-action service (block-fn 64 action-blocker) 10)]
+      (f/on-complete
+        f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
+      (.await blocker)
+      (is (= :timeout @status))
+      (is (nil? @result))
+      (.countDown action-blocker))))
 
 (deftest metrics-test
   (testing "Testing that metrics are updated with result of action"

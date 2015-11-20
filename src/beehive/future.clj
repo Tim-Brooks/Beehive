@@ -92,7 +92,7 @@
 (defn cancel [^BeehiveFuture f]
   (.cancel ^PrecipiceFuture (.future f) true))
 
-(deftype CLJCallback [^PrecipiceFuture future fn]
+(deftype CLJCallback [^BeehiveFuture future fn]
   PrecipiceFunction
   (apply [this result]
     (fn (:status future) result)))
@@ -101,7 +101,7 @@
   (if (instance? BeehiveRejectedFuture f)
     (fn :rejected (.reason ^BeehiveRejectedFuture f))
     (let [^PrecipiceFuture java-f (.future ^BeehiveFuture f)
-          cb (CLJCallback. java-f fn)]
+          cb (CLJCallback. f fn)]
       (.onSuccess java-f cb)
       (.onError java-f cb)
       (.onTimeout java-f cb))))
