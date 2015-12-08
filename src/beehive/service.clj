@@ -38,6 +38,7 @@
   (run-action [this action-fn])
   (metrics [this] [this time time-unit])
   (latency [this])
+  (remaining-capacity [this])
   (pending-count [this])
   (shutdown [this]))
 
@@ -98,6 +99,7 @@
        :latency-99-999 (.latency99999 snapshot)
        :latency-mean (.latencyMean snapshot)}))
   (pending-count [_] (.currentlyPending service))
+  (remaining-capacity [_] (.remainingCapacity service))
   (shutdown [_] (.shutdown service))
   ILookup
   (valAt [this key] (.valAt this key nil))

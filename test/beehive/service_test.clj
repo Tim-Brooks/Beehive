@@ -46,6 +46,7 @@
     (let [latch (CountDownLatch. 1)
           f (service/submit-action service (block-fn 64 latch) Long/MAX_VALUE)]
       (is (= 1 (service/pending-count service)))
+      (is (= 0 (service/remaining-capacity service)))
       (is (= :pending (:status f)))
       (is (not (realized? f)))
       (is (:pending? f))
@@ -58,7 +59,8 @@
       (is (not (:timeout? f)))
       (is (not (:rejected? f)))
       (is (nil? (:error f)))
-      (is (= 0 (service/pending-count service)))))
+      (is (= 0 (service/pending-count service)))
+      (is (= 1 (service/remaining-capacity service)))))
   (testing "Submitted action can return error"
     (let [exception (IOException.)
           f (service/submit-action service (error-fn exception) 10000)]
