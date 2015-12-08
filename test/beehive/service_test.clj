@@ -18,7 +18,8 @@
             [beehive.service :as service]
             [beehive.future :as f])
   (:import (java.io IOException)
-           (java.util.concurrent CountDownLatch ExecutionException)))
+           (java.util.concurrent CountDownLatch ExecutionException)
+           (net.uncontended.precipice.timeout ActionTimeoutException)))
 
 (set! *warn-on-reflection* true)
 
@@ -80,8 +81,7 @@
   (testing "Submitted action can timeout"
     (let [latch (CountDownLatch. 1)
           f (service/submit-action service (block-fn 1 latch) 50)]
-      ;; TODO: Should change when precipice changes.
-      (is (nil? @f))
+      (f/await f)
       (is (:timeout? f))
       (is (not (:success? f)))
       (is (not (:error? f)))
@@ -89,7 +89,12 @@
       (is (= :timeout (:status f)))
       (.countDown latch)
       (is (nil? (:result f)))
-      (is (nil? (:error f)))))
+      (is (nil? (:error f)))
+      (try
+        @f
+        (is false)
+        (catch ExecutionException e
+          (is (instance? ActionTimeoutException (.getCause e)))))))
   (testing "If concurrency level exhausted, action rejected"
     (let [latch (CountDownLatch. 1)
           _ (service/submit-action service (block-fn 1 latch) Long/MAX_VALUE)
