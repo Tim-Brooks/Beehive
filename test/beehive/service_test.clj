@@ -18,7 +18,7 @@
             [beehive.service :as service]
             [beehive.future :as f])
   (:import (java.io IOException)
-           (java.util.concurrent CountDownLatch)))
+           (java.util.concurrent CountDownLatch ExecutionException)))
 
 (set! *warn-on-reflection* true)
 
@@ -60,18 +60,24 @@
   (testing "Submitted action can return error"
     (let [exception (IOException.)
           f (service/submit-action service (error-fn exception) 10000)]
-      (is (= exception @f))
+      (f/await f)
       (is (= exception (:error f)))
       (is (nil? (:result f)))
       (is (:error? f))
       (is (not (:success? f)))
       (is (not (:timeout? f)))
       (is (not (:rejected? f)))
-      (is (= :error (:status f)))))
+      (is (= :error (:status f)))
+      (try
+        @f
+        (is false)
+        (catch ExecutionException e
+          (is (= exception (.getCause e)))))))
   (testing "Submitted action can timeout"
     (let [latch (CountDownLatch. 1)
           f (service/submit-action service (block-fn 1 latch) 50)]
-      (is (= :timeout @f))
+      ;; TODO: Should change when precipice changes.
+      (is (nil? @f))
       (is (:timeout? f))
       (is (not (:success? f)))
       (is (not (:error? f)))
@@ -129,9 +135,9 @@
   (testing "Testing that metrics are updated with result of action"
     (let [metrics-service (beehive/service "test" 1 100)
           latch (CountDownLatch. 1)]
-      @(service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
-      @(service/submit-action metrics-service (error-fn (IOException.)) Long/MAX_VALUE)
-      @(service/submit-action metrics-service (block-fn 1 latch) 10)
+      (f/await (service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE))
+      (f/await (service/submit-action metrics-service (error-fn (IOException.)) Long/MAX_VALUE))
+      (f/await (service/submit-action metrics-service (block-fn 1 latch) 10))
       (.countDown latch)
       (is (= 1 (-> metrics-service service/metrics :successes)))
       (is (= 1 (-> metrics-service service/metrics :timeouts)))
@@ -187,9 +193,9 @@
   (testing "Testing that latency is updated"
     (let [latency-service (beehive/service "test" 1 100)
           latch (CountDownLatch. 1)]
-      @(service/submit-action latency-service (success-fn 1) Long/MAX_VALUE)
-      @(service/submit-action latency-service (error-fn (IOException.)) Long/MAX_VALUE)
-      @(service/submit-action latency-service (block-fn 1 latch) 10)
+      (f/await (service/submit-action latency-service (success-fn 1) Long/MAX_VALUE))
+      (f/await (service/submit-action latency-service (error-fn (IOException.)) Long/MAX_VALUE))
+      (f/await (service/submit-action latency-service (block-fn 1 latch) 10))
       (.countDown latch)
       (let [{:keys [latency-50
                     latency-90

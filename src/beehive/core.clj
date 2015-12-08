@@ -16,7 +16,7 @@
   (:require [beehive.service :as s]))
 
 (set! *warn-on-reflection* true)
-
+(await)
 (when
   (try
     (require '[clojure.core.async])

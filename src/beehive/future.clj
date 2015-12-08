@@ -13,6 +13,7 @@
 ;; limitations under the License.
 
 (ns beehive.future
+  (:refer-clojure :exclude [await])
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
            (net.uncontended.precipice Status RejectionReason PrecipiceFunction)
@@ -22,36 +23,34 @@
 
 (defn- status [status-enum]
   (cond
-    (= Status/PENDING status-enum) :pending
-    (= Status/SUCCESS status-enum) :success
-    (= Status/ERROR status-enum) :error
-    (= Status/TIMEOUT status-enum) :timeout
-    (= Status/CANCELLED status-enum) :cancelled))
+    (identical? Status/PENDING status-enum) :pending
+    (identical? Status/SUCCESS status-enum) :success
+    (identical? Status/ERROR status-enum) :error
+    (identical? Status/TIMEOUT status-enum) :timeout
+    (identical? Status/CANCELLED status-enum) :cancelled))
 
 (deftype BeehiveFuture [^PrecipiceFuture future]
   IDeref
   (deref [this]
-    (do (.await future)
-        (or (.result future) (.error future) (:status this))))
+    (.get future))
   IBlockingDeref
-  (deref
-    [this timeout-ms timeout-val]
+  (deref [this timeout-ms timeout-val]
     (if (.await future timeout-ms TimeUnit/MILLISECONDS)
-      (or (.result future) (.error future) (:status this))
+      (.get future)
       timeout-val))
   IPending
   (isRealized [_]
-    (not= Status/PENDING (.getStatus future)))
+    (not (identical? Status/PENDING (.getStatus future))))
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
     (case key
       :status (status (.getStatus future))
-      :success? (identical? :success (status (.getStatus future)))
-      :timeout? (identical? :timeout (status (.getStatus future)))
-      :error? (identical? :error (status (.getStatus future)))
-      :pending? (identical? :pending (status (.getStatus future)))
-      :cancelled? (identical? :cancelled (status (.getStatus future)))
+      :success? (identical? Status/SUCCESS (.getStatus future))
+      :timeout? (identical? Status/TIMEOUT (.getStatus future))
+      :error? (identical? Status/ERROR (.getStatus future))
+      :pending? (identical? Status/PENDING (.getStatus future))
+      :cancelled? (identical? Status/CANCELLED (.getStatus future))
       :rejected? false
       :result (.result future)
       :error (.error future)
@@ -89,19 +88,28 @@
 (defn rejected-action-future [reason]
   (->BeehiveRejectedFuture (get reject-enum->keyword reason)))
 
-(defn cancel [^BeehiveFuture f]
-  (.cancel ^PrecipiceFuture (.future f) true))
+(defn cancel! [f]
+  (when (instance? BeehiveFuture f)
+    (.cancel ^PrecipiceFuture (.future ^BeehiveFuture f) true)))
+
+(defn await
+  ([f]
+   (when (instance? BeehiveFuture f)
+     (.await ^PrecipiceFuture (.future ^BeehiveFuture f))))
+  ([f timeout-ms]
+   (when (instance? BeehiveFuture f)
+     (.await ^PrecipiceFuture (.future ^BeehiveFuture f) timeout-ms TimeUnit/MILLISECONDS))))
 
 (deftype CLJCallback [^BeehiveFuture future fn]
   PrecipiceFunction
   (apply [this result]
     (fn (:status future) result)))
 
-(defn on-complete [f fn]
+(defn on-complete [f function]
   (if (instance? BeehiveRejectedFuture f)
-    (fn :rejected (.reason ^BeehiveRejectedFuture f))
+    (function :rejected (.reason ^BeehiveRejectedFuture f))
     (let [^PrecipiceFuture java-f (.future ^BeehiveFuture f)
-          cb (CLJCallback. f fn)]
+          cb (CLJCallback. f function)]
       (.onSuccess java-f cb)
       (.onError java-f cb)
       (.onTimeout java-f cb))))
