@@ -45,6 +45,7 @@
   (testing "Submit action returns CLJ future wrapping result"
     (let [latch (CountDownLatch. 1)
           f (service/submit-action service (block-fn 64 latch) Long/MAX_VALUE)]
+      (is (= 1 (service/pending-count service)))
       (is (= :pending (:status f)))
       (is (not (realized? f)))
       (is (:pending? f))
@@ -56,7 +57,8 @@
       (is (not (:error? f)))
       (is (not (:timeout? f)))
       (is (not (:rejected? f)))
-      (is (nil? (:error f)))))
+      (is (nil? (:error f)))
+      (is (= 0 (service/pending-count service)))))
   (testing "Submitted action can return error"
     (let [exception (IOException.)
           f (service/submit-action service (error-fn exception) 10000)]

@@ -38,6 +38,7 @@
   (run-action [this action-fn])
   (metrics [this] [this time time-unit])
   (latency [this])
+  (pending-count [this])
   (shutdown [this]))
 
 (deftype CLJBreaker [^CircuitBreaker breaker]
@@ -96,6 +97,7 @@
        :latency-99-99 (.latency9999 snapshot)
        :latency-99-999 (.latency99999 snapshot)
        :latency-mean (.latencyMean snapshot)}))
+  (pending-count [_] (.currentlyPending service))
   (shutdown [_] (.shutdown service))
   ILookup
   (valAt [this key] (.valAt this key nil))
