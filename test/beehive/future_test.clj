@@ -17,7 +17,10 @@
             [beehive.future :as f])
   (:import (net.uncontended.precipice.concurrent Eventual)))
 
-(defn remove-false [f & ks]
+(def pending [:success? :error? :timeout? :rejected? :cancelled? :result :error])
+(def success [:pending? :error? :timeout? :rejected? :cancelled? :error])
+
+(defn- remove-false [f ks]
   (filter (fn [func] (func f)) ks))
 
 (deftest future-status
@@ -26,21 +29,8 @@
           future (f/->BeehiveFuture eventual)]
       (is (= :pending (:status future)))
       (is (:pending? future))
-      (is (= [] (remove-false future
-                              :success?
-                              :error?
-                              :timeout?
-                              :rejected?
-                              :cancelled?
-                              :result
-                              :error)))
+      (is (= [] (remove-false future pending)))
       (.complete eventual 4)
       (is (= :success (:status future)))
       (is (:success? future))
-      (is (= [] (remove-false future
-                              :pending?
-                              :error?
-                              :timeout?
-                              :rejected?
-                              :cancelled?
-                              :error))))))
+      (is (= [] (remove-false future success))))))
