@@ -23,13 +23,18 @@
 (defn- remove-false [f ks]
   (filter (fn [func] (func f)) ks))
 
-(deftest future-status
-  (testing "Test that statuses work correctly."
+(deftest future-test
+  (testing "Test that pending futures work correctly."
     (let [eventual (Eventual.)
           future (f/->BeehiveFuture eventual)]
       (is (= :pending (:status future)))
       (is (:pending? future))
       (is (= [] (remove-false future pending)))
+      (.complete eventual 4)))
+
+  (testing "Test that success futures work correctly."
+    (let [eventual (Eventual.)
+          future (f/->BeehiveFuture eventual)]
       (.complete eventual 4)
       (is (= :success (:status future)))
       (is (:success? future))
