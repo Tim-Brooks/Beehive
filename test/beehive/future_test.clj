@@ -26,7 +26,21 @@
           future (f/->BeehiveFuture eventual)]
       (is (= :pending (:status future)))
       (is (:pending? future))
+      (is (= [] (remove-false future
+                              :success?
+                              :error?
+                              :timeout?
+                              :rejected?
+                              :cancelled?
+                              :result
+                              :error)))
       (.complete eventual 4)
       (is (= :success (:status future)))
       (is (:success? future))
-      (is (= [] (remove-false future :pending?))))))
+      (is (= [] (remove-false future
+                              :pending?
+                              :error?
+                              :timeout?
+                              :rejected?
+                              :cancelled?
+                              :error))))))
