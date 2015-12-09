@@ -125,14 +125,27 @@
            failure-threshold
            failure-percentage-threshold
            backoff-time-millis
-           health-refresh-millis]}]
-  (DefaultCircuitBreaker.
-    ^BreakerConfig (.build (cond-> (BreakerConfigBuilder.)
-                             trailing-period-millis (.trailingPeriodMillis trailing-period-millis)
-                             failure-threshold  (.failureThreshold failure-threshold)
-                             failure-percentage-threshold (.failurePercentageThreshold failure-percentage-threshold)
-                             backoff-time-millis (.backOffTimeMillis backoff-time-millis)
-                             health-refresh-millis (.healthRefreshMillis health-refresh-millis)))))
+           health-refresh-millis
+           sample-size-threshold]}]
+  (let [config (cond-> (BreakerConfigBuilder.)
+                       trailing-period-millis
+                       (.trailingPeriodMillis trailing-period-millis)
+
+                       failure-threshold
+                       (.failureThreshold failure-threshold)
+
+                       failure-percentage-threshold
+                       (.failurePercentageThreshold failure-percentage-threshold)
+
+                       backoff-time-millis
+                       (.backOffTimeMillis backoff-time-millis)
+
+                       health-refresh-millis
+                       (.healthRefreshMillis health-refresh-millis)
+
+                       sample-size-threshold
+                       (.sampleSizeThreshold sample-size-threshold))]
+    (DefaultCircuitBreaker. ^BreakerConfig (.build config))))
 
 (defn service
   [name
