@@ -13,8 +13,8 @@
 ;; limitations under the License.
 
 (ns beehive.patterns-test
-  (:use [clojure.test])
-  (:require [beehive.core :as beehive]
+  (:require [clojure.test :refer :all]
+            [beehive.core :as beehive]
             [beehive.service :as service]
             [beehive.patterns :as patterns])
   (:import (java.util.concurrent CountDownLatch)
