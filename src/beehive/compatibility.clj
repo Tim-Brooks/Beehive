@@ -27,9 +27,15 @@
     (run [_] (action-fn))))
 
 (defn rejected-exception->reason [^RejectedActionException e]
-  (case (.reason e)
-    RejectionReason/CIRCUIT_OPEN :circuit-open
-    RejectionReason/MAX_CONCURRENCY_LEVEL_EXCEEDED :max-concurrency-level-exceeded
-    RejectionReason/QUEUE_FULL :queue-full
-    RejectionReason/SERVICE_SHUTDOWN :service-shutdown
-    RejectionReason/ALL_SERVICES_REJECTED :all-services-rejected))
+  (let [reason (.reason e)]
+    (cond
+      (identical? RejectionReason/CIRCUIT_OPEN reason)
+      :circuit-open
+      (identical? RejectionReason/MAX_CONCURRENCY_LEVEL_EXCEEDED reason)
+      :max-concurrency-level-exceeded
+      (identical? RejectionReason/QUEUE_FULL reason)
+      :queue-full
+      (identical? RejectionReason/SERVICE_SHUTDOWN reason)
+      :service-shutdown
+      (identical? RejectionReason/ALL_SERVICES_REJECTED reason)
+      :all-services-rejected)))

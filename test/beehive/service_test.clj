@@ -107,6 +107,50 @@
       (is (= :rejected (:status f)))
       (.countDown latch))))
 
+(deftest perform-test
+  (testing "Run action returns map wrapping result"
+    (let [m (service/run-action service (success-fn 64))]
+      (is (= 64 (:result m)))
+      (is (= :success (:status m)))
+      (is (:success? m))
+      (is (not (:error? m)))
+      (is (not (:timeout? m)))
+      (is (not (:rejected? m)))
+      (is (nil? (:error m)))
+      (is (= 0 (service/pending-count service)))
+      (is (= 1 (service/remaining-capacity service)))))
+  (testing "Run action can return error"
+    (let [exception (IOException.)
+          m (service/run-action service (error-fn exception))]
+      (is (= exception (:error m)))
+      (is (nil? (:result m)))
+      (is (:error? m))
+      (is (not (:success? m)))
+      (is (not (:timeout? m)))
+      (is (not (:rejected? m)))
+      (is (= :error (:status m)))))
+  (testing "Run action can timeout"
+    (let [timeout-ex (ActionTimeoutException.)
+          m (service/run-action service (error-fn timeout-ex))]
+      (is (:timeout? m))
+      (is (not (:success? m)))
+      (is (not (:error? m)))
+      (is (not (:rejected? m)))
+      (is (= :timeout (:status m)))
+      (is (nil? (:result m)))
+      (is (nil? (:error m)))))
+  (testing "If concurrency level exhausted, action rejected"
+    (let [latch (CountDownLatch. 1)
+          _ (service/submit-action service (block-fn 1 latch) Long/MAX_VALUE)
+          m (service/run-action service (success-fn 1))]
+      (is (= :max-concurrency-level-exceeded (:rejected-reason m)))
+      (is (:rejected? m))
+      (is (not (:timeout? m)))
+      (is (not (:success? m)))
+      (is (not (:error? m)))
+      (is (= :rejected (:status m)))
+      (.countDown latch))))
+
 (deftest callback-test
   (testing "Test that future callback is executed"
     (let [status (atom nil)

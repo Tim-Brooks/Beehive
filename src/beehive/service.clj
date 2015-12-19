@@ -81,7 +81,7 @@
       (let [result (.run service (c/wrap-action-fn action-fn))]
         {:status :success :result result :success? true})
       (catch RejectedActionException e
-        {:status :rejected :rejected? true :reason (c/rejected-exception->reason e)})
+        {:status :rejected :rejected? true :rejected-reason (c/rejected-exception->reason e)})
       (catch ActionTimeoutException _
         {:status :timeout :timeout? true})
       (catch Throwable e
