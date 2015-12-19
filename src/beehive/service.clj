@@ -29,7 +29,8 @@
                                       RejectedActionException
                                       Services
                                       ServiceProperties
-                                      Service)))
+                                      Service)
+           (net.uncontended.precipice.timeout ActionTimeoutException)))
 
 (set! *warn-on-reflection* true)
 
@@ -77,9 +78,14 @@
         (f/rejected-action-future (.reason e)))))
   (run-action [_ action-fn]
     (try
-      (.run service (c/wrap-action-fn action-fn))
+      (let [result (.run service (c/wrap-action-fn action-fn))]
+        {:status :success :result result :success? true})
       (catch RejectedActionException e
-        (c/rejected-exception->reason e))))
+        {:status :rejected :rejected? true :reason (c/rejected-exception->reason e)})
+      (catch ActionTimeoutException _
+        {:status :timeout :timeout? true})
+      (catch Throwable e
+        {:status :error :error e :error? true})))
   (metrics [this]
     (let [{:keys [slots-to-track resolution time-unit]} metrics-config]
       (metrics this (* slots-to-track resolution) time-unit)))
