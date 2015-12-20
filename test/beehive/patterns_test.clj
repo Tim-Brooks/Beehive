@@ -51,8 +51,9 @@
                        load-balancer (fn [context] (:result context 10)) 1000)))))
       (is (= #{1 2 3}
              (set (for [_ (range 3)]
-                    (patterns/run-action
-                      load-balancer (fn [context] (:result context 10))))))))
+                    (:result
+                      (patterns/run-action
+                        load-balancer (fn [context] (:result context 10)))))))))
 
     (testing "If action rejected, other services will be called."
       (let [submitted-latch (CountDownLatch. 2)
@@ -64,8 +65,11 @@
         (is (= 2 @(patterns/submit-action load-balancer
                                           (fn [context] (:result context 10))
                                           1000)))
-        (is (= 2 (patterns/run-action load-balancer
-                                      (fn [context] (:result context 10)))))
+        (is (= {:result 2
+                :status :success
+                :success? true}
+               (patterns/run-action load-balancer
+                                    (fn [context] (:result context 10)))))
         (.countDown latch)))
     (testing ":all-services-rejected returned if all services reject action"
       (let [submitted-latch (CountDownLatch. 3)
@@ -76,11 +80,14 @@
         (beehive/submit-action service3 action Long/MAX_VALUE)
         (.await submitted-latch)
         (is (= :all-services-rejected
-               @(patterns/submit-action
-                  load-balancer
-                  (fn [context] (:result context 10))
-                  1000)))
-        (is (= :all-services-rejected
+               (:rejected-reason
+                 (patterns/submit-action
+                   load-balancer
+                   (fn [context] (:result context 10))
+                   1000))))
+        (is (= {:rejected-reason :all-services-rejected
+                :rejected? true
+                :status :rejected}
                (patterns/run-action
                  load-balancer
                  (fn [context] (:result context 10)))))
@@ -120,8 +127,8 @@
         (is (not (:rejected? (patterns/submit-action shotgun
                                                      action-fn
                                                      Long/MAX_VALUE))))
-        (is (= :all-services-rejected @(patterns/submit-action
-                                         shotgun
-                                         action-fn
-                                         Long/MAX_VALUE)))
+        (is (= :all-services-rejected (:rejected-reason (patterns/submit-action
+                                                          shotgun
+                                                          action-fn
+                                                          Long/MAX_VALUE))))
         (.countDown ^CountDownLatch @action-blocking-latch)))))

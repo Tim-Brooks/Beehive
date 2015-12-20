@@ -16,7 +16,7 @@
   (:refer-clojure :exclude [await])
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
-           (net.uncontended.precipice Status RejectionReason PrecipiceFunction)
+           (net.uncontended.precipice Status RejectionReason PrecipiceFunction RejectedActionException)
            (net.uncontended.precipice.concurrent PrecipiceFuture)))
 
 (set! *warn-on-reflection* true)
@@ -56,11 +56,11 @@
       :error (.error future)
       default)))
 
-(deftype BeehiveRejectedFuture [reason]
+(deftype BeehiveRejectedFuture [^RejectedActionException ex reason]
   IDeref
-  (deref [this] reason)
+  (deref [this] (throw ex))
   IBlockingDeref
-  (deref [this timeout-ms timeout-val] reason)
+  (deref [this timeout-ms timeout-val] (throw ex))
   IPending
   (isRealized [_]
     true)
@@ -85,8 +85,8 @@
    RejectionReason/SERVICE_SHUTDOWN :service-shutdown
    RejectionReason/ALL_SERVICES_REJECTED :all-services-rejected})
 
-(defn rejected-action-future [reason]
-  (->BeehiveRejectedFuture (get reject-enum->keyword reason)))
+(defn rejected-action-future [^RejectedActionException ex]
+  (->BeehiveRejectedFuture ex (get reject-enum->keyword (.reason ex))))
 
 (defn cancel! [f]
   (when (instance? BeehiveFuture f)

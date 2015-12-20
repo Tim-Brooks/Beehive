@@ -22,9 +22,6 @@
 
 (thing 9)
 
-(def t
-  (f/rejected-action-future :time-out))
-
 (defonce s (c/service "1" 1 10))
 
 (defn multi-5 [thing]

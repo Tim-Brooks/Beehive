@@ -40,13 +40,15 @@
                     (c/wrap-pattern-action-fn action-fn)
                     timeout-millis))
          (catch RejectedActionException e
-           (f/rejected-action-future (.reason e)))))
+           (f/rejected-action-future e))))
   CLJSyncPattern
   (run-action [_ action-fn]
     (try
-      (.run balancer (c/wrap-pattern-action-fn action-fn))
-      (catch RejectedActionException _
-        :all-services-rejected))))
+      (.run balancer (c/wrap-run-pattern-action-fn action-fn))
+      (catch RejectedActionException e
+        {:status :rejected
+         :rejected? true
+         :rejected-reason (c/rejected-exception->reason e)}))))
 
 (defn load-balancer [service->context]
   (let [service->context (transform-map service->context)
@@ -61,7 +63,7 @@
                     (c/wrap-pattern-action-fn action-fn)
                     timeout-millis))
          (catch RejectedActionException e
-           (f/rejected-action-future (.reason e))))))
+           (f/rejected-action-future e)))))
 
 (defn shotgun [service->context submission-count]
   (let [service->context (transform-map service->context)

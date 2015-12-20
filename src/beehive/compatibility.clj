@@ -16,15 +16,40 @@
   (:import (net.uncontended.precipice ResilientAction
                                       RejectedActionException
                                       RejectionReason)
-           (net.uncontended.precipice.pattern ResilientPatternAction)))
+           (net.uncontended.precipice.pattern ResilientPatternAction)
+           (net.uncontended.precipice.timeout ActionTimeoutException)))
+
+(declare rejected-exception->reason)
 
 (defn wrap-pattern-action-fn [action-fn]
   (reify ResilientPatternAction
     (run [_ context] (action-fn context))))
 
+(defn wrap-run-pattern-action-fn [action-fn]
+  (reify ResilientPatternAction
+    (run [_ context]
+      (try
+        (let [result (action-fn context)]
+          {:status :success :result result :success? true})
+        (catch ActionTimeoutException _
+          {:status :timeout :timeout? true})
+        (catch Throwable e
+          {:status :error :error e :error? true})))))
+
 (defn wrap-action-fn [action-fn]
   (reify ResilientAction
     (run [_] (action-fn))))
+
+(defn wrap-run-action-fn [action-fn]
+  (reify ResilientAction
+    (run [_]
+      (try
+        (let [result (action-fn)]
+          {:status :success :result result :success? true})
+        (catch ActionTimeoutException _
+          {:status :timeout :timeout? true})
+        (catch Throwable e
+          {:status :error :error e :error? true})))))
 
 (defn rejected-exception->reason [^RejectedActionException e]
   (let [reason (.reason e)]

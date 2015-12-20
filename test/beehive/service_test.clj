@@ -99,7 +99,7 @@
     (let [latch (CountDownLatch. 1)
           _ (service/submit-action service (block-fn 1 latch) Long/MAX_VALUE)
           f (service/submit-action service (success-fn 1) Long/MAX_VALUE)]
-      (is (= :max-concurrency-level-exceeded @f))
+      (is (= :max-concurrency-level-exceeded (:rejected-reason f)))
       (is (:rejected? f))
       (is (not (:timeout? f)))
       (is (not (:success? f)))
@@ -232,7 +232,7 @@
     (let [metrics-service (beehive/service "test" 1 1)
           latch (CountDownLatch. 1)]
       (service/open-circuit! metrics-service)
-      @(service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
+      (f/await (service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE))
       (is (= 1 (-> metrics-service service/metrics :circuit-open)))
       (service/close-circuit! metrics-service)
 

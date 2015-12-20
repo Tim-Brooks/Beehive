@@ -75,17 +75,14 @@
                  ^ResilientAction (c/wrap-action-fn action-fn)
                  (long timeout-millis)))
       (catch RejectedActionException e
-        (f/rejected-action-future (.reason e)))))
+        (f/rejected-action-future e))))
   (run-action [_ action-fn]
     (try
-      (let [result (.run service (c/wrap-action-fn action-fn))]
-        {:status :success :result result :success? true})
+      (.run service (c/wrap-run-action-fn action-fn))
       (catch RejectedActionException e
-        {:status :rejected :rejected? true :rejected-reason (c/rejected-exception->reason e)})
-      (catch ActionTimeoutException _
-        {:status :timeout :timeout? true})
-      (catch Throwable e
-        {:status :error :error e :error? true})))
+        {:status :rejected
+         :rejected? true
+         :rejected-reason (c/rejected-exception->reason e)})))
   (metrics [this]
     (let [{:keys [slots-to-track resolution time-unit]} metrics-config]
       (metrics this (* slots-to-track resolution) time-unit)))
