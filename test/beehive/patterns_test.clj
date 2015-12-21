@@ -93,32 +93,25 @@
                  (fn [context] (:result context 10)))))
         (.countDown latch)))))
 
-(deftest shotgun
-  (let [shotgun (patterns/shotgun {service1 {} service2 {} service3 {}} 2)
-        all-done (atom (CountDownLatch. 2))
-        action-blocking-latch (atom (CountDownLatch. 1))
-        test-blocking-latch (atom (CountDownLatch. 1))
-        counter (AtomicInteger. 0)
-        action-fn (fn [_] (let [result (.incrementAndGet counter)]
-                            (if (= 1 result)
-                              (.await ^CountDownLatch @action-blocking-latch)
-                              (.countDown ^CountDownLatch @test-blocking-latch))
-                            (.countDown ^CountDownLatch @all-done)
-                            result))]
-    (testing "Actions submitted to multiple services"
-      (.set counter 0)
-      (reset! all-done (CountDownLatch. 2))
-      (reset! action-blocking-latch (CountDownLatch. 1))
-      (reset! test-blocking-latch (CountDownLatch. 1))
+(deftest shotgun-submission
+  (testing "Actions submitted to multiple services"
+    (let [shotgun (patterns/shotgun {service1 {} service2 {} service3 {}} 2)
+          all-done (atom (CountDownLatch. 2))
+          action-blocking-latch (atom (CountDownLatch. 1))
+          counter (AtomicInteger. 0)
+          action-fn (fn [_] (let [result (.incrementAndGet counter)]
+                              (when (= 1 result)
+                                (.await ^CountDownLatch @action-blocking-latch))
+                              (.countDown ^CountDownLatch @all-done)
+                              result))]
       (is (= 2 @(patterns/submit-action shotgun action-fn Long/MAX_VALUE)))
       (.countDown ^CountDownLatch @action-blocking-latch)
-      (.await ^CountDownLatch @test-blocking-latch)
-      (is (= 2 (.get counter)))
-      (.await ^CountDownLatch @all-done))
-    (testing "Nil returned if all services reject action"
-      (.set counter 0)
+      (.await ^CountDownLatch @all-done))))
+
+(deftest shotgun-rejection
+  (testing "Nil returned if all services reject action"
+    (let [action-blocking-latch (atom (CountDownLatch. 1))]
       (reset! action-blocking-latch (CountDownLatch. 1))
-      (reset! test-blocking-latch (CountDownLatch. 1))
       (let [shotgun (patterns/shotgun {service1 {}
                                        service2 {}
                                        service3 {}}
@@ -127,8 +120,8 @@
         (is (not (:rejected? (patterns/submit-action shotgun
                                                      action-fn
                                                      Long/MAX_VALUE))))
-        (is (= :all-services-rejected (:rejected-reason (patterns/submit-action
-                                                          shotgun
-                                                          action-fn
-                                                          Long/MAX_VALUE))))
+        (is (= :all-services-rejected
+               (:rejected-reason (patterns/submit-action shotgun
+                                                         action-fn
+                                                         Long/MAX_VALUE))))
         (.countDown ^CountDownLatch @action-blocking-latch)))))
