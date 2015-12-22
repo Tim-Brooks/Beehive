@@ -22,15 +22,14 @@
                                               DefaultCircuitBreaker
                                               BreakerConfigBuilder
                                               NoOpCircuitBreaker)
-           (net.uncontended.precipice.metrics DefaultActionMetrics)
+           (net.uncontended.precipice.metrics DefaultActionMetrics Metric)
            (net.uncontended.precipice.concurrent PrecipiceFuture)
            (net.uncontended.precipice MultiService
                                       ResilientAction
                                       RejectedActionException
                                       Services
                                       ServiceProperties
-                                      Service)
-           (net.uncontended.precipice.timeout ActionTimeoutException)))
+                                      Service)))
 
 (set! *warn-on-reflection* true)
 
@@ -92,15 +91,33 @@
                              time
                              (utils/->time-unit time-unit)))))
   (latency [_]
-    (let [snapshot (.latencySnapshot (.getLatencyMetrics service))]
-      {:latency-max (.latencyMax snapshot)
-       :latency-50 (.latency50 snapshot)
-       :latency-90 (.latency90 snapshot)
-       :latency-99 (.latency99 snapshot)
-       :latency-99-9 (.latency999 snapshot)
-       :latency-99-99 (.latency9999 snapshot)
-       :latency-99-999 (.latency99999 snapshot)
-       :latency-mean (.latencyMean snapshot)}))
+    (let [ss (.latencySnapshot (.getLatencyMetrics service) Metric/SUCCESS)
+          es (.latencySnapshot (.getLatencyMetrics service) Metric/ERROR)
+          ts (.latencySnapshot (.getLatencyMetrics service) Metric/ERROR)]
+      {:success-latency {:latency-max (.latencyMax ss)
+                         :latency-50 (.latency50 ss)
+                         :latency-90 (.latency90 ss)
+                         :latency-99 (.latency99 ss)
+                         :latency-99-9 (.latency999 ss)
+                         :latency-99-99 (.latency9999 ss)
+                         :latency-99-999 (.latency99999 ss)
+                         :latency-mean (.latencyMean ss)}
+       :error-latency {:latency-max (.latencyMax es)
+                       :latency-50 (.latency50 es)
+                       :latency-90 (.latency90 es)
+                       :latency-99 (.latency99 es)
+                       :latency-99-9 (.latency999 es)
+                       :latency-99-99 (.latency9999 es)
+                       :latency-99-999 (.latency99999 es)
+                       :latency-mean (.latencyMean es)}
+       :timeout-latency {:latency-max (.latencyMax ts)
+                         :latency-50 (.latency50 ts)
+                         :latency-90 (.latency90 ts)
+                         :latency-99 (.latency99 ts)
+                         :latency-99-9 (.latency999 ts)
+                         :latency-99-99 (.latency9999 ts)
+                         :latency-99-999 (.latency99999 ts)
+                         :latency-mean (.latencyMean ts)}}))
   (pending-count [_] (.currentlyPending service))
   (remaining-capacity [_] (.remainingCapacity service))
   (shutdown [_] (.shutdown service))

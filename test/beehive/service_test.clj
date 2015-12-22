@@ -250,22 +250,25 @@
       (f/await (service/submit-action latency-service (error-fn (IOException.)) Long/MAX_VALUE))
       (f/await (service/submit-action latency-service (block-fn 1 latch) 10))
       (.countDown latch)
-      (let [{:keys [latency-50
-                    latency-90
-                    latency-99
-                    latency-99-9
-                    latency-99-99
-                    latency-99-999
-                    latency-max
-                    latency-mean]} (service/latency latency-service)]
-        (is (not (or (nil? latency-50) (= latency-50 0))))
-        (is (not (or (nil? latency-90) (= latency-90 0))))
-        (is (not (or (nil? latency-99) (= latency-99 0))))
-        (is (not (or (nil? latency-99-9) (= latency-99-9 0))))
-        (is (not (or (nil? latency-99-99) (= latency-99-99 0))))
-        (is (not (or (nil? latency-99-999) (= latency-99-999 0))))
-        (is (not (or (nil? latency-max) (= latency-max 0))))
-        (is (not (or (nil? latency-mean) (= latency-mean 0.0))))))))
+      (let [{:keys [success-latency
+                    error-latency
+                    timeout-latency]} (service/latency latency-service)]
+        (doseq [{:keys [latency-50
+                        latency-90
+                        latency-99
+                        latency-99-9
+                        latency-99-99
+                        latency-99-999
+                        latency-max
+                        latency-mean]} [success-latency error-latency timeout-latency]]
+          (is (not (or (nil? latency-50) (= latency-50 0))))
+          (is (not (or (nil? latency-90) (= latency-90 0))))
+          (is (not (or (nil? latency-99) (= latency-99 0))))
+          (is (not (or (nil? latency-99-9) (= latency-99-9 0))))
+          (is (not (or (nil? latency-99-99) (= latency-99-99 0))))
+          (is (not (or (nil? latency-99-999) (= latency-99-999 0))))
+          (is (not (or (nil? latency-max) (= latency-max 0))))
+          (is (not (or (nil? latency-mean) (= latency-mean 0.0)))))))))
 
 (deftest circuit-breaker-config-test
   (testing "Testing that the service is created with the correct circuit breaker config"
