@@ -93,7 +93,7 @@
   (latency [_]
     (let [ss (.latencySnapshot (.getLatencyMetrics service) Metric/SUCCESS)
           es (.latencySnapshot (.getLatencyMetrics service) Metric/ERROR)
-          ts (.latencySnapshot (.getLatencyMetrics service) Metric/ERROR)]
+          ts (.latencySnapshot (.getLatencyMetrics service) Metric/TIMEOUT)]
       {:success-latency {:latency-max (.latencyMax ss)
                          :latency-50 (.latency50 ss)
                          :latency-90 (.latency90 ss)
