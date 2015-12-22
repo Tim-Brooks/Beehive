@@ -118,7 +118,7 @@
                          :latency-99-99 (.latency9999 ts)
                          :latency-99-999 (.latency99999 ts)
                          :latency-mean (.latencyMean ts)}}))
-  (pending-count [_] (.currentlyPending service))
+  (pending-count [_] (.pendingCount service))
   (remaining-capacity [_] (.remainingCapacity service))
   (shutdown [_] (.shutdown service))
   ILookup
