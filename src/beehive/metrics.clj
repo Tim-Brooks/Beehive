@@ -14,9 +14,7 @@
 
 (ns beehive.metrics
   (:require [beehive.utils :as utils])
-  (:import (net.uncontended.precipice.metrics ActionMetrics
-                                              DefaultActionMetrics
-                                              Metric)))
+  (:import (net.uncontended.precipice.metrics ActionMetrics DefaultActionMetrics)))
 
 (set! *warn-on-reflection* true)
 
