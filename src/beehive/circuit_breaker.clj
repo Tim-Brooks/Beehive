@@ -63,6 +63,14 @@
 (defn set-config! [breaker config-map]
   (.setBreakerConfig ^CircuitBreaker breaker (create-breaker-config config-map)))
 
+(defn get-config [breaker]
+  (let [^BreakerConfig config (.getBreakerConfig breaker)]
+    {:trailing-period-millis (.trailingPeriodMillis config)
+     :failure-threshold (.failureThreshold config)
+     :back-off-time-millis (.backOffTimeMillis config)
+     :failure-percentage-threshold (.failurePercentageThreshold config)
+     :health-refresh-millis (.healthRefreshMillis config)}))
+
 (defn open? [breaker]
   (.isOpen ^CircuitBreaker breaker))
 
