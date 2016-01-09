@@ -14,7 +14,9 @@
 
 (ns beehive.metrics
   (:require [beehive.utils :as utils])
-  (:import (net.uncontended.precipice.metrics ActionMetrics DefaultActionMetrics)))
+  (:import (net.uncontended.precipice.metrics ActionMetrics
+                                              DefaultActionMetrics
+                                              IntervalLatencyMetrics)))
 
 (set! *warn-on-reflection* true)
 
@@ -28,10 +30,13 @@
 (defn snapshot [metrics duration time-unit]
   (.snapshot ^ActionMetrics metrics duration (utils/->time-unit time-unit)))
 
-(defn default-metrics
+(defn action-metrics
   ([{:keys [slots-to-track resolution time-unit]}]
-    (default-metrics slots-to-track resolution time-unit))
+    (action-metrics slots-to-track resolution time-unit))
   ([slots-to-track resolution time-unit]
    (DefaultActionMetrics. slots-to-track
                           resolution
                           (utils/->time-unit time-unit))))
+
+(defn latency-metrics [highest-trackable-value significant-digits]
+  (IntervalLatencyMetrics. (long highest-trackable-value) (long significant-digits)))
