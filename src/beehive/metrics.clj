@@ -12,4 +12,14 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
-(ns beehive.metrics)
+(ns beehive.metrics
+  (:require [beehive.utils :as utils])
+  (:import (net.uncontended.precipice.metrics DefaultActionMetrics)))
+
+(defn default-metrics
+  ([{:keys [slots-to-track resolution time-unit]}]
+    (default-metrics slots-to-track resolution time-unit))
+  ([slots-to-track resolution time-unit]
+   (DefaultActionMetrics. slots-to-track
+                          resolution
+                          (utils/->time-unit time-unit))))
