@@ -15,13 +15,13 @@
 (ns beehive.circuit-breaker
   (:import (net.uncontended.precipice.circuit BreakerConfig
                                               BreakerConfigBuilder
+                                              CircuitBreaker
                                               DefaultCircuitBreaker
                                               NoOpCircuitBreaker)))
 
-(defn no-opt-breaker []
-  (NoOpCircuitBreaker.))
+(set! *warn-on-reflection* true)
 
-(defn default-breaker
+(defn- create-breaker-config
   [{:keys [trailing-period-millis
            failure-threshold
            failure-percentage-threshold
@@ -46,4 +46,19 @@
 
                        sample-size-threshold
                        (.sampleSizeThreshold sample-size-threshold))]
-    (DefaultCircuitBreaker. ^BreakerConfig (.build config))))
+    (.build config)))
+
+(defn no-opt-breaker []
+  (NoOpCircuitBreaker.))
+
+(defn default-breaker [config-map]
+  (DefaultCircuitBreaker. ^BreakerConfig (create-breaker-config config-map)))
+
+(defn close-circuit! [breaker]
+  (.forceClosed ^CircuitBreaker breaker))
+
+(defn open-circuit! [breaker]
+  (.forceOpen ^CircuitBreaker breaker))
+
+(defn set-config! [breaker config-map]
+  (.setBreakerConfig ^CircuitBreaker breaker (create-breaker-config config-map)))

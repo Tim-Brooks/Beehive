@@ -49,9 +49,11 @@
     (case key
       :open? (.isOpen breaker)
       :config (let [^BreakerConfig config (.getBreakerConfig breaker)]
-                {:time-period-in-millis (.trailingPeriodMillis config)
+                {:trailing-period-millis (.trailingPeriodMillis config)
                  :failure-threshold (.failureThreshold config)
-                 :time-to-pause-millis (.backOffTimeMillis config)})
+                 :back-off-time-millis (.backOffTimeMillis config)
+                 :failure-percentage-threshold (.failurePercentageThreshold config)
+                 :health-refresh-millis (.healthRefreshMillis config)})
       default))
   Object
   (toString [this]

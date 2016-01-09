@@ -278,9 +278,9 @@
                                :breaker {:trailing-period-millis 999
                                          :failure-threshold Long/MAX_VALUE})]
       (is (= 999
-             (:time-period-in-millis (:config (:breaker svc)))))
+             (:trailing-period-millis (:config (:breaker svc)))))
       (is (= Long/MAX_VALUE
              (:failure-threshold (:config (:breaker svc)))))
       ;; Defaults if the key is not passed in the config
       (is (= 1000
-             (:time-to-pause-millis (:config (:breaker svc))))))))
+             (:back-off-time-millis (:config (:breaker svc))))))))
