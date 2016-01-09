@@ -14,7 +14,16 @@
 
 (ns beehive.metrics
   (:require [beehive.utils :as utils])
-  (:import (net.uncontended.precipice.metrics DefaultActionMetrics)))
+  (:import (net.uncontended.precipice.metrics DefaultActionMetrics Metric)))
+
+(set! *warn-on-reflection* true)
+
+(defn get-count [metrics ^Metric metric]
+  (.getMetricCountForTotalPeriod metrics metric))
+
+(defn get-count-for-period [metrics metric duration time-unit]
+  (.getMetricCountForTimePeriod
+    metrics metric duration (utils/->time-unit time-unit)))
 
 (defn default-metrics
   ([{:keys [slots-to-track resolution time-unit]}]

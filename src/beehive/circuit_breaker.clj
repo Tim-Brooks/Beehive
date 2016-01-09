@@ -62,3 +62,9 @@
 
 (defn set-config! [breaker config-map]
   (.setBreakerConfig ^CircuitBreaker breaker (create-breaker-config config-map)))
+
+(defn open? [breaker]
+  (.isOpen ^CircuitBreaker breaker))
+
+(defn closed? [breaker]
+  (not (.isOpen ^CircuitBreaker breaker)))
