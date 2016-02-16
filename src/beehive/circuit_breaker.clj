@@ -13,8 +13,9 @@
 ;; limitations under the License.
 
 (ns beehive.circuit-breaker
-  (:import (net.uncontended.precipice.circuit BreakerConfig
-                                              BreakerConfigBuilder
+  (:import (net.uncontended.precipice Rejected)
+           (net.uncontended.precipice.circuit CircuitBreakerConfig
+                                              CircuitBreakerConfigBuilder
                                               CircuitBreaker
                                               DefaultCircuitBreaker
                                               NoOpCircuitBreaker)))
@@ -28,7 +29,7 @@
            backoff-time-millis
            health-refresh-millis
            sample-size-threshold]}]
-  (let [config (cond-> (BreakerConfigBuilder.)
+  (let [config (cond-> (CircuitBreakerConfigBuilder. Rejected/CIRCUIT_OPEN)
                        trailing-period-millis
                        (.trailingPeriodMillis trailing-period-millis)
 
@@ -52,7 +53,8 @@
   (NoOpCircuitBreaker.))
 
 (defn default-breaker [config-map]
-  (DefaultCircuitBreaker. ^BreakerConfig (create-breaker-config config-map)))
+  (DefaultCircuitBreaker.
+    ^CircuitBreakerConfig (create-breaker-config config-map)))
 
 (defn close-circuit! [breaker]
   (.forceClosed ^CircuitBreaker breaker))
@@ -64,7 +66,7 @@
   (.setBreakerConfig ^CircuitBreaker breaker (create-breaker-config config-map)))
 
 (defn get-config [breaker]
-  (let [^BreakerConfig config (.getBreakerConfig breaker)]
+  (let [^CircuitBreakerConfig config (.getBreakerConfig breaker)]
     {:trailing-period-millis (.trailingPeriodMillis config)
      :failure-threshold (.failureThreshold config)
      :back-off-time-millis (.backOffTimeMillis config)
