@@ -20,108 +20,108 @@
   (:import (java.util.concurrent CountDownLatch)
            (java.util.concurrent.atomic AtomicInteger)))
 
-(set! *warn-on-reflection* true)
-
-(def service1 nil)
-(def service2 nil)
-(def service3 nil)
-
-(defn- start-and-stop [f]
-  (alter-var-root #'service1 (fn [_] (beehive/service "1" 2 1)))
-  (alter-var-root #'service2 (fn [_] (beehive/service "2" 2 1)))
-  (alter-var-root #'service3 (fn [_] (beehive/service "3" 2 1)))
-  (f)
-  (service/shutdown service1)
-  (service/shutdown service2)
-  (service/shutdown service3))
-
-(use-fixtures :each start-and-stop)
-
-(defn blocking-action [^CountDownLatch latch ^CountDownLatch submitted-latch]
-  (fn [] (.countDown submitted-latch) (.await latch)))
-
-(deftest load-balancer
-  (let [load-balancer (patterns/load-balancer {service1 {:result 1}
-                                               service2 {:result 2}
-                                               service3 {:result 3}})]
-    (testing "Submitted Actions will be spread among services."
-      (is (= #{1 2 3}
-             (set (for [_ (range 3)]
-                    @(patterns/submit-action
-                       load-balancer (fn [context] (:result context 10)) 1000)))))
-      (is (= #{1 2 3}
-             (set (for [_ (range 3)]
-                    (:result
-                      (patterns/run-action
-                        load-balancer (fn [context] (:result context 10)))))))))
-
-    (testing "If action rejected, other services will be called."
-      (let [submitted-latch (CountDownLatch. 2)
-            latch (CountDownLatch. 1)
-            action (blocking-action latch submitted-latch)]
-        (beehive/submit-action service1 action Long/MAX_VALUE)
-        (beehive/submit-action service3 action Long/MAX_VALUE)
-        (.await submitted-latch)
-        (is (= 2 @(patterns/submit-action load-balancer
-                                          (fn [context] (:result context 10))
-                                          1000)))
-        (is (= {:result 2
-                :status :success
-                :success? true}
-               (patterns/run-action load-balancer
-                                    (fn [context] (:result context 10)))))
-        (.countDown latch)))
-    (testing ":all-services-rejected returned if all services reject action"
-      (let [submitted-latch (CountDownLatch. 3)
-            latch (CountDownLatch. 1)
-            action (blocking-action latch submitted-latch)]
-        (beehive/submit-action service1 action Long/MAX_VALUE)
-        (beehive/submit-action service2 action Long/MAX_VALUE)
-        (beehive/submit-action service3 action Long/MAX_VALUE)
-        (.await submitted-latch)
-        (is (= :all-services-rejected
-               (:rejected-reason
-                 (patterns/submit-action
-                   load-balancer
-                   (fn [context] (:result context 10))
-                   1000))))
-        (is (= {:rejected-reason :all-services-rejected
-                :rejected? true
-                :status :rejected}
-               (patterns/run-action
-                 load-balancer
-                 (fn [context] (:result context 10)))))
-        (.countDown latch)))))
-
-(deftest shotgun-submission
-  (testing "Actions submitted to multiple services"
-    (let [shotgun (patterns/shotgun {service1 {} service2 {} service3 {}} 2)
-          all-done (atom (CountDownLatch. 2))
-          action-blocking-latch (atom (CountDownLatch. 1))
-          counter (AtomicInteger. 0)
-          action-fn (fn [_] (let [result (.incrementAndGet counter)]
-                              (when (= 1 result)
-                                (.await ^CountDownLatch @action-blocking-latch))
-                              (.countDown ^CountDownLatch @all-done)
-                              result))]
-      (is (= 2 @(patterns/submit-action shotgun action-fn Long/MAX_VALUE)))
-      (.countDown ^CountDownLatch @action-blocking-latch)
-      (.await ^CountDownLatch @all-done))))
-
-(deftest shotgun-rejection
-  (testing "Nil returned if all services reject action"
-    (let [action-blocking-latch (atom (CountDownLatch. 1))]
-      (reset! action-blocking-latch (CountDownLatch. 1))
-      (let [shotgun (patterns/shotgun {service1 {}
-                                       service2 {}
-                                       service3 {}}
-                                      3)
-            action-fn (fn [_] (.await ^CountDownLatch @action-blocking-latch))]
-        (is (not (:rejected? (patterns/submit-action shotgun
-                                                     action-fn
-                                                     Long/MAX_VALUE))))
-        (is (= :all-services-rejected
-               (:rejected-reason (patterns/submit-action shotgun
-                                                         action-fn
-                                                         Long/MAX_VALUE))))
-        (.countDown ^CountDownLatch @action-blocking-latch)))))
+;(set! *warn-on-reflection* true)
+;
+;(def service1 nil)
+;(def service2 nil)
+;(def service3 nil)
+;
+;(defn- start-and-stop [f]
+;  (alter-var-root #'service1 (fn [_] (beehive/service "1" 2 1)))
+;  (alter-var-root #'service2 (fn [_] (beehive/service "2" 2 1)))
+;  (alter-var-root #'service3 (fn [_] (beehive/service "3" 2 1)))
+;  (f)
+;  (service/shutdown service1)
+;  (service/shutdown service2)
+;  (service/shutdown service3))
+;
+;(use-fixtures :each start-and-stop)
+;
+;(defn blocking-action [^CountDownLatch latch ^CountDownLatch submitted-latch]
+;  (fn [] (.countDown submitted-latch) (.await latch)))
+;
+;(deftest load-balancer
+;  (let [load-balancer (patterns/load-balancer {service1 {:result 1}
+;                                               service2 {:result 2}
+;                                               service3 {:result 3}})]
+;    (testing "Submitted Actions will be spread among services."
+;      (is (= #{1 2 3}
+;             (set (for [_ (range 3)]
+;                    @(patterns/submit-action
+;                       load-balancer (fn [context] (:result context 10)) 1000)))))
+;      (is (= #{1 2 3}
+;             (set (for [_ (range 3)]
+;                    (:result
+;                      (patterns/run-action
+;                        load-balancer (fn [context] (:result context 10)))))))))
+;
+;    (testing "If action rejected, other services will be called."
+;      (let [submitted-latch (CountDownLatch. 2)
+;            latch (CountDownLatch. 1)
+;            action (blocking-action latch submitted-latch)]
+;        (beehive/submit-action service1 action Long/MAX_VALUE)
+;        (beehive/submit-action service3 action Long/MAX_VALUE)
+;        (.await submitted-latch)
+;        (is (= 2 @(patterns/submit-action load-balancer
+;                                          (fn [context] (:result context 10))
+;                                          1000)))
+;        (is (= {:result 2
+;                :status :success
+;                :success? true}
+;               (patterns/run-action load-balancer
+;                                    (fn [context] (:result context 10)))))
+;        (.countDown latch)))
+;    (testing ":all-services-rejected returned if all services reject action"
+;      (let [submitted-latch (CountDownLatch. 3)
+;            latch (CountDownLatch. 1)
+;            action (blocking-action latch submitted-latch)]
+;        (beehive/submit-action service1 action Long/MAX_VALUE)
+;        (beehive/submit-action service2 action Long/MAX_VALUE)
+;        (beehive/submit-action service3 action Long/MAX_VALUE)
+;        (.await submitted-latch)
+;        (is (= :all-services-rejected
+;               (:rejected-reason
+;                 (patterns/submit-action
+;                   load-balancer
+;                   (fn [context] (:result context 10))
+;                   1000))))
+;        (is (= {:rejected-reason :all-services-rejected
+;                :rejected? true
+;                :status :rejected}
+;               (patterns/run-action
+;                 load-balancer
+;                 (fn [context] (:result context 10)))))
+;        (.countDown latch)))))
+;
+;(deftest shotgun-submission
+;  (testing "Actions submitted to multiple services"
+;    (let [shotgun (patterns/shotgun {service1 {} service2 {} service3 {}} 2)
+;          all-done (atom (CountDownLatch. 2))
+;          action-blocking-latch (atom (CountDownLatch. 1))
+;          counter (AtomicInteger. 0)
+;          action-fn (fn [_] (let [result (.incrementAndGet counter)]
+;                              (when (= 1 result)
+;                                (.await ^CountDownLatch @action-blocking-latch))
+;                              (.countDown ^CountDownLatch @all-done)
+;                              result))]
+;      (is (= 2 @(patterns/submit-action shotgun action-fn Long/MAX_VALUE)))
+;      (.countDown ^CountDownLatch @action-blocking-latch)
+;      (.await ^CountDownLatch @all-done))))
+;
+;(deftest shotgun-rejection
+;  (testing "Nil returned if all services reject action"
+;    (let [action-blocking-latch (atom (CountDownLatch. 1))]
+;      (reset! action-blocking-latch (CountDownLatch. 1))
+;      (let [shotgun (patterns/shotgun {service1 {}
+;                                       service2 {}
+;                                       service3 {}}
+;                                      3)
+;            action-fn (fn [_] (.await ^CountDownLatch @action-blocking-latch))]
+;        (is (not (:rejected? (patterns/submit-action shotgun
+;                                                     action-fn
+;                                                     Long/MAX_VALUE))))
+;        (is (= :all-services-rejected
+;               (:rejected-reason (patterns/submit-action shotgun
+;                                                         action-fn
+;                                                         Long/MAX_VALUE))))
+;        (.countDown ^CountDownLatch @action-blocking-latch)))))

@@ -31,12 +31,8 @@
       :or {breaker {} metrics {:slots-to-track 3600
                                :resolution 1
                                :time-unit :seconds}}}]
-  (if (empty? breaker)
-    (s/service-with-no-opt-breaker name pool-size max-concurrency metrics)
-    (s/service name pool-size max-concurrency breaker metrics)))
+  (s/service name pool-size max-concurrency breaker metrics))
 
 (defn submit-action [service f time-out-ms]
-  (s/submit-action service f time-out-ms))
+  (s/submit service f time-out-ms))
 
-(defn run-action [service f]
-  (s/run-action service f))

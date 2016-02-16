@@ -14,29 +14,30 @@
 
 (ns beehive.metrics
   (:require [beehive.utils :as utils])
-  (:import (net.uncontended.precipice.metrics ActionMetrics
-                                              DefaultActionMetrics
-                                              IntervalLatencyMetrics)))
+  (:import (net.uncontended.precipice.metrics TotalCountMetrics
+                                              RollingCountMetrics
+                                              IntervalLatencyMetrics)
+           (net.uncontended.precipice TimeoutableResult)))
 
 (set! *warn-on-reflection* true)
 
 (defn get-count [metrics metric]
-  (.getMetricCountForTotalPeriod ^ActionMetrics metrics metric))
+  (.getTotalMetricCount ^TotalCountMetrics metrics metric))
 
 (defn get-count-for-period [metrics metric duration time-unit]
-  (.getMetricCountForTimePeriod
-    ^ActionMetrics metrics metric duration (utils/->time-unit time-unit)))
+  (.getMetricCount
+    ^RollingCountMetrics metrics metric duration (utils/->time-unit time-unit)))
 
-(defn snapshot [metrics duration time-unit]
-  (.snapshot ^ActionMetrics metrics duration (utils/->time-unit time-unit)))
-
-(defn action-metrics
+(defn count-metrics
   ([{:keys [slots-to-track resolution time-unit]}]
-    (action-metrics slots-to-track resolution time-unit))
+   (count-metrics slots-to-track resolution time-unit))
   ([slots-to-track resolution time-unit]
-   (DefaultActionMetrics. slots-to-track
-                          resolution
-                          (utils/->time-unit time-unit))))
+   (RollingCountMetrics. TimeoutableResult
+                         slots-to-track
+                         resolution
+                         (utils/->time-unit time-unit))))
 
 (defn latency-metrics [highest-trackable-value significant-digits]
-  (IntervalLatencyMetrics. (long highest-trackable-value) (long significant-digits)))
+  (IntervalLatencyMetrics. TimeoutableResult
+                           (long highest-trackable-value)
+                           (long significant-digits)))

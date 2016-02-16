@@ -69,9 +69,9 @@
   (go
     (loop []
       (let [county (<! in-channel)
-            f (service/submit-action @service
-                                     (lookup-state-action county)
-                                     (+ 850 (rand-int 200)))]
+            f (service/submit @service
+                              (lookup-state-action county)
+                              (+ 850 (rand-int 200)))]
         (when (:rejected? f)
           (println (:rejected-reason f)))
         (recur)))))

@@ -8,6 +8,7 @@
                                   [clj-http "1.0.1"]
                                   [criterium "0.4.3"]]}}
   :dependencies [[org.clojure/clojure "1.6.0"]
-                 [net.uncontended/precipice-core "0.6.0-SNAPSHOT"]])
+                 [net.uncontended/precipice-core "0.6.0-SNAPSHOT"]
+                 [net.uncontended/precipice-threadpool "0.6.0-SNAPSHOT"]])
 
 

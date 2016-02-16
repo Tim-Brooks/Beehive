@@ -15,7 +15,8 @@
 (ns beehive.future-test
   (:require [clojure.test :refer :all]
             [beehive.future :as f])
-  (:import (net.uncontended.precipice.concurrent Eventual)))
+  (:import (net.uncontended.precipice.concurrent Eventual)
+           (net.uncontended.precipice TimeoutableResult)))
 
 (set! *warn-on-reflection* true)
 
@@ -34,12 +35,12 @@
       (is (= :pending (:status future)))
       (is (:pending? future))
       (is (= [] (remove-false future pending)))
-      (.complete eventual 4)))
+      (.complete eventual TimeoutableResult/SUCCESS 4)))
 
   (testing "Test that success futures work correctly."
     (let [eventual (Eventual.)
           future (f/->BeehiveFuture eventual)]
-      (.complete eventual 4)
+      (.complete eventual TimeoutableResult/SUCCESS 4)
       (is (= :success (:status future)))
       (is (= 4 (:result future)))
       (is (:success? future))
@@ -49,7 +50,7 @@
     (let [eventual (Eventual.)
           ex (RuntimeException.)
           future (f/->BeehiveFuture eventual)]
-      (.completeExceptionally eventual ex)
+      (.completeExceptionally eventual TimeoutableResult/ERROR ex)
       (is (= :error (:status future)))
       (is (= ex (:error future)))
       (is (:error? future))
@@ -58,7 +59,7 @@
   (testing "Test that timeout futures work correctly."
     (let [eventual (Eventual.)
           future (f/->BeehiveFuture eventual)]
-      (.completeWithTimeout eventual)
+      (.completeExceptionally eventual TimeoutableResult/TIMEOUT nil)
       (is (= :timeout (:status future)))
       (is (:timeout? future))
       (is (= [] (remove-false future timeout))))))
