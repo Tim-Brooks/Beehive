@@ -14,7 +14,6 @@
 
 (ns beehive.threadpool-test
   (:require [clojure.test :refer :all]
-            [beehive.core :as beehive]
             [beehive.threadpool :as threadpool]
             [beehive.future :as f])
   (:import (java.io IOException)
@@ -26,7 +25,10 @@
 (def service nil)
 
 (defn- start-and-stop [f]
-  (alter-var-root #'service (fn [_] (beehive/service "" 1 1)))
+  (let [metrics-config {:slots-to-track 3600 :resolution 1 :time-unit :seconds}]
+    (alter-var-root
+      #'service
+      (fn [_] (threadpool/threadpool "" 1 1 {} metrics-config))))
   (f)
   (threadpool/shutdown service))
 

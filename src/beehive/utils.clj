@@ -22,15 +22,17 @@
                  :days TimeUnit/DAYS})
 
 (defn ->time-unit [unit-in-keyword]
-  (case unit-in-keyword
-    :milliseconds TimeUnit/MILLISECONDS
-    :seconds TimeUnit/SECONDS
-    :minutes TimeUnit/MINUTES
-    :hours TimeUnit/HOURS
-    :days TimeUnit/DAYS
-    (throw
-      (IllegalArgumentException.
-        ^String
-        (format "Invalid time unit argument: %s. Valid arguments are: %s."
-                unit-in-keyword
-                (vec (keys time-units)))))))
+  (if (instance? TimeUnit unit-in-keyword)
+    unit-in-keyword
+    (case unit-in-keyword
+      :milliseconds TimeUnit/MILLISECONDS
+      :seconds TimeUnit/SECONDS
+      :minutes TimeUnit/MINUTES
+      :hours TimeUnit/HOURS
+      :days TimeUnit/DAYS
+      (throw
+        (IllegalArgumentException.
+          ^String
+          (format "Invalid time unit argument: %s. Valid arguments are: %s."
+                  unit-in-keyword
+                  (vec (keys time-units))))))))

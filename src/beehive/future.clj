@@ -14,6 +14,7 @@
 
 (ns beehive.future
   (:refer-clojure :exclude [await])
+  (:require [beehive.compatibility :as c])
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
            (net.uncontended.precipice TimeoutableResult PrecipiceFunction RejectedException Rejected)
@@ -25,8 +26,7 @@
   (cond
     (identical? TimeoutableResult/SUCCESS status-enum) :success
     (identical? TimeoutableResult/ERROR status-enum) :error
-    (identical? TimeoutableResult/TIMEOUT status-enum) :timeout
-    (nil? status-enum) :pending))
+    (identical? TimeoutableResult/TIMEOUT status-enum) :timeout))
 
 (deftype BeehiveFuture [^PrecipiceFuture future]
   IDeref
@@ -44,7 +44,7 @@
   (valAt [this key] (.valAt this key nil))
   (valAt [this key default]
     (case key
-      :status (status (.getStatus future))
+      :status (or (status (.getStatus future)) :pending)
       :success? (identical? TimeoutableResult/SUCCESS (.getStatus future))
       :timeout? (identical? TimeoutableResult/TIMEOUT (.getStatus future))
       :error? (identical? TimeoutableResult/ERROR (.getStatus future))

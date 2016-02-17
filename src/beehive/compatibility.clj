@@ -13,9 +13,19 @@
 ;; limitations under the License.
 
 (ns beehive.compatibility
-  (:import (net.uncontended.precipice RejectedException Rejected)))
+  (:import (net.uncontended.precipice TimeoutableResult)))
 
-(declare rejected-exception->reason)
+(defn result->clj-result [result-enum]
+  (cond
+    (identical? TimeoutableResult/SUCCESS result-enum) :success
+    (identical? TimeoutableResult/ERROR result-enum) :error
+    (identical? TimeoutableResult/TIMEOUT result-enum) :timeout))
+
+(defn clj-result->result [clj-result]
+  (cond
+    (identical? clj-result :success) TimeoutableResult/SUCCESS
+    (identical? clj-result :error) TimeoutableResult/ERROR
+    (identical? clj-result :timeout) TimeoutableResult/TIMEOUT))
 
 ;(defn wrap-run-pattern-action-fn [action-fn]
 ;  (reify ResilientPatternAction

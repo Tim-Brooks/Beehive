@@ -13,7 +13,8 @@
 ;; limitations under the License.
 
 (ns beehive.metrics
-  (:require [beehive.utils :as utils])
+  (:require [beehive.compatibility :as c]
+            [beehive.utils :as utils])
   (:import (net.uncontended.precipice.metrics TotalCountMetrics
                                               RollingCountMetrics
                                               IntervalLatencyMetrics)
@@ -22,11 +23,13 @@
 (set! *warn-on-reflection* true)
 
 (defn total-count [metrics metric]
-  (.getTotalMetricCount ^TotalCountMetrics metrics metric))
+  (when-let [metric (c/clj-result->result metric)]
+    (.getTotalMetricCount ^TotalCountMetrics metrics metric)))
 
 (defn count-for-period [metrics metric duration time-unit]
-  (.getMetricCount
-    ^RollingCountMetrics metrics metric duration (utils/->time-unit time-unit)))
+  (when-let [metric (c/clj-result->result metric)]
+    (.getMetricCount
+      ^RollingCountMetrics metrics metric duration (utils/->time-unit time-unit))))
 
 (defn count-metrics
   ([] (RollingCountMetrics. TimeoutableResult))
