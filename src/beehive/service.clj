@@ -15,11 +15,11 @@
 (ns beehive.service
   (:require [beehive.circuit-breaker :as cb]
             [beehive.future :as f]
-            [beehive.metrics :as metrics])
+            [beehive.metrics :as metrics]
+            [beehive.semaphore :as semaphore])
   (:import (net.uncontended.precipice.concurrent PrecipiceFuture)
-           (net.uncontended.precipice GuardRailBuilder RejectedException Rejected)
-           (net.uncontended.precipice.threadpool ThreadPoolService)
-           (net.uncontended.precipice.semaphore LongSemaphore)))
+           (net.uncontended.precipice GuardRailBuilder RejectedException)
+           (net.uncontended.precipice.threadpool ThreadPoolService)))
 
 (set! *warn-on-reflection* true)
 
@@ -39,8 +39,7 @@
   (let [metrics (metrics/count-metrics metrics-config)
         rejected-metrics (metrics/count-metrics metrics-config)
         breaker (cb/default-breaker breaker-config)
-        semaphore (LongSemaphore. Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED
-                                  max-concurrency)
+        semaphore (semaphore/semaphore max-concurrency)
         builder (doto (GuardRailBuilder.)
                   (.name name)
                   (.resultMetrics metrics)

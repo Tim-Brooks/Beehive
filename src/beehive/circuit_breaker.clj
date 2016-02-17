@@ -66,7 +66,7 @@
   (.setBreakerConfig ^CircuitBreaker breaker (create-breaker-config config-map)))
 
 (defn get-config [breaker]
-  (let [^CircuitBreakerConfig config (.getBreakerConfig breaker)]
+  (let [^CircuitBreakerConfig config (.getBreakerConfig ^CircuitBreaker breaker)]
     {:trailing-period-millis (.trailingPeriodMillis config)
      :failure-threshold (.failureThreshold config)
      :back-off-time-millis (.backOffTimeMillis config)

@@ -33,6 +33,3 @@
                                :time-unit :seconds}}}]
   (s/service name pool-size max-concurrency breaker metrics))
 
-(defn submit-action [service f time-out-ms]
-  (s/submit service f time-out-ms))
-
