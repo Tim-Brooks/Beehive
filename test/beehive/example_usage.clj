@@ -17,7 +17,7 @@
             [clj-http.client :as http]
             [beehive.async :as fa]
             [beehive.core :as beehive]
-            [beehive.service :as service]))
+            [beehive.threadpool :as service]))
 
 (def api-route (str "http://www.broadbandmap.gov/broadbandmap/"
                     "census/county/%s?format=json"))

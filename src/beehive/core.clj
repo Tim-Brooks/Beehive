@@ -13,7 +13,7 @@
 ;; limitations under the License.
 
 (ns beehive.core
-  (:require [beehive.service :as s]))
+  (:require [beehive.threadpool :as s]))
 
 (set! *warn-on-reflection* true)
 (await)
@@ -31,5 +31,5 @@
       :or {breaker {} metrics {:slots-to-track 3600
                                :resolution 1
                                :time-unit :seconds}}}]
-  (s/service name pool-size max-concurrency breaker metrics))
+  (s/threadpool name pool-size max-concurrency breaker metrics))
 

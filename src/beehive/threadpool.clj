@@ -12,13 +12,13 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
-(ns beehive.service
+(ns beehive.threadpool
   (:require [beehive.circuit-breaker :as cb]
             [beehive.future :as f]
             [beehive.metrics :as metrics]
             [beehive.semaphore :as semaphore])
   (:import (net.uncontended.precipice.concurrent PrecipiceFuture)
-           (net.uncontended.precipice GuardRailBuilder RejectedException)
+           (net.uncontended.precipice GuardRail GuardRailBuilder RejectedException)
            (net.uncontended.precipice.threadpool ThreadPoolService)))
 
 (set! *warn-on-reflection* true)
@@ -34,21 +34,29 @@
 (defn shutdown [{:keys [thread-pool]}]
   (.shutdown ^ThreadPoolService thread-pool))
 
-(defn service
-  [name pool-size max-concurrency breaker-config metrics-config]
+(defn threadpool [guard-rail pool-size max-concurrency]
+  (let [guard-rail ^GuardRail guard-rail]
+    {:result-metrics (.getResultMetrics guard-rail)
+     :rejected-metrics (.getRejectedMetrics guard-rail)
+     :latency-metrics (.getLatencyMetrics guard-rail)
+     :thread-pool (ThreadPoolService. pool-size
+                                      (+ max-concurrency 2)
+                                      guard-rail)}))
+
+(defn threadpool [name pool-size max-concurrency breaker-config metrics-config]
   (let [metrics (metrics/count-metrics metrics-config)
         rejected-metrics (metrics/count-metrics metrics-config)
         breaker (cb/default-breaker breaker-config)
         semaphore (semaphore/semaphore max-concurrency)
-        builder (doto (GuardRailBuilder.)
-                  (.name name)
-                  (.resultMetrics metrics)
-                  (.rejectedMetrics rejected-metrics)
-                  (.addBackPressure semaphore)
-                  (.addBackPressure breaker))]
+        guard-rail (-> (GuardRailBuilder.)
+                       (.name name)
+                       (.resultMetrics metrics)
+                       (.rejectedMetrics rejected-metrics)
+                       (.addBackPressure semaphore)
+                       (.addBackPressure breaker)
+                       (.build))]
     {:result-metrics metrics
      :rejected-metrics rejected-metrics
-     :circuit-breaker breaker
-     :thread-pool (ThreadPoolService. pool-size
-                                      (+ max-concurrency 2)
-                                      (.build builder))}))
+     :backpresure {:circuit-breaker breaker
+                   :semaphore semaphore}
+     :thread-pool (ThreadPoolService. pool-size (+ max-concurrency 2) guard-rail)}))

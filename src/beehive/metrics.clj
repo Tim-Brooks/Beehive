@@ -21,14 +21,15 @@
 
 (set! *warn-on-reflection* true)
 
-(defn get-count [metrics metric]
+(defn total-count [metrics metric]
   (.getTotalMetricCount ^TotalCountMetrics metrics metric))
 
-(defn get-count-for-period [metrics metric duration time-unit]
+(defn count-for-period [metrics metric duration time-unit]
   (.getMetricCount
     ^RollingCountMetrics metrics metric duration (utils/->time-unit time-unit)))
 
 (defn count-metrics
+  ([] (RollingCountMetrics. TimeoutableResult))
   ([{:keys [slots-to-track resolution time-unit]}]
    (count-metrics slots-to-track resolution time-unit))
   ([slots-to-track resolution time-unit]

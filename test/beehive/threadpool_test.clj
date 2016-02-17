@@ -12,10 +12,10 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
-(ns beehive.service-test
+(ns beehive.threadpool-test
   (:require [clojure.test :refer :all]
             [beehive.core :as beehive]
-            [beehive.service :as service]
+            [beehive.threadpool :as threadpool]
             [beehive.future :as f])
   (:import (java.io IOException)
            (java.util.concurrent CountDownLatch ExecutionException)
@@ -28,7 +28,7 @@
 (defn- start-and-stop [f]
   (alter-var-root #'service (fn [_] (beehive/service "" 1 1)))
   (f)
-  (service/shutdown service))
+  (threadpool/shutdown service))
 
 
 (use-fixtures :each start-and-stop)
@@ -45,7 +45,7 @@
 (deftest submit-test
   (testing "Submit action returns CLJ future wrapping result"
     (let [latch (CountDownLatch. 1)
-          f (service/submit service (block-fn 64 latch) Long/MAX_VALUE)]
+          f (threadpool/submit service (block-fn 64 latch) Long/MAX_VALUE)]
       (is (= :pending (:status f)))
       (is (not (realized? f)))
       (is (:pending? f))
@@ -60,7 +60,7 @@
       (is (nil? (:error f)))))
   (testing "Submitted action can return error"
     (let [exception (IOException.)
-          f (service/submit service (error-fn exception) 10000)]
+          f (threadpool/submit service (error-fn exception) 10000)]
       (f/await f)
       (is (= exception (:error f)))
       (is (nil? (:result f)))
@@ -76,7 +76,7 @@
           (is (= exception (.getCause e)))))))
   (testing "Submitted action can timeout"
     (let [latch (CountDownLatch. 1)
-          f (service/submit service (block-fn 1 latch) 50)]
+          f (threadpool/submit service (block-fn 1 latch) 50)]
       (f/await f)
       (is (:timeout? f))
       (is (not (:success? f)))
@@ -93,8 +93,8 @@
           (is (instance? PrecipiceTimeoutException (.getCause e)))))))
   (testing "If concurrency level exhausted, action rejected"
     (let [latch (CountDownLatch. 1)
-          _ (service/submit service (block-fn 1 latch) Long/MAX_VALUE)
-          f (service/submit service (success-fn 1) Long/MAX_VALUE)]
+          _ (threadpool/submit service (block-fn 1 latch) Long/MAX_VALUE)
+          f (threadpool/submit service (success-fn 1) Long/MAX_VALUE)]
       (is (= :max-concurrency-level-exceeded (:rejected-reason f)))
       (is (:rejected? f))
       (is (not (:timeout? f)))
@@ -108,7 +108,7 @@
     (let [status (atom nil)
           result (atom nil)
           blocker (CountDownLatch. 1)
-          f (service/submit service (success-fn 64) Long/MAX_VALUE)]
+          f (threadpool/submit service (success-fn 64) Long/MAX_VALUE)]
       (f/on-complete
         f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
       (.await blocker)
@@ -118,7 +118,7 @@
           result (atom nil)
           blocker (CountDownLatch. 1)
           e (RuntimeException.)
-          f (service/submit service (error-fn e) Long/MAX_VALUE)]
+          f (threadpool/submit service (error-fn e) Long/MAX_VALUE)]
       (f/on-complete
         f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
       (.await blocker)
@@ -128,7 +128,7 @@
           status (atom nil)
           result (atom nil)
           blocker (CountDownLatch. 1)
-          f (service/submit service (block-fn 64 action-blocker) 10)]
+          f (threadpool/submit service (block-fn 64 action-blocker) 10)]
       (f/on-complete
         f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
       (.await blocker)
