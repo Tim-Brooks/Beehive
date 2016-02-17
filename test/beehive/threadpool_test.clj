@@ -15,7 +15,8 @@
 (ns beehive.threadpool-test
   (:require [clojure.test :refer :all]
             [beehive.threadpool :as threadpool]
-            [beehive.future :as f])
+            [beehive.future :as f]
+            [beehive.metrics :as metrics])
   (:import (java.io IOException)
            (java.util.concurrent CountDownLatch ExecutionException)
            (net.uncontended.precipice.timeout PrecipiceTimeoutException)))
@@ -28,7 +29,7 @@
   (let [metrics-config {:slots-to-track 3600 :resolution 1 :time-unit :seconds}]
     (alter-var-root
       #'service
-      (fn [_] (threadpool/threadpool "" 1 1 {} metrics-config))))
+      (fn [_] (threadpool/threadpool "" 1 1 metrics-config))))
   (f)
   (threadpool/shutdown service))
 
@@ -47,7 +48,7 @@
 (deftest submit-test
   (testing "Submit action returns CLJ future wrapping result"
     (let [latch (CountDownLatch. 1)
-          f (threadpool/submit service (block-fn 64 latch) Long/MAX_VALUE)]
+          f (threadpool/submit service (block-fn 64 latch))]
       (is (= :pending (:status f)))
       (is (not (realized? f)))
       (is (:pending? f))
@@ -95,8 +96,8 @@
           (is (instance? PrecipiceTimeoutException (.getCause e)))))))
   (testing "If concurrency level exhausted, action rejected"
     (let [latch (CountDownLatch. 1)
-          _ (threadpool/submit service (block-fn 1 latch) Long/MAX_VALUE)
-          f (threadpool/submit service (success-fn 1) Long/MAX_VALUE)]
+          _ (threadpool/submit service (block-fn 1 latch))
+          f (threadpool/submit service (success-fn 1))]
       (is (= :max-concurrency-level-exceeded (:rejected-reason f)))
       (is (:rejected? f))
       (is (not (:timeout? f)))
@@ -110,7 +111,7 @@
     (let [status (atom nil)
           result (atom nil)
           blocker (CountDownLatch. 1)
-          f (threadpool/submit service (success-fn 64) Long/MAX_VALUE)]
+          f (threadpool/submit service (success-fn 64))]
       (f/on-complete
         f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
       (.await blocker)
@@ -120,7 +121,7 @@
           result (atom nil)
           blocker (CountDownLatch. 1)
           e (RuntimeException.)
-          f (threadpool/submit service (error-fn e) Long/MAX_VALUE)]
+          f (threadpool/submit service (error-fn e))]
       (f/on-complete
         f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
       (.await blocker)
@@ -138,63 +139,28 @@
       (is (instance? PrecipiceTimeoutException @result))
       (.countDown action-blocker))))
 
-;(deftest metrics-test
-;  (testing "Testing that metrics are updated with result of action"
-;    (let [metrics-service (beehive/service "test" 1 100)
-;          latch (CountDownLatch. 1)]
-;      (f/await (service/submit metrics-service (success-fn 1) Long/MAX_VALUE))
-;      (f/await (service/submit metrics-service (error-fn (IOException.)) Long/MAX_VALUE))
-;      (f/await (service/submit metrics-service (block-fn 1 latch) 10))
-;      (.countDown latch)
-;      (is (= 1 (-> metrics-service service/metrics :successes)))
-;      (is (= 1 (-> metrics-service service/metrics :timeouts)))
-;      (is (= 1 (-> metrics-service service/metrics :errors)))
-;      (is (= {:all-rejected 0
-;              :circuit-open 0
-;              :errors 1
-;              :max-1-all-rejected 0
-;              :max-1-circuit-open 0
-;              :max-1-errors 1
-;              :max-1-max-concurrency 0
-;              :max-1-queue-full 0
-;              :max-1-successes 1
-;              :max-1-timeouts 1
-;              :max-1-total 3
-;              :max-2-all-rejected 0
-;              :max-2-circuit-open 0
-;              :max-2-errors 1
-;              :max-2-max-concurrency 0
-;              :max-2-queue-full 0
-;              :max-2-successes 1
-;              :max-2-timeouts 1
-;              :max-2-total 3
-;              :max-concurrency 0
-;              :queue-full 0
-;              :successes 1
-;              :timeouts 1
-;              :total 3
-;              :total-all-rejected 0
-;              :total-circuit-open 0
-;              :total-errors 1
-;              :total-max-concurrency 0
-;              :total-queue-full 0
-;              :total-successes 1
-;              :total-timeouts 1
-;              :total-total 3}
-;             (service/metrics metrics-service)))))
-;  (testing "Testing that rejection reasons are updated"
-;    (let [metrics-service (beehive/service "test" 1 1)
-;          latch (CountDownLatch. 1)]
-;      (service/open-circuit! metrics-service)
-;      (f/await (service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE))
-;      (is (= 1 (-> metrics-service service/metrics :circuit-open)))
-;      (service/close-circuit! metrics-service)
-;
-;      (service/submit-action metrics-service (block-fn 1 latch) Long/MAX_VALUE)
-;      (service/submit-action metrics-service (success-fn 1) Long/MAX_VALUE)
-;      (.countDown latch)
-;      (is (= 1 (-> metrics-service service/metrics :max-concurrency)))
-;      (service/shutdown metrics-service))))
+(deftest metrics-test
+  (testing "Testing that metrics are updated with result of action"
+    (let [{:keys [result-metrics] :as threadpool}
+          (threadpool/threadpool "test" 1 100)
+          latch (CountDownLatch. 1)]
+      (f/await (threadpool/submit threadpool (success-fn 1)))
+      (f/await (threadpool/submit threadpool (error-fn (IOException.))))
+      (f/await (threadpool/submit threadpool (block-fn 1 latch) 10))
+      (.countDown latch)
+      (is (= 1 (metrics/total-count result-metrics :success)))
+      (is (= 1 (metrics/total-count result-metrics :timeout)))
+      (is (= 1 (metrics/total-count result-metrics :error)))
+      (threadpool/shutdown threadpool)))
+  (testing "Testing that rejection reasons are updated"
+    (let [{:keys [rejected-metrics] :as threadpool}
+          (threadpool/threadpool "test" 1 1)
+          latch (CountDownLatch. 1)]
+      (threadpool/submit threadpool (block-fn 1 latch))
+      (threadpool/submit threadpool (success-fn 1))
+      (.countDown latch)
+      (is (= 1 (metrics/total-count rejected-metrics :max-concurrency-level-exceeded)))
+      (threadpool/shutdown threadpool))))
 ;
 ;(deftest latency-test
 ;  (testing "Testing that latency is updated"
@@ -223,18 +189,4 @@
 ;          (is (not (or (nil? latency-99-999) (= latency-99-999 0))))
 ;          (is (not (or (nil? latency-max) (= latency-max 0))))
 ;          (is (not (or (nil? latency-mean) (= latency-mean 0.0)))))))))
-;
-;(deftest circuit-breaker-config-test
-;  (testing "Testing that the service is created with the correct circuit breaker config"
-;    (let [svc (beehive/service "test"
-;                               1
-;                               100
-;                               :breaker {:trailing-period-millis 999
-;                                         :failure-threshold Long/MAX_VALUE})]
-;      (is (= 999
-;             (:trailing-period-millis (:config (:breaker svc)))))
-;      (is (= Long/MAX_VALUE
-;             (:failure-threshold (:config (:breaker svc)))))
-;      ;; Defaults if the key is not passed in the config
-;      (is (= 1000
-;             (:back-off-time-millis (:config (:breaker svc))))))))
+

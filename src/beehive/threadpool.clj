@@ -19,17 +19,21 @@
             [beehive.semaphore :as semaphore])
   (:import (net.uncontended.precipice.concurrent PrecipiceFuture)
            (net.uncontended.precipice GuardRail GuardRailBuilder RejectedException)
-           (net.uncontended.precipice.threadpool ThreadPoolService)))
+           (net.uncontended.precipice.threadpool ThreadPoolService)
+           (net.uncontended.precipice.timeout TimeoutService)))
 
 (set! *warn-on-reflection* true)
 
-(defn submit [{:keys [thread-pool]} fn timeout-millis]
-  (let [^ThreadPoolService thread-pool thread-pool]
-    (try
-      (f/->BeehiveFuture
-        ^PrecipiceFuture (.submit thread-pool fn (long timeout-millis)))
-      (catch RejectedException e
-        (f/rejected-action-future e)))))
+(defn submit
+  ([threadpool fn]
+    (submit threadpool fn TimeoutService/NO_TIMEOUT))
+  ([{:keys [thread-pool]} fn timeout-millis]
+   (let [^ThreadPoolService thread-pool thread-pool]
+     (try
+       (f/->BeehiveFuture
+         ^PrecipiceFuture (.submit thread-pool fn (long timeout-millis)))
+       (catch RejectedException e
+         (f/rejected-action-future e))))))
 
 (defn shutdown [{:keys [thread-pool]}]
   (.shutdown ^ThreadPoolService thread-pool))
@@ -43,20 +47,22 @@
                                       (+ max-concurrency 2)
                                       guard-rail)}))
 
-(defn threadpool [name pool-size max-concurrency breaker-config metrics-config]
-  (let [metrics (metrics/count-metrics metrics-config)
-        rejected-metrics (metrics/count-metrics metrics-config)
-        breaker (cb/default-breaker breaker-config)
-        semaphore (semaphore/semaphore max-concurrency)
-        guard-rail (-> (GuardRailBuilder.)
-                       (.name name)
-                       (.resultMetrics metrics)
-                       (.rejectedMetrics rejected-metrics)
-                       (.addBackPressure semaphore)
-                       (.addBackPressure breaker)
-                       (.build))]
-    {:result-metrics metrics
-     :rejected-metrics rejected-metrics
-     :backpresure {:circuit-breaker breaker
-                   :semaphore semaphore}
-     :thread-pool (ThreadPoolService. pool-size (+ max-concurrency 2) guard-rail)}))
+(defn threadpool
+  ([name pool-size max-concurrency]
+   (threadpool name pool-size max-concurrency {:slots-to-track 3600
+                                               :resolution 1
+                                               :time-unit :seconds}))
+  ([name pool-size max-concurrency metrics-config]
+   (let [metrics (metrics/count-metrics metrics-config)
+         rejected-metrics (metrics/count-metrics metrics-config)
+         semaphore (semaphore/semaphore max-concurrency)
+         guard-rail (-> (GuardRailBuilder.)
+                        (.name name)
+                        (.resultMetrics metrics)
+                        (.rejectedMetrics rejected-metrics)
+                        (.addBackPressure semaphore)
+                        (.build))]
+     {:result-metrics metrics
+      :rejected-metrics rejected-metrics
+      :backpresure {:semaphore semaphore}
+      :thread-pool (ThreadPoolService. pool-size (+ max-concurrency 2) guard-rail)})))

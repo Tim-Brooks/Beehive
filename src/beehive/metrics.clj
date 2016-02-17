@@ -23,11 +23,13 @@
 (set! *warn-on-reflection* true)
 
 (defn total-count [metrics metric]
-  (when-let [metric (c/clj-result->result metric)]
+  (when-let [metric (or (c/clj-result->result metric)
+                        (c/clj-rejected->rejected metric))]
     (.getTotalMetricCount ^TotalCountMetrics metrics metric)))
 
 (defn count-for-period [metrics metric duration time-unit]
-  (when-let [metric (c/clj-result->result metric)]
+  (when-let [metric (or (c/clj-result->result metric)
+                        (c/clj-rejected->rejected metric))]
     (.getMetricCount
       ^RollingCountMetrics metrics metric duration (utils/->time-unit time-unit))))
 
