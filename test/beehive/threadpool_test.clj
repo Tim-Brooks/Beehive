@@ -16,7 +16,8 @@
   (:require [clojure.test :refer :all]
             [beehive.threadpool :as threadpool]
             [beehive.future :as f]
-            [beehive.metrics :as metrics])
+            [beehive.metrics :as metrics]
+            [beehive.threadpool :as service])
   (:import (java.io IOException)
            (java.util.concurrent CountDownLatch ExecutionException)
            (net.uncontended.precipice.timeout PrecipiceTimeoutException)))
@@ -161,32 +162,59 @@
       (.countDown latch)
       (is (= 1 (metrics/total-count rejected-metrics :max-concurrency-level-exceeded)))
       (threadpool/shutdown threadpool))))
-;
-;(deftest latency-test
-;  (testing "Testing that latency is updated"
-;    (let [latency-service (beehive/service "test" 1 100)
-;          latch (CountDownLatch. 1)]
-;      (f/await (service/submit-action latency-service (success-fn 1) Long/MAX_VALUE))
-;      (f/await (service/submit-action latency-service (error-fn (IOException.)) Long/MAX_VALUE))
-;      (f/await (service/submit-action latency-service (block-fn 1 latch) 10))
-;      (.countDown latch)
-;      (let [{:keys [success-latency
-;                    error-latency
-;                    timeout-latency]} (service/latency latency-service)]
-;        (doseq [{:keys [latency-50
-;                        latency-90
-;                        latency-99
-;                        latency-99-9
-;                        latency-99-99
-;                        latency-99-999
-;                        latency-max
-;                        latency-mean]} [success-latency error-latency timeout-latency]]
-;          (is (not (or (nil? latency-50) (= latency-50 0))))
-;          (is (not (or (nil? latency-90) (= latency-90 0))))
-;          (is (not (or (nil? latency-99) (= latency-99 0))))
-;          (is (not (or (nil? latency-99-9) (= latency-99-9 0))))
-;          (is (not (or (nil? latency-99-99) (= latency-99-99 0))))
-;          (is (not (or (nil? latency-99-999) (= latency-99-999 0))))
-;          (is (not (or (nil? latency-max) (= latency-max 0))))
-;          (is (not (or (nil? latency-mean) (= latency-mean 0.0)))))))))
+
+(defn- assert-not-zero
+  [{:keys [latency-50 latency-90 latency-99 latency-99-9 latency-99-99
+           latency-99-999 latency-max latency-mean]}]
+  (is (not (or (nil? latency-50) (= latency-50 0))))
+  (is (not (or (nil? latency-90) (= latency-90 0))))
+  (is (not (or (nil? latency-99) (= latency-99 0))))
+  (is (not (or (nil? latency-99-9) (= latency-99-9 0))))
+  (is (not (or (nil? latency-99-99) (= latency-99-99 0))))
+  (is (not (or (nil? latency-99-999) (= latency-99-999 0))))
+  (is (not (or (nil? latency-max) (= latency-max 0))))
+  (is (not (or (nil? latency-mean) (= latency-mean 0.0)))))
+
+(defn- assert-zero
+  [{:keys [latency-50 latency-90 latency-99 latency-99-9 latency-99-99
+           latency-99-999 latency-max latency-mean]}]
+  (is (= latency-50 0))
+  (is (= latency-90 0))
+  (is (= latency-99 0))
+  (is (= latency-99-9 0))
+  (is (= latency-99-99 0))
+  (is (= latency-99-999 0))
+  (is (= latency-max 0))
+  (is (= latency-mean 0.0)))
+
+(deftest latency-test
+  (let [{:keys [latency-metrics] :as threadpool} (threadpool/threadpool "test" 1 100)
+        latch (CountDownLatch. 1)]
+    (testing "Testing that success latency is updated"
+      (f/await (service/submit threadpool (success-fn 1)))
+      (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)
+            error-latency (metrics/interval-latency-snapshot latency-metrics :error)
+            timeout-latency (metrics/interval-latency-snapshot latency-metrics :timeout)]
+        (assert-not-zero success-latency)
+        (assert-zero error-latency)
+        (assert-zero timeout-latency)))
+
+    (testing "Testing that error latency is updated"
+      (f/await (service/submit threadpool (error-fn (IOException.))))
+      (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)
+            error-latency (metrics/interval-latency-snapshot latency-metrics :error)
+            timeout-latency (metrics/interval-latency-snapshot latency-metrics :timeout)]
+        (assert-not-zero error-latency)
+        (assert-zero success-latency)
+        (assert-zero timeout-latency)))
+
+    (testing "Testing that timeout latency is updated"
+      (f/await (service/submit threadpool (block-fn 1 latch) 10))
+      (.countDown latch)
+      (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)
+            error-latency (metrics/interval-latency-snapshot latency-metrics :error)
+            timeout-latency (metrics/interval-latency-snapshot latency-metrics :timeout)]
+        (assert-not-zero timeout-latency)
+        (assert-zero success-latency)
+        (assert-zero error-latency)))))
 

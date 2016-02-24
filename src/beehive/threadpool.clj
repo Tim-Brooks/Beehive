@@ -17,10 +17,12 @@
             [beehive.future :as f]
             [beehive.metrics :as metrics]
             [beehive.semaphore :as semaphore])
-  (:import (net.uncontended.precipice.concurrent PrecipiceFuture)
-           (net.uncontended.precipice GuardRail GuardRailBuilder RejectedException)
+  (:import (java.util.concurrent TimeUnit)
+           (net.uncontended.precipice.concurrent PrecipiceFuture)
+           (net.uncontended.precipice GuardRail GuardRailBuilder)
            (net.uncontended.precipice.threadpool ThreadPoolService)
-           (net.uncontended.precipice.timeout TimeoutService)))
+           (net.uncontended.precipice.timeout TimeoutService)
+           (net.uncontended.precipice.rejected RejectedException)))
 
 (set! *warn-on-reflection* true)
 
@@ -56,13 +58,16 @@
    (let [metrics (metrics/count-metrics metrics-config)
          rejected-metrics (metrics/count-metrics metrics-config)
          semaphore (semaphore/semaphore max-concurrency)
+         latency (metrics/latency-metrics (.toNanos TimeUnit/HOURS 1) 2)
          guard-rail (-> (GuardRailBuilder.)
                         (.name name)
                         (.resultMetrics metrics)
                         (.rejectedMetrics rejected-metrics)
+                        (.resultLatency latency)
                         (.addBackPressure semaphore)
                         (.build))]
      {:result-metrics metrics
       :rejected-metrics rejected-metrics
+      :latency-metrics latency
       :backpresure {:semaphore semaphore}
       :thread-pool (ThreadPoolService. pool-size (+ max-concurrency 2) guard-rail)})))

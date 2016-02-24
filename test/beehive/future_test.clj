@@ -16,7 +16,7 @@
   (:require [clojure.test :refer :all]
             [beehive.future :as f])
   (:import (net.uncontended.precipice.concurrent Eventual)
-           (net.uncontended.precipice TimeoutableResult)))
+           (net.uncontended.precipice.result TimeoutableResult)))
 
 (set! *warn-on-reflection* true)
 

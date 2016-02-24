@@ -18,12 +18,23 @@
 package beehive;
 
 import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.dynamic.DynamicType;
 import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
+import net.uncontended.precipice.concurrent.Eventual;
 import net.uncontended.precipice.metrics.RollingCountMetrics;
 
 public class EnumBuilder {
 
     public void build() {
+        ByteBuddy byteBuddy = new ByteBuddy();
+        DynamicType.Unloaded<Eventual> myClass = byteBuddy
+                .subclass(Eventual.class)
+                .make();
+        work();
+    }
+
+
+    private void work() {
         Class<?> dynamicType = new ByteBuddy()
                 .makeEnumeration("BLUE", "GREEN")
                 .name("RejectedType")
@@ -36,7 +47,7 @@ public class EnumBuilder {
 
         RollingCountMetrics metrics = new RollingCountMetrics(dynamicType);
         metrics.incrementMetricCount(enum1);
-        System.out.println(metrics.getTotalMetricCount(enum1));
-        System.out.println(metrics.getTotalMetricCount(enum2));
+        System.out.println(metrics.getMetricCount(enum1));
+        System.out.println(metrics.getMetricCount(enum2));
     }
 }

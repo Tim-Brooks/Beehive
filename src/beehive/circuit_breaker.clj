@@ -13,12 +13,13 @@
 ;; limitations under the License.
 
 (ns beehive.circuit-breaker
-  (:import (net.uncontended.precipice Rejected)
-           (net.uncontended.precipice.circuit CircuitBreakerConfig
-                                              CircuitBreakerConfigBuilder
-                                              CircuitBreaker
-                                              DefaultCircuitBreaker
-                                              NoOpCircuitBreaker)))
+  (:import
+    (net.uncontended.precipice.circuit CircuitBreakerConfig
+                                       CircuitBreakerConfigBuilder
+                                       CircuitBreaker
+                                       DefaultCircuitBreaker
+                                       NoOpCircuitBreaker)
+    (net.uncontended.precipice.rejected Rejected)))
 
 (set! *warn-on-reflection* true)
 
@@ -50,7 +51,7 @@
     (.build config)))
 
 (defn no-opt-breaker []
-  (NoOpCircuitBreaker.))
+  (NoOpCircuitBreaker. Rejected/CIRCUIT_OPEN))
 
 (defn default-breaker [config-map]
   (DefaultCircuitBreaker.

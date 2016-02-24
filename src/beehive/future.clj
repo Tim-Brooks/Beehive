@@ -14,11 +14,12 @@
 
 (ns beehive.future
   (:refer-clojure :exclude [await])
-  (:require [beehive.compatibility :as c])
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
-           (net.uncontended.precipice TimeoutableResult PrecipiceFunction RejectedException Rejected)
-           (net.uncontended.precipice.concurrent PrecipiceFuture)))
+           (net.uncontended.precipice PrecipiceFunction)
+           (net.uncontended.precipice.concurrent PrecipiceFuture)
+           (net.uncontended.precipice.rejected RejectedException Rejected)
+           (net.uncontended.precipice.result TimeoutableResult)))
 
 (set! *warn-on-reflection* true)
 
@@ -79,8 +80,7 @@
 
 (def ^:private reject-enum->keyword
   {Rejected/CIRCUIT_OPEN :circuit-open
-   Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED :max-concurrency-level-exceeded
-   Rejected/ALL_SERVICES_REJECTED :all-services-rejected})
+   Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED :max-concurrency-level-exceeded})
 
 (defn rejected-action-future [^RejectedException ex]
   (->BeehiveRejectedFuture ex (get reject-enum->keyword (.reason ex))))

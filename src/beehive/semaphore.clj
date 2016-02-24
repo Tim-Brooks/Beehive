@@ -13,10 +13,11 @@
 ;; limitations under the License.
 
 (ns beehive.semaphore
-  (:import (net.uncontended.precipice Rejected)
-           (net.uncontended.precipice.semaphore LongSemaphore
-                                                PrecipiceSemaphore
-                                                UnlimitedSemaphore)))
+  (:import
+    (net.uncontended.precipice.rejected Rejected)
+    (net.uncontended.precipice.semaphore LongSemaphore
+                                         PrecipiceSemaphore
+                                         UnlimitedSemaphore)))
 
 (set! *warn-on-reflection* true)
 
@@ -29,8 +30,11 @@
 (defn current-concurrency-level [semaphore]
   (.currentConcurrencyLevel ^PrecipiceSemaphore semaphore))
 
-(defn semaphore [max-concurrency]
-  (LongSemaphore. Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED (long max-concurrency)))
+(defn semaphore
+  ([max-concurrency]
+   (semaphore max-concurrency Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED))
+  ([max-concurrency reason]
+   (LongSemaphore. reason (long max-concurrency))))
 
 (defn unlimited-semaphore [max-concurrency]
-  (UnlimitedSemaphore. Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED))
+  (UnlimitedSemaphore.))

@@ -13,7 +13,8 @@
 ;; limitations under the License.
 
 (ns beehive.compatibility
-  (:import (net.uncontended.precipice TimeoutableResult Rejected)))
+  (:import (net.uncontended.precipice.rejected Rejected)
+           (net.uncontended.precipice.result TimeoutableResult)))
 
 (defn result->clj-result [result-enum]
   (cond
@@ -33,10 +34,7 @@
     Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED
 
     (identical? clj-rejected :circuit-open)
-    Rejected/CIRCUIT_OPEN
-
-    (identical? clj-rejected :all-services-rejected)
-    Rejected/ALL_SERVICES_REJECTED))
+    Rejected/CIRCUIT_OPEN))
 
 ;(defn wrap-run-pattern-action-fn [action-fn]
 ;  (reify ResilientPatternAction

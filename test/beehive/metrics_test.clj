@@ -16,7 +16,7 @@
   (:require [clojure.test :refer :all]
             [beehive.metrics :as metrics])
   (:import (net.uncontended.precipice.metrics RollingCountMetrics)
-           (net.uncontended.precipice TimeoutableResult)))
+           (net.uncontended.precipice.result TimeoutableResult)))
 
 (deftest metrics-test
   (testing "Testing metrics return the results of the underlying java class"

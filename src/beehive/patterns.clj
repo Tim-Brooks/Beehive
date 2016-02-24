@@ -14,53 +14,14 @@
 
 (ns beehive.patterns
   (:require [beehive.compatibility :as c]
-            [beehive.future :as f]))
+            [beehive.future :as f])
+  (:import (net.uncontended.precipice.pattern Pattern RoundRobinLoadBalancer)))
 
 (set! *warn-on-reflection* true)
 
-;(defn- transform-map [service->context]
-;  (into {} (map (fn [[k v]] [(.service ^CLJServiceImpl k) v]) service->context)))
-;
-;(defprotocol CLJAsyncPattern
-;  (submit-action [this action-fn timeout-millis]))
-;
-;(defprotocol CLJSyncPattern
-;  (run-action [this action-fn]))
-;
-;(deftype CLJLoadBalancer [^MultiLoadBalancer balancer]
-;  CLJAsyncPattern
-;  (submit-action [_ action-fn timeout-millis]
-;    (try (f/->BeehiveFuture
-;           (.submit balancer
-;                    (c/wrap-pattern-action-fn action-fn)
-;                    timeout-millis))
-;         (catch RejectedActionException e
-;           (f/rejected-action-future e))))
-;  CLJSyncPattern
-;  (run-action [_ action-fn]
-;    (try
-;      (.run balancer (c/wrap-run-pattern-action-fn action-fn))
-;      (catch RejectedActionException e
-;        {:status :rejected
-;         :rejected? true
-;         :rejected-reason (c/rejected-exception->reason e)}))))
-;
-;(defn load-balancer [service->context]
-;  (let [service->context (transform-map service->context)
-;        balancer (LoadBalancers/multiRoundRobin service->context)]
-;    (->CLJLoadBalancer balancer)))
-;
-;(deftype CLJShotgun [^Shotgun shotgun]
-;  CLJAsyncPattern
-;  (submit-action [_ action-fn timeout-millis]
-;    (try (f/->BeehiveFuture
-;           (.submit shotgun
-;                    (c/wrap-pattern-action-fn action-fn)
-;                    timeout-millis))
-;         (catch RejectedActionException e
-;           (f/rejected-action-future e)))))
-;
-;(defn shotgun [service->context submission-count]
-;  (let [service->context (transform-map service->context)
-;        shotgun (Shotgun. service->context (int submission-count))]
-;    (->CLJShotgun shotgun)))
+(defn load-balancer [precipice-list]
+  (Pattern. precipice-list (RoundRobinLoadBalancer. (count precipice-list))))
+
+(defn pattern-seq [pattern permit-number]
+  (let [^Pattern pattern pattern]
+    (.getPrecipices pattern permit-number (System/nanoTime))))
