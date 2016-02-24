@@ -46,14 +46,26 @@
 (defn guard-rail
   [name result-metrics rejected-metrics
    & {:keys [latency-metrics reason->backpressure]}]
-  (-> (GuardRailBuilder.)
-      (.name name)
-      (.resultMetrics result-metrics)
-      (.rejectedMetrics rejected-metrics)
-      (cond->
-        latency-metrics
-        (.resultLatency latency-metrics)
-        reason->backpressure
-        (add-backpressure reason->backpressure))))
+  (with-meta
+    {:guard-rail
+     (-> (GuardRailBuilder.)
+         (.name name)
+         (.resultMetrics result-metrics)
+         (.rejectedMetrics rejected-metrics)
+         (cond->
+           latency-metrics
+           (.resultLatency latency-metrics)
+           reason->backpressure
+           (add-backpressure reason->backpressure)))}
+    {:enum->keyword (fn [e]
+                      (cond
+                        (identical? e Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED)
+                        :max-concurrency
+                        (identical? e Rejected/CIRCUIT_OPEN)
+                        :circuit-open))
+     :keyword->enum (fn [k]
+                      (case k
+                        :max-concurrency Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED
+                        :circuit-open Rejected/CIRCUIT_OPEN))}))
 
 
