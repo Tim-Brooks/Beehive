@@ -15,72 +15,78 @@
 (ns beehive.guard-rail
   (:import (net.uncontended.precipice GuardRailBuilder)
            (net.uncontended.precipice.rejected Rejected)
-           (beehive.generator EnumBuilder)))
+           (beehive.generator EnumBuilder)
+           (net.uncontended.precipice.result TimeoutableResult)))
 
 (set! *warn-on-reflection* true)
-
-(def keyword->enum {:max-concurrency-level-exceeded Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED
-                    :circuit-open Rejected/CIRCUIT_OPEN})
 
 (defn- do-assertions [clauses]
   (assert (even? (count clauses)))
   (assert (every? keyword? (take-nth 2 clauses)))
   (assert (every? seq? (take-nth 2 (rest clauses)))))
 
+(defn- do-new-assertions [clauses]
+  (assert (every? keyword? (keys clauses)))
+  (assert (every? seq? (vals (rest clauses)))))
+
 (defn to-enum-string [k]
   (.toUpperCase (.replace (name k) \- \_)))
 
-(defn gen-fn [ks cpath]
-  (let [^Class enum (resolve cpath)
-        string->enum (into {} (map (fn [^Enum e] [(.name e) e])
-                                   (.getEnumConstants enum)))]
-    (into {} (mapv (fn [k] [k (symbol (to-enum-string k))]) ks))))
+(defn gen-fn [ks]
+  (into {} (mapv (fn [k] [k (symbol (to-enum-string k))]) ks)))
 
 (defmacro backpressure [builder & clauses]
   (do-assertions clauses)
   (let [ks (set (take-nth 2 clauses))
         cpath (EnumBuilder/build (mapv to-enum-string ks))
         cpath (symbol cpath)
-        key->enum (gen-fn ks cpath)
+        key->enum (gen-fn ks)
         clauses (partition 2 clauses)
         b (gensym)]
     `(let [~b ~builder]
        ~@(map (fn [[reason bp-fn-seq]]
                 `(.addBackPressure ~b (~(first bp-fn-seq)
-                                         ~@(rest bp-fn-seq)
-                                         (. ~cpath ~(get key->enum reason)))))
+                                        ~@(rest bp-fn-seq)
+                                        (. ~cpath ~(get key->enum reason)))))
               clauses)
        ~b)))
 
-(defn- add-backpressure [^GuardRailBuilder builder reason->backpressure]
-  (doseq [[_ bp] reason->backpressure]
-    (.addBackPressure builder bp))
-  builder)
+(defmacro new-bp [builder reason->backpressure]
+  (do-new-assertions reason->backpressure)
+  (let [ks (set (keys reason->backpressure))
+        cpath (EnumBuilder/build (mapv to-enum-string ks))
+        cpath (symbol cpath)
+        key->enum (gen-fn ks)
+        b (gensym)]
+    `(let [~b ~builder]
+       ~@(map (fn [[reason bp-fn-seq]]
+                `(.addBackPressure ~b (~(first bp-fn-seq)
+                                        ~@(rest bp-fn-seq)
+                                        (. ~cpath ~(get key->enum reason)))))
+              reason->backpressure)
+       ~b)))
 
-(defn guard-rail
-  [name result-metrics rejected-metrics
-   & {:keys [latency-metrics reason->backpressure]}]
-  (keyword "dfd")
-  (with-meta
-    {:guard-rail
-     (-> (GuardRailBuilder.)
-         (.name name)
-         (.resultMetrics result-metrics)
-         (.rejectedMetrics rejected-metrics)
+(defmacro guard-rail
+  [name result-metrics rejected-metrics &
+   {:keys [latency-metrics backpressure custom-results]}]
+  (let [rm-fn (first result-metrics)
+        rj-fn (first rejected-metrics)
+        rm-args (rest result-metrics)
+        rj-args (rest rejected-metrics)
+        result-type TimeoutableResult
+        rejected-type Rejected
+        l-fn (first latency-metrics)
+        l-args (rest latency-metrics)]
+    `(-> (GuardRailBuilder.)
+         (.name ~name)
+         (.resultMetrics (~rm-fn ~result-type ~@rm-args))
+         (.rejectedMetrics (~rj-fn ~rejected-type ~@rj-args))
          (cond->
-           latency-metrics
-           (.resultLatency latency-metrics)
-           reason->backpressure
-           (add-backpressure reason->backpressure)))}
-    {:enum->keyword (fn [e]
-                      (cond
-                        (identical? e Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED)
-                        :max-concurrency
-                        (identical? e Rejected/CIRCUIT_OPEN)
-                        :circuit-open))
-     :keyword->enum (fn [k]
-                      (case k
-                        :max-concurrency Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED
-                        :circuit-open Rejected/CIRCUIT_OPEN))}))
+           ~latency-metrics
+           (.resultLatency (~l-fn ~result-type ~@l-args))
+           ~backpressure
+           (new-bp ~backpressure)))))
+
+
 
 

@@ -54,9 +54,9 @@
    (threadpool name pool-size max-concurrency {:slots-to-track 3600
                                                :resolution 1
                                                :time-unit :seconds}))
-  ([name pool-size max-concurrency metrics-config]
-   (let [metrics (metrics/count-metrics metrics-config)
-         rejected-metrics (metrics/count-metrics metrics-config)
+  ([name pool-size max-concurrency {:keys [slots-to-track resolution time-unit]}]
+   (let [metrics (metrics/count-metrics slots-to-track resolution time-unit)
+         rejected-metrics (metrics/count-metrics slots-to-track resolution time-unit)
          semaphore (semaphore/semaphore max-concurrency)
          latency (metrics/latency-metrics (.toNanos TimeUnit/HOURS 1) 2)
          guard-rail (-> (GuardRailBuilder.)

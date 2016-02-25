@@ -18,7 +18,7 @@
   (:import (net.uncontended.precipice.metrics CountMetrics
                                               RollingCountMetrics
                                               IntervalLatencyMetrics
-                                              LatencyMetrics LatencySnapshot)
+                                              LatencyMetrics)
            (net.uncontended.precipice.result TimeoutableResult)))
 
 (set! *warn-on-reflection* true)
@@ -35,14 +35,14 @@
       ^RollingCountMetrics metrics metric duration (utils/->time-unit time-unit))))
 
 (defn count-metrics
-  ([] (RollingCountMetrics. TimeoutableResult))
-  ([{:keys [slots-to-track resolution time-unit]}]
-   (count-metrics slots-to-track resolution time-unit))
+  ([] (count-metrics TimeoutableResult))
+  ([result-type]
+   (RollingCountMetrics. result-type))
   ([slots-to-track resolution time-unit]
-   (RollingCountMetrics. TimeoutableResult
-                         slots-to-track
-                         resolution
-                         (utils/->time-unit time-unit))))
+    (count-metrics TimeoutableResult slots-to-track resolution time-unit))
+  ([result-type slots-to-track resolution time-unit]
+   (RollingCountMetrics.
+     result-type slots-to-track resolution (utils/->time-unit time-unit))))
 
 (defn interval-latency-snapshot [latency-metrics metric]
   (when-let [metric (c/clj-result->result metric)]
@@ -68,7 +68,9 @@
        :latency-max (.-latencyMax snapshot)
        :latency-mean (.-latencyMean snapshot)})))
 
-(defn latency-metrics [highest-trackable-value significant-digits]
-  (IntervalLatencyMetrics. TimeoutableResult
-                           (long highest-trackable-value)
-                           (long significant-digits)))
+(defn latency-metrics
+  ([highest-trackable-value significant-digits]
+   (latency-metrics TimeoutableResult highest-trackable-value significant-digits))
+  ([result-type highest-trackable-value significant-digits]
+   (IntervalLatencyMetrics.
+     result-type (long highest-trackable-value) (long significant-digits))))
