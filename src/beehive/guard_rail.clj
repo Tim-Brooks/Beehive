@@ -38,7 +38,7 @@
 (defmacro backpressure [builder & clauses]
   (do-assertions clauses)
   (let [ks (set (take-nth 2 clauses))
-        cpath (EnumBuilder/build (mapv to-enum-string ks))
+        cpath (EnumBuilder/buildRejectedEnum (mapv to-enum-string ks))
         cpath (symbol cpath)
         key->enum (gen-fn ks)
         clauses (partition 2 clauses)
@@ -54,7 +54,7 @@
 (defmacro new-bp [builder reason->backpressure]
   (do-new-assertions reason->backpressure)
   (let [ks (set (keys reason->backpressure))
-        cpath (EnumBuilder/build (mapv to-enum-string ks))
+        cpath (EnumBuilder/buildRejectedEnum (mapv to-enum-string ks))
         cpath (symbol cpath)
         key->enum (gen-fn ks)
         b (gensym)]

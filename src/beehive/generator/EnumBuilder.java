@@ -20,6 +20,7 @@ package beehive.generator;
 import clojure.lang.Compiler;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.dynamic.DynamicType;
+import net.uncontended.precipice.Failable;
 
 import java.io.IOException;
 import java.util.*;
@@ -28,11 +29,12 @@ public class EnumBuilder {
 
     private static final Object lock = new Object();
     private static long count = 0;
-    private static final Map<Set<String>, String> classCache = new HashMap<>();
+    private static final Map<Set<String>, String> rejectedCache = new HashMap<>();
+    private static final Map<Map<String, Boolean>, String> resultCache = new HashMap<>();
 
-    public static String build(List<String> keywords) throws IOException {
+    public static String buildRejectedEnum(List<String> keywords) throws IOException {
         Set<String> setOfKeywords = new HashSet<>(keywords);
-        if (!classCache.containsKey(setOfKeywords)) {
+        if (!rejectedCache.containsKey(setOfKeywords)) {
             synchronized (lock) {
                 String className = "BeehiveEnum" + count++;
                 String cpath = "beehive.generator." + className;
@@ -40,12 +42,32 @@ public class EnumBuilder {
                         .makeEnumeration(keywords)
                         .name(cpath)
                         .make();
-                classCache.put(setOfKeywords, cpath);
+                rejectedCache.put(setOfKeywords, cpath);
                 Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
                 return cpath;
             }
         } else {
-            return classCache.get(setOfKeywords);
+            return rejectedCache.get(setOfKeywords);
         }
     }
+
+    public static String buildResultEnum(Map<String, Boolean> enumToFailed) throws IOException {
+        if (!resultCache.containsKey(enumToFailed)) {
+            synchronized (lock) {
+                String className = "BeehiveEnum" + count++;
+                String cpath = "beehive.generator." + className;
+                DynamicType.Unloaded<?> enumType = new ByteBuddy()
+                        .makeEnumeration("d") // Fix
+                        .name(cpath)
+                        .implement(Failable.class)
+                        .make();
+                resultCache.put(enumToFailed, cpath);
+                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
+                return cpath;
+            }
+        } else {
+            return resultCache.get(enumToFailed);
+        }
+    }
+}
 }
