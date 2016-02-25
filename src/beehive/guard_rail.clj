@@ -14,7 +14,8 @@
 
 (ns beehive.guard-rail
   (:import (net.uncontended.precipice GuardRailBuilder)
-           (net.uncontended.precipice.rejected Rejected)))
+           (net.uncontended.precipice.rejected Rejected)
+           (beehive.generator EnumBuilder)))
 
 (set! *warn-on-reflection* true)
 
@@ -26,17 +27,30 @@
   (assert (every? keyword? (take-nth 2 clauses)))
   (assert (every? seq? (take-nth 2 (rest clauses)))))
 
+(defn to-enum-string [k]
+  (.toUpperCase (.replace (name k) \- \_)))
+
+(defn gen-fn [ks cpath]
+  (let [^Class enum (resolve cpath)
+        string->enum (into {} (map (fn [^Enum e] [(.name e) e])
+                                   (.getEnumConstants enum)))]
+    (into {} (mapv (fn [k] [k (symbol (to-enum-string k))]) ks))))
+
 (defmacro backpressure [builder & clauses]
   (do-assertions clauses)
-  (let [clauses (partition 2 clauses)]
-    (let [gx (gensym)]
-      `(let [~gx ~builder]
-         ~@(map (fn [[reason bp-fn-seq]]
-                  `(.addBackPressure ~gx (~(first bp-fn-seq)
-                                           ~@(rest bp-fn-seq)
-                                           (get keyword->enum ~reason))))
-                clauses)
-         ~gx))))
+  (let [ks (set (take-nth 2 clauses))
+        cpath (EnumBuilder/build (mapv to-enum-string ks))
+        cpath (symbol cpath)
+        key->enum (gen-fn ks cpath)
+        clauses (partition 2 clauses)
+        b (gensym)]
+    `(let [~b ~builder]
+       ~@(map (fn [[reason bp-fn-seq]]
+                `(.addBackPressure ~b (~(first bp-fn-seq)
+                                         ~@(rest bp-fn-seq)
+                                         (. ~cpath ~(get key->enum reason)))))
+              clauses)
+       ~b)))
 
 (defn- add-backpressure [^GuardRailBuilder builder reason->backpressure]
   (doseq [[_ bp] reason->backpressure]
@@ -46,6 +60,7 @@
 (defn guard-rail
   [name result-metrics rejected-metrics
    & {:keys [latency-metrics reason->backpressure]}]
+  (keyword "dfd")
   (with-meta
     {:guard-rail
      (-> (GuardRailBuilder.)
