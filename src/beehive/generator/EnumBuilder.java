@@ -19,6 +19,8 @@ package beehive.generator;
 
 import clojure.lang.Compiler;
 import net.bytebuddy.ByteBuddy;
+import net.bytebuddy.description.modifier.FieldManifestation;
+import net.bytebuddy.description.modifier.Visibility;
 import net.bytebuddy.dynamic.DynamicType;
 import net.uncontended.precipice.Failable;
 
@@ -36,7 +38,7 @@ public class EnumBuilder {
         Set<String> setOfKeywords = new HashSet<>(keywords);
         if (!rejectedCache.containsKey(setOfKeywords)) {
             synchronized (lock) {
-                String className = "BeehiveEnum" + count++;
+                String className = "BeehiveRejected" + count++;
                 String cpath = "beehive.generator." + className;
                 DynamicType.Unloaded<? extends Enum<?>> enumType = new ByteBuddy()
                         .makeEnumeration(keywords)
@@ -54,12 +56,15 @@ public class EnumBuilder {
     public static String buildResultEnum(Map<String, Boolean> enumToFailed) throws IOException {
         if (!resultCache.containsKey(enumToFailed)) {
             synchronized (lock) {
-                String className = "BeehiveEnum" + count++;
+                String className = "BeehiveResult" + count++;
                 String cpath = "beehive.generator." + className;
                 DynamicType.Unloaded<?> enumType = new ByteBuddy()
                         .makeEnumeration("d") // Fix
-                        .name(cpath)
                         .implement(Failable.class)
+                        .defineField("isFailure", boolean.class, Visibility.PRIVATE, FieldManifestation.FINAL)
+//                        .method(named("isFailure"))
+//                        .method(named("isSuccess"))
+                        .name(cpath)
                         .make();
                 resultCache.put(enumToFailed, cpath);
                 Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
@@ -70,4 +75,4 @@ public class EnumBuilder {
         }
     }
 }
-}
+
