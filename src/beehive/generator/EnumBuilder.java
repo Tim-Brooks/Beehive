@@ -22,10 +22,19 @@ import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.modifier.FieldManifestation;
 import net.bytebuddy.description.modifier.Visibility;
 import net.bytebuddy.dynamic.DynamicType;
+import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
+import net.bytebuddy.implementation.FieldAccessor;
+import net.bytebuddy.implementation.MethodDelegation;
+import net.bytebuddy.implementation.SuperMethodCall;
+import net.bytebuddy.implementation.bind.annotation.This;
 import net.uncontended.precipice.Failable;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.*;
+
+import static net.bytebuddy.matcher.ElementMatchers.any;
+import static net.bytebuddy.matcher.ElementMatchers.named;
 
 public class EnumBuilder {
 
@@ -58,20 +67,46 @@ public class EnumBuilder {
             synchronized (lock) {
                 String className = "BeehiveResult" + count++;
                 String cpath = "beehive.generator." + className;
-                DynamicType.Unloaded<?> enumType = new ByteBuddy()
-                        .makeEnumeration("d") // Fix
+                Class<? extends Enum<?>> enumType = new ByteBuddy()
+                        .makeEnumeration(enumToFailed.keySet())
                         .implement(Failable.class)
                         .defineField("isFailure", boolean.class, Visibility.PRIVATE, FieldManifestation.FINAL)
-//                        .method(named("isFailure"))
-//                        .method(named("isSuccess"))
+                        .defineField("isSuccess", boolean.class, Visibility.PRIVATE, FieldManifestation.FINAL)
+                        .constructor(any()).intercept(SuperMethodCall.INSTANCE.andThen(MethodDelegation.to(FailableBuilder.class)))
+                        .method(named("isFailure")).intercept(FieldAccessor.ofField("isFailure"))
+                        .method(named("isSuccess")).intercept(FieldAccessor.ofField("isSuccess"))
                         .name(cpath)
-                        .make();
-                resultCache.put(enumToFailed, cpath);
-                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
+                        .make()
+                        .load(EnumBuilder.class.getClassLoader(), ClassLoadingStrategy.Default.WRAPPER)
+                        .getLoaded();
+
+                Failable failable = (Failable) enumType.getEnumConstants()[0];
+                System.out.println(failable);
+                System.out.println(failable.isFailure());
+                System.out.println(failable.isSuccess());
+
+//                resultCache.put(enumToFailed, cpath);
+//                Path file = Paths.get("/Users/timbrooks/development/Beehive/target/classes/beehive/generator/" + className + ".class");
+//                Files.write(file, enumType.getBytes());
+
+//                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
                 return cpath;
             }
         } else {
             return resultCache.get(enumToFailed);
+        }
+    }
+
+    public static class FailableBuilder {
+
+        public static void construct(@This Object o, String name, int number) throws NoSuchFieldException, IllegalAccessException {
+            boolean isFailure = name.endsWith("_F");
+            Field failureField = o.getClass().getDeclaredField("isFailure");
+            failureField.setAccessible(true);
+            failureField.set(o, isFailure);
+            Field successField = o.getClass().getDeclaredField("isSuccess");
+            successField.setAccessible(true);
+            successField.set(o, !isFailure);
         }
     }
 }

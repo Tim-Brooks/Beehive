@@ -8,8 +8,8 @@ public class EntryPoint {
 
     public static void main(String[] args) throws IOException {
         Map<String, Boolean> enumToFailed = new HashMap<>();
-        enumToFailed.put("SUCCESS", false);
-        enumToFailed.put("ERROR", true);
+        enumToFailed.put("SUCCESS_S", false);
+        enumToFailed.put("ERROR_F", true);
         EnumBuilder.buildResultEnum(enumToFailed);
     }
 }
