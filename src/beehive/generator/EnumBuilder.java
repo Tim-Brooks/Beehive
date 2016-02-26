@@ -31,6 +31,9 @@ import net.uncontended.precipice.Failable;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
 
 import static net.bytebuddy.matcher.ElementMatchers.any;
@@ -67,7 +70,7 @@ public class EnumBuilder {
             synchronized (lock) {
                 String className = "BeehiveResult" + count++;
                 String cpath = "beehive.generator." + className;
-                Class<? extends Enum<?>> enumType = new ByteBuddy()
+                DynamicType.Unloaded<? extends Enum<?>> enumType = new ByteBuddy()
                         .makeEnumeration(enumToFailed.keySet())
                         .implement(Failable.class)
                         .defineField("isFailure", boolean.class, Visibility.PRIVATE, FieldManifestation.FINAL)
@@ -76,18 +79,18 @@ public class EnumBuilder {
                         .method(named("isFailure")).intercept(FieldAccessor.ofField("isFailure"))
                         .method(named("isSuccess")).intercept(FieldAccessor.ofField("isSuccess"))
                         .name(cpath)
-                        .make()
-                        .load(EnumBuilder.class.getClassLoader(), ClassLoadingStrategy.Default.WRAPPER)
-                        .getLoaded();
+                        .make();
+//                        .load(EnumBuilder.class.getClassLoader(), ClassLoadingStrategy.Default.WRAPPER)
+//                        .getLoaded();
 
-                Failable failable = (Failable) enumType.getEnumConstants()[0];
-                System.out.println(failable);
-                System.out.println(failable.isFailure());
-                System.out.println(failable.isSuccess());
+//                Failable failable = (Failable) enumType.getEnumConstants()[0];
+//                System.out.println(failable);
+//                System.out.println(failable.isFailure());
+//                System.out.println(failable.isSuccess());
 
 //                resultCache.put(enumToFailed, cpath);
-//                Path file = Paths.get("/Users/timbrooks/development/Beehive/target/classes/beehive/generator/" + className + ".class");
-//                Files.write(file, enumType.getBytes());
+                Path file = Paths.get("/Users/timbrooks/development/Beehive/target/classes/beehive/generator/" + className + ".class");
+                Files.write(file, enumType.getBytes());
 
 //                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
                 return cpath;
@@ -99,7 +102,7 @@ public class EnumBuilder {
 
     public static class FailableBuilder {
 
-        public static void construct(@This Object o, String name, int number) throws NoSuchFieldException, IllegalAccessException {
+        public static void construct(@This Object o, String name, int ordinal) throws NoSuchFieldException, IllegalAccessException {
             boolean isFailure = name.endsWith("_F");
             Field failureField = o.getClass().getDeclaredField("isFailure");
             failureField.setAccessible(true);
