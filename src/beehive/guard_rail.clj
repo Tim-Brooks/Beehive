@@ -66,26 +66,47 @@
               reason->backpressure)
        ~b)))
 
+(defn result-enum-string [k s?]
+  (str (to-enum-string k) (when-not s? "_F")))
+
+(defn gen-type [result->success?]
+  (let [key->enum-string (into {} (map (fn [[k s?]]
+                                         [k (symbol (result-enum-string k s?))])
+                                       result->success?))
+        cpath (EnumBuilder/buildResultEnum (map str (vals key->enum-string)))
+        cpath (symbol cpath)]
+    {:cpath cpath
+     :key->enum-string key->enum-string}))
+
+(defmacro create-types [result->success?]
+  (let [{:keys [key->enum-string cpath]} (gen-type result->success?)]
+    `(do
+       (-> {}
+           ~@(map (fn [[k es]]
+                    (list assoc k `(. ~cpath ~es)))
+                  key->enum-string)))))
+
 (defmacro guard-rail
   [name result-metrics rejected-metrics &
-   {:keys [latency-metrics backpressure custom-results]}]
+   {:keys [latency-metrics backpressure result->success?]}]
   (let [rm-fn (first result-metrics)
         rj-fn (first rejected-metrics)
         rm-args (rest result-metrics)
         rj-args (rest rejected-metrics)
-        result-type TimeoutableResult
-        rejected-type Rejected
+        result-type TimeoutableResult                       ;; Use correct type
+        rejected-type Rejected                              ;; Use correct type
         l-fn (first latency-metrics)
         l-args (rest latency-metrics)]
-    `(-> (GuardRailBuilder.)
-         (.name ~name)
-         (.resultMetrics (~rm-fn ~result-type ~@rm-args))
-         (.rejectedMetrics (~rj-fn ~rejected-type ~@rj-args))
-         (cond->
-           ~latency-metrics
-           (.resultLatency (~l-fn ~result-type ~@l-args))
-           ~backpressure
-           (new-bp ~backpressure)))))
+    {:pr `(-> (GuardRailBuilder.)
+             (.name ~name)
+             (.resultMetrics (~rm-fn ~result-type ~@rm-args))
+             (.rejectedMetrics (~rj-fn ~rejected-type ~@rj-args))
+             (cond->
+               ~latency-metrics
+               (.resultLatency (~l-fn ~result-type ~@l-args))
+               ~backpressure
+               (new-bp ~backpressure)))
+     :pl `(create-types ~result->success?)}))
 
 
 

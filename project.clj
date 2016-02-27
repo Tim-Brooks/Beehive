@@ -4,6 +4,7 @@
   :license {:name "Apache License, Version 2.0"
             :url "http://www.apache.org/licenses/LICENSE-2.0"}
   :signing {:gpg-key "tim@uncontended.net"}
+  :java-source-paths ["src/beehive/generator"]
   :profiles {:dev {:dependencies [[org.clojure/core.async "0.1.346.0-17112a-alpha"]
                                   [clj-http "1.0.1"]
                                   [criterium "0.4.3"]]}}

@@ -22,7 +22,6 @@ import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.modifier.FieldManifestation;
 import net.bytebuddy.description.modifier.Visibility;
 import net.bytebuddy.dynamic.DynamicType;
-import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
 import net.bytebuddy.implementation.FieldAccessor;
 import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.SuperMethodCall;
@@ -31,9 +30,6 @@ import net.uncontended.precipice.Failable;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 
 import static net.bytebuddy.matcher.ElementMatchers.any;
@@ -42,15 +38,16 @@ import static net.bytebuddy.matcher.ElementMatchers.named;
 public class EnumBuilder {
 
     private static final Object lock = new Object();
-    private static long count = 0;
+    private static long rejectedCount = 0;
+    private static long resultCount = 0;
     private static final Map<Set<String>, String> rejectedCache = new HashMap<>();
-    private static final Map<Map<String, Boolean>, String> resultCache = new HashMap<>();
+    private static final Map<Set<String>, String> resultCache = new HashMap<>();
 
     public static String buildRejectedEnum(List<String> keywords) throws IOException {
         Set<String> setOfKeywords = new HashSet<>(keywords);
         if (!rejectedCache.containsKey(setOfKeywords)) {
             synchronized (lock) {
-                String className = "BeehiveRejected" + count++;
+                String className = "BeehiveRejected" + rejectedCount++;
                 String cpath = "beehive.generator." + className;
                 DynamicType.Unloaded<? extends Enum<?>> enumType = new ByteBuddy()
                         .makeEnumeration(keywords)
@@ -65,13 +62,14 @@ public class EnumBuilder {
         }
     }
 
-    public static String buildResultEnum(Map<String, Boolean> enumToFailed) throws IOException {
-        if (!resultCache.containsKey(enumToFailed)) {
+    public static String buildResultEnum(List<String> enums) throws IOException {
+        Set<String> setOfEnums = new HashSet<>(enums);
+        if (!resultCache.containsKey(setOfEnums)) {
             synchronized (lock) {
-                String className = "BeehiveResult" + count++;
+                String className = "BeehiveResult" + resultCount++;
                 String cpath = "beehive.generator." + className;
                 DynamicType.Unloaded<? extends Enum<?>> enumType = new ByteBuddy()
-                        .makeEnumeration(enumToFailed.keySet())
+                        .makeEnumeration(enums)
                         .implement(Failable.class)
                         .defineField("isFailure", boolean.class, Visibility.PRIVATE, FieldManifestation.FINAL)
                         .defineField("isSuccess", boolean.class, Visibility.PRIVATE, FieldManifestation.FINAL)
@@ -80,23 +78,12 @@ public class EnumBuilder {
                         .method(named("isSuccess")).intercept(FieldAccessor.ofField("isSuccess"))
                         .name(cpath)
                         .make();
-//                        .load(EnumBuilder.class.getClassLoader(), ClassLoadingStrategy.Default.WRAPPER)
-//                        .getLoaded();
-
-//                Failable failable = (Failable) enumType.getEnumConstants()[0];
-//                System.out.println(failable);
-//                System.out.println(failable.isFailure());
-//                System.out.println(failable.isSuccess());
-
-//                resultCache.put(enumToFailed, cpath);
-                Path file = Paths.get("/Users/timbrooks/development/Beehive/target/classes/beehive/generator/" + className + ".class");
-                Files.write(file, enumType.getBytes());
-
-//                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
+                resultCache.put(setOfEnums, cpath);
+                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
                 return cpath;
             }
         } else {
-            return resultCache.get(enumToFailed);
+            return resultCache.get(setOfEnums);
         }
     }
 
