@@ -78,13 +78,25 @@
     {:cpath cpath
      :key->enum-string key->enum-string}))
 
-(defmacro create-types [result->success?]
-  (let [{:keys [key->enum-string cpath]} (gen-type result->success?)]
-    `(do
-       (-> {}
-           ~@(map (fn [[k es]]
-                    (list assoc k `(. ~cpath ~es)))
-                  key->enum-string)))))
+(defmacro create-type-map [{:keys [key->enum-string cpath] :as l}]
+  (println key->enum-string)
+  `(do
+     (-> {}
+         ~@(map (fn [[k es]]
+                  (list assoc k `(. ~cpath ~es)))
+                key->enum-string))))
+
+(def default-rejected-type
+  {:cpath net.uncontended.precipice.rejected.Rejected
+   :key->enum-string {:max-concurrency 'MAX_CONCURRENCY_LEVEL_EXCEEDED
+                      :circuit-open 'CIRCUIT_OPEN
+                      :rate-limit 'RATE_LIMIT_EXCEEDED}})
+
+(def default-result-type
+  {:cpath net.uncontended.precipice.result.TimeoutableResult
+   :key->enum-string {:success 'SUCCESS
+                      :error 'ERROR
+                      :timeout 'TIMEOUT}})
 
 (defmacro guard-rail
   [name result-metrics rejected-metrics &
@@ -93,20 +105,23 @@
         rj-fn (first rejected-metrics)
         rm-args (rest result-metrics)
         rj-args (rest rejected-metrics)
-        result-type TimeoutableResult                       ;; Use correct type
-        rejected-type Rejected                              ;; Use correct type
+        result-type (if result->success?
+                      (gen-type result->success?)
+                      default-result-type)
+        rejected-type default-rejected-type
         l-fn (first latency-metrics)
         l-args (rest latency-metrics)]
-    {:pr `(-> (GuardRailBuilder.)
-             (.name ~name)
-             (.resultMetrics (~rm-fn ~result-type ~@rm-args))
-             (.rejectedMetrics (~rj-fn ~rejected-type ~@rj-args))
-             (cond->
-               ~latency-metrics
-               (.resultLatency (~l-fn ~result-type ~@l-args))
-               ~backpressure
-               (new-bp ~backpressure)))
-     :pl `(create-types ~result->success?)}))
+    {:guard-rail `(-> (GuardRailBuilder.)
+                      (.name ~name)
+                      (.resultMetrics (~rm-fn ~(:cpath result-type) ~@rm-args))
+                      (.rejectedMetrics (~rj-fn ~(:cpath rejected-type) ~@rj-args))
+                      (cond->
+                        ~latency-metrics
+                        (.resultLatency (~l-fn ~(:cpath result-type) ~@l-args))
+                        ~backpressure
+                        (new-bp ~backpressure)))
+     :results `(create-type-map ~result-type)
+     :rejected `(create-type-map ~rejected-type)}))
 
 
 
