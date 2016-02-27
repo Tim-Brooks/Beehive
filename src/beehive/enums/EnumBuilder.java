@@ -15,7 +15,7 @@
  *
  */
 
-package beehive.generator;
+package beehive.enums;
 
 import clojure.lang.Compiler;
 import net.bytebuddy.ByteBuddy;
@@ -48,7 +48,7 @@ public class EnumBuilder {
         if (!rejectedCache.containsKey(setOfKeywords)) {
             synchronized (lock) {
                 String className = "BeehiveRejected" + rejectedCount++;
-                String cpath = "beehive.generator." + className;
+                String cpath = "beehive.enums." + className;
                 DynamicType.Unloaded<? extends Enum<?>> enumType = new ByteBuddy()
                         .makeEnumeration(keywords)
                         .name(cpath)
@@ -67,7 +67,7 @@ public class EnumBuilder {
         if (!resultCache.containsKey(setOfEnums)) {
             synchronized (lock) {
                 String className = "BeehiveResult" + resultCount++;
-                String cpath = "beehive.generator." + className;
+                String cpath = "beehive.enums." + className;
                 DynamicType.Unloaded<? extends Enum<?>> enumType = new ByteBuddy()
                         .makeEnumeration(enums)
                         .implement(Failable.class)
