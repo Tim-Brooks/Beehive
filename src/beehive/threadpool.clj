@@ -13,8 +13,7 @@
 ;; limitations under the License.
 
 (ns beehive.threadpool
-  (:require [beehive.circuit-breaker :as cb]
-            [beehive.future :as f]
+  (:require [beehive.future :as f]
             [beehive.metrics :as metrics]
             [beehive.semaphore :as semaphore])
   (:import (java.util.concurrent TimeUnit)
@@ -22,7 +21,8 @@
            (net.uncontended.precipice GuardRail GuardRailBuilder)
            (net.uncontended.precipice.threadpool ThreadPoolService)
            (net.uncontended.precipice.timeout TimeoutService)
-           (net.uncontended.precipice.rejected RejectedException)))
+           (net.uncontended.precipice.rejected RejectedException Rejected)
+           (beehive.metrics MetricHolder)))
 
 (set! *warn-on-reflection* true)
 
@@ -49,6 +49,8 @@
                                       (+ max-concurrency 2)
                                       guard-rail)}))
 
+(def temp-rejected {:max-concurrency-level-exceeded Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED})
+
 (defn threadpool
   ([name pool-size max-concurrency]
    (threadpool name pool-size max-concurrency {:slots-to-track 3600
@@ -56,14 +58,14 @@
                                                :time-unit :seconds}))
   ([name pool-size max-concurrency {:keys [slots-to-track resolution time-unit]}]
    (let [metrics (metrics/count-metrics slots-to-track resolution time-unit)
-         rejected-metrics (metrics/count-metrics slots-to-track resolution time-unit)
+         rejected-metrics (metrics/count-metrics temp-rejected slots-to-track resolution time-unit)
          semaphore (semaphore/semaphore max-concurrency)
          latency (metrics/latency-metrics (.toNanos TimeUnit/HOURS 1) 2)
          guard-rail (-> (GuardRailBuilder.)
                         (.name name)
-                        (.resultMetrics metrics)
-                        (.rejectedMetrics rejected-metrics)
-                        (.resultLatency latency)
+                        (.resultMetrics (.metrics ^MetricHolder metrics))
+                        (.rejectedMetrics (.metrics ^MetricHolder rejected-metrics))
+                        (.resultLatency (.metrics ^MetricHolder latency))
                         (.addBackPressure semaphore)
                         (.build))]
      {:result-metrics metrics

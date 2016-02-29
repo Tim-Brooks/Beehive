@@ -1,5 +1,8 @@
 (ns beehive.enums
-  (:import (beehive.enums EnumBuilder)))
+  (:import (beehive.enums EnumBuilder)
+           (java.util.concurrent ConcurrentHashMap)))
+
+(set! *warn-on-reflection* true)
 
 (defn- enum-string [k]
   (.toUpperCase (.replace (name k) \- \_)))

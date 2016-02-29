@@ -15,15 +15,17 @@
 (ns beehive.metrics-test
   (:require [clojure.test :refer :all]
             [beehive.metrics :as metrics])
-  (:import (net.uncontended.precipice.metrics RollingCountMetrics)
-           (net.uncontended.precipice.result TimeoutableResult)))
+  (:import (net.uncontended.precipice.result TimeoutableResult)
+           (beehive.metrics MetricHolder)
+           (net.uncontended.precipice.metrics RollingCountMetrics)))
 
 (deftest metrics-test
   (testing "Testing metrics return the results of the underlying java class"
-    (let [^RollingCountMetrics metrics (metrics/count-metrics)]
-      (.incrementMetricCount metrics TimeoutableResult/SUCCESS)
-      (.incrementMetricCount metrics TimeoutableResult/ERROR)
-      (.incrementMetricCount metrics TimeoutableResult/TIMEOUT)
+    (let [^MetricHolder metrics (metrics/count-metrics)
+          ^RollingCountMetrics java-metrics (.metrics metrics)]
+      (.incrementMetricCount java-metrics TimeoutableResult/SUCCESS)
+      (.incrementMetricCount java-metrics TimeoutableResult/ERROR)
+      (.incrementMetricCount java-metrics TimeoutableResult/TIMEOUT)
       (is (= 1 (metrics/total-count metrics :success)))
       (is (= 1 (metrics/total-count metrics :timeout)))
       (is (= 1 (metrics/total-count metrics :error)))

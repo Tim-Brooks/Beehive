@@ -23,30 +23,40 @@
 
 (set! *warn-on-reflection* true)
 
-(defn total-count [metrics metric]
-  (when-let [metric (or (c/clj-result->result metric)
-                        (c/clj-rejected->rejected metric))]
-    (.getMetricCount ^CountMetrics metrics metric)))
+(def default-key->result {:success TimeoutableResult/SUCCESS
+                          :error TimeoutableResult/ERROR
+                          :timeout TimeoutableResult/TIMEOUT})
 
-(defn count-for-period [metrics metric duration time-unit]
-  (when-let [metric (or (c/clj-result->result metric)
-                        (c/clj-rejected->rejected metric))]
+(deftype MetricHolder [metrics keyToEnum])
+
+(defn total-count [^MetricHolder metrics metric]
+  (when-let [enum (get (.keyToEnum metrics) metric)]
+    (.getMetricCount ^CountMetrics (.metrics metrics) enum)))
+
+(defn count-for-period [^MetricHolder metrics metric duration time-unit]
+  (when-let [enum (get (.keyToEnum metrics) metric)]
     (.getMetricCountForPeriod
-      ^RollingCountMetrics metrics metric duration (utils/->time-unit time-unit))))
+      ^RollingCountMetrics
+      (.metrics metrics)
+      enum
+      duration
+      (utils/->time-unit time-unit))))
 
 (defn count-metrics
-  ([] (count-metrics TimeoutableResult))
-  ([result-type]
-   (RollingCountMetrics. result-type))
+  ([] (count-metrics (* 60 15) 1 :seconds))
   ([slots-to-track resolution time-unit]
-    (count-metrics TimeoutableResult slots-to-track resolution time-unit))
-  ([result-type slots-to-track resolution time-unit]
-   (RollingCountMetrics.
-     result-type slots-to-track resolution (utils/->time-unit time-unit))))
+   (count-metrics default-key->result slots-to-track resolution time-unit))
+  ([key->result slots-to-track resolution time-unit]
+   (let [type (class (val (first key->result)))]
+     (->MetricHolder
+       (RollingCountMetrics.
+         type slots-to-track resolution (utils/->time-unit time-unit))
+       key->result))))
 
-(defn interval-latency-snapshot [latency-metrics metric]
-  (when-let [metric (c/clj-result->result metric)]
-    (let [snapshot (.intervalSnapshot ^IntervalLatencyMetrics latency-metrics metric)]
+(defn interval-latency-snapshot [^MetricHolder latency-metrics metric]
+  (when-let [enum (get (.keyToEnum latency-metrics) metric)]
+    (let [snapshot (.intervalSnapshot ^IntervalLatencyMetrics
+                                      (.-metrics latency-metrics) enum)]
       {:latency-50 (.-latency50 snapshot)
        :latency-90 (.-latency90 snapshot)
        :latency-99 (.-latency99 snapshot)
@@ -56,9 +66,10 @@
        :latency-max (.-latencyMax snapshot)
        :latency-mean (.-latencyMean snapshot)})))
 
-(defn latency-snapshot [latency-metrics metric]
-  (when-let [metric (c/clj-result->result metric)]
-    (let [snapshot (.latencySnapshot ^LatencyMetrics latency-metrics metric)]
+(defn latency-snapshot [^MetricHolder latency-metrics metric]
+  (when-let [enum (get (.keyToEnum latency-metrics) metric)]
+    (let [snapshot (.latencySnapshot ^IntervalLatencyMetrics
+                                      (.-metrics latency-metrics) enum)]
       {:latency-50 (.-latency50 snapshot)
        :latency-90 (.-latency90 snapshot)
        :latency-99 (.-latency99 snapshot)
@@ -70,7 +81,11 @@
 
 (defn latency-metrics
   ([highest-trackable-value significant-digits]
-   (latency-metrics TimeoutableResult highest-trackable-value significant-digits))
-  ([result-type highest-trackable-value significant-digits]
-   (IntervalLatencyMetrics.
-     result-type (long highest-trackable-value) (long significant-digits))))
+   (latency-metrics default-key->result highest-trackable-value significant-digits))
+  ([key->result highest-trackable-value significant-digits]
+   (->MetricHolder
+     (IntervalLatencyMetrics.
+       (class (val (first key->result)))
+       (long highest-trackable-value)
+       (long significant-digits))
+     key->result)))

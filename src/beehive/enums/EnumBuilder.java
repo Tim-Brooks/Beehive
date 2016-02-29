@@ -14,7 +14,6 @@
  * limitations under the License.
  *
  */
-
 package beehive.enums;
 
 import clojure.lang.Compiler;
@@ -42,6 +41,10 @@ public class EnumBuilder {
     private static long resultCount = 0;
     private static final Map<Set<String>, String> rejectedCache = new HashMap<>();
     private static final Map<Set<String>, String> resultCache = new HashMap<>();
+
+    static {
+        rejectedCache.put(new HashSet<String>(), "net.uncontended.precipice.rejected.Unrejectable");
+    }
 
     public static String buildRejectedEnum(List<String> keywords) throws IOException {
         Set<String> setOfKeywords = new HashSet<>(keywords);
