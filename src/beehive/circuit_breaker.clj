@@ -29,8 +29,9 @@
            failure-percentage-threshold
            backoff-time-millis
            health-refresh-millis
-           sample-size-threshold]}]
-  (let [config (cond-> (CircuitBreakerConfigBuilder. Rejected/CIRCUIT_OPEN)
+           sample-size-threshold]}
+   reason]
+  (let [config (cond-> (CircuitBreakerConfigBuilder. reason)
                        trailing-period-millis
                        (.trailingPeriodMillis trailing-period-millis)
 
@@ -50,12 +51,12 @@
                        (.sampleSizeThreshold sample-size-threshold))]
     (.build config)))
 
-(defn no-opt-breaker []
-  (NoOpCircuitBreaker. Rejected/CIRCUIT_OPEN))
+(defn no-opt-breaker [reason]
+  (NoOpCircuitBreaker. reason))
 
-(defn default-breaker [config-map]
+(defn default-breaker [config-map reason]
   (DefaultCircuitBreaker.
-    ^CircuitBreakerConfig (create-breaker-config config-map)))
+    ^CircuitBreakerConfig (create-breaker-config config-map reason)))
 
 (defn close-circuit! [breaker]
   (.forceClosed ^CircuitBreaker breaker))

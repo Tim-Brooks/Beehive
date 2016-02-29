@@ -14,22 +14,20 @@
 
 (ns beehive.threadpool
   (:require [beehive.future :as f]
-            [beehive.metrics :as metrics]
-            [beehive.semaphore :as semaphore])
-  (:import (java.util.concurrent TimeUnit)
-           (net.uncontended.precipice.concurrent PrecipiceFuture)
-           (net.uncontended.precipice GuardRail GuardRailBuilder)
+            [beehive.hive])
+  (:import (net.uncontended.precipice.concurrent PrecipiceFuture)
+           (net.uncontended.precipice GuardRail)
            (net.uncontended.precipice.threadpool ThreadPoolService)
            (net.uncontended.precipice.timeout TimeoutService)
-           (net.uncontended.precipice.rejected RejectedException Rejected)
-           (beehive.metrics MetricHolder)))
+           (net.uncontended.precipice.rejected RejectedException)
+           (beehive.hive Hive)))
 
 (set! *warn-on-reflection* true)
 
 (defn submit
   ([threadpool fn]
     (submit threadpool fn TimeoutService/NO_TIMEOUT))
-  ([{:keys [thread-pool]} fn timeout-millis]
+  ([thread-pool fn timeout-millis]
    (let [^ThreadPoolService thread-pool thread-pool]
      (try
        (f/->BeehiveFuture
@@ -37,7 +35,7 @@
        (catch RejectedException e
          (f/rejected-action-future e))))))
 
-(defn shutdown [{:keys [thread-pool]}]
+(defn shutdown [thread-pool]
   (.shutdown ^ThreadPoolService thread-pool))
 
 (defn threadpool [guard-rail pool-size max-concurrency]
@@ -49,27 +47,5 @@
                                       (+ max-concurrency 2)
                                       guard-rail)}))
 
-(def temp-rejected {:max-concurrency-level-exceeded Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED})
-
-(defn threadpool
-  ([name pool-size max-concurrency]
-   (threadpool name pool-size max-concurrency {:slots-to-track 3600
-                                               :resolution 1
-                                               :time-unit :seconds}))
-  ([name pool-size max-concurrency {:keys [slots-to-track resolution time-unit]}]
-   (let [metrics (metrics/count-metrics slots-to-track resolution time-unit)
-         rejected-metrics (metrics/count-metrics temp-rejected slots-to-track resolution time-unit)
-         semaphore (semaphore/semaphore max-concurrency)
-         latency (metrics/latency-metrics (.toNanos TimeUnit/HOURS 1) 2)
-         guard-rail (-> (GuardRailBuilder.)
-                        (.name name)
-                        (.resultMetrics (.metrics ^MetricHolder metrics))
-                        (.rejectedMetrics (.metrics ^MetricHolder rejected-metrics))
-                        (.resultLatency (.metrics ^MetricHolder latency))
-                        (.addBackPressure semaphore)
-                        (.build))]
-     {:result-metrics metrics
-      :rejected-metrics rejected-metrics
-      :latency-metrics latency
-      :backpresure {:semaphore semaphore}
-      :thread-pool (ThreadPoolService. pool-size (+ max-concurrency 2) guard-rail)})))
+(defn threadpool [pool-size queue-size ^Hive beehive]
+  (ThreadPoolService. pool-size queue-size (.guard_rail beehive)))

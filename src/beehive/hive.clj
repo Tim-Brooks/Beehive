@@ -14,43 +14,43 @@
 
 (ns beehive.hive
   (:require [beehive.enums :as enums])
-  (:import (clojure.lang ILookup)
-           (net.uncontended.precipice GuardRail GuardRailBuilder)))
+  (:import (clojure.lang ILookup)))
 
-(def default-rejected-type
-  {:cpath net.uncontended.precipice.rejected.Unrejectable
-   :key->enum-string {}})
+(set! *warn-on-reflection* true)
 
 (def default-result-type
-  {:cpath net.uncontended.precipice.result.TimeoutableResult
-   :key->enum-string {:success 'SUCCESS
-                      :error 'ERROR
-                      :timeout 'TIMEOUT}})
+  {:success true
+   :error false
+   :timeout false})
 
-(deftype Hive [^GuardRail guard-rail backpressure result-enums rejected-enum]
+(defn return-nil [x] nil)
+
+(deftype Hive
+  [^net.uncontended.precipice.GuardRail guard-rail result-metrics rejected-metrics
+   latency-metrics backpressure result-enums rejected-enum]
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [this key default]
     (case key
       :name (.getName guard-rail)
-      :result-metrics (.getResultMetrics guard-rail)
-      :rejected-metrics (.getRejectedMetrics guard-rail)
-      :latency-metrics (.getLatencyMetrics guard-rail)
+      :result-metrics result-metrics
+      :rejected-metrics rejected-metrics
+      :latency-metrics latency-metrics
       :backpressure backpressure
       default))
   Object
   (toString [this]
     (str {:name (.getName guard-rail)
-          :result-metrics (.getResultMetrics guard-rail)
-          :rejected-metrics (.getRejectedMetrics guard-rail)
-          :latency-metrics (.getLatencyMetrics guard-rail)
+          :result-metrics result-metrics
+          :rejected-metrics rejected-metrics
+          :latency-metrics latency-metrics
           :backpressure backpressure})))
 
 (defn- do-new-assertions [clauses]
   (assert (every? keyword? (keys clauses)))
   (assert (every? seq? (vals (rest clauses)))))
 
-(defn add-bp [builder reason->backpressure]
+(defn add-bp [^net.uncontended.precipice.GuardRailBuilder builder reason->backpressure]
   (doseq [backpressure (vals reason->backpressure)]
     (.addBackPressure builder backpressure))
   builder)
@@ -65,13 +65,6 @@
                                           (get ~r ~reason))))
                   reason->backpressure)))))
 
-(defmacro create-type-map [{:keys [key->enum-string cpath]}]
-  `(do
-     (-> {}
-         ~@(map (fn [[k es]]
-                  (list assoc k `(. ~cpath ~es)))
-                key->enum-string))))
-
 (defmacro beehive
   [name result-metrics rejected-metrics &
    {:keys [latency-metrics backpressure result->success?]}]
@@ -79,36 +72,29 @@
         rej-metrics-fn (first rejected-metrics)
         res-metrics-args (rest result-metrics)
         rej-metrics-args (rest rejected-metrics)
-        latency-metrics-fn (first latency-metrics)
-        latency-args (rest latency-metrics)]
+        latency-metrics-fn (or (first latency-metrics) return-nil)
+        latency-args (rest latency-metrics)
+        result->success? (or result->success? default-result-type)]
     `(let [result-key->enum# (enums/result-keys->enum ~result->success?)
            rejected-key->enum# (enums/rejected-keys->enum ~(keys backpressure))
-           backpressure# (create-bp ~backpressure rejected-key->enum#)]
-       (->Hive
-         (-> (GuardRailBuilder.)
-             (.name ~name)
-             (.resultMetrics
-               (.metrics
-                 (~res-metrics-fn result-key->enum# ~@res-metrics-args)))
-             (.rejectedMetrics
-               (.metrics
-                 (~rej-metrics-fn rejected-key->enum# ~@rej-metrics-args)))
-             (cond->
-               ~latency-metrics
-               (.resultLatency
-                 (.metrics
-                   (~latency-metrics-fn result-key->enum# ~@latency-args)))
-               backpressure#
-               (add-bp backpressure#))
-             (.build))
+           backpressure# (create-bp ~backpressure rejected-key->enum#)
+           result-metrics# (~res-metrics-fn result-key->enum# ~@res-metrics-args)
+           rejected-metrics# (~rej-metrics-fn rejected-key->enum# ~@rej-metrics-args)
+           latency-metrics# (~latency-metrics-fn result-key->enum# ~@latency-args)
+           builder# (-> (net.uncontended.precipice.GuardRailBuilder.)
+                        (.name ~name)
+                        (.resultMetrics (.metrics ^beehive.metrics.MetricHolder result-metrics#))
+                        (.rejectedMetrics (.metrics ^beehive.metrics.MetricHolder rejected-metrics#))
+                        (cond->
+                          latency-metrics#
+                          (.resultLatency (.metrics ^beehive.metrics.MetricHolder latency-metrics#))
+                          backpressure#
+                          (add-bp backpressure#)))]
+       (Hive.
+         (.build ^net.uncontended.precipice.GuardRailBuilder builder#)
+         result-metrics#
+         rejected-metrics#
+         latency-metrics#
          backpressure#
          result-key->enum#
          rejected-key->enum#))))
-
-(beehive
-  "k"
-  (beehive.metrics/count-metrics 15 1 :minutes)
-  (beehive.metrics/count-metrics)
-  :latency-metrics (beehive.metrics/latency-metrics 10 2)
-  :backpressure {:luck (beehive.semaphore/semaphore 2)}
-  :result->success? {:success true :failure false})

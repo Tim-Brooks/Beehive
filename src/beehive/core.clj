@@ -31,5 +31,5 @@
       :or {breaker {} metrics {:slots-to-track 3600
                                :resolution 1
                                :time-unit :seconds}}}]
-  (s/threadpool name pool-size max-concurrency metrics))
+  )
 

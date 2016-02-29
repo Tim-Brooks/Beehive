@@ -43,7 +43,7 @@
 
 (defn count-metrics
   ([] (count-metrics (* 60 15) 1 :seconds))
-  ([default-key->result] (count-metrics default-key->result (* 60 15) 1 :seconds))
+  ([key->result] (count-metrics key->result (* 60 15) 1 :seconds))
   ([slots-to-track resolution time-unit]
    (count-metrics default-key->result slots-to-track resolution time-unit))
   ([key->result slots-to-track resolution time-unit]

@@ -14,12 +14,14 @@
 
 (ns beehive.threadpool-test
   (:require [clojure.test :refer :all]
+            [beehive.hive :as beehive]
             [beehive.threadpool :as threadpool]
             [beehive.future :as f]
             [beehive.metrics :as metrics]
+            [beehive.semaphore :as semaphore]
             [beehive.threadpool :as service])
   (:import (java.io IOException)
-           (java.util.concurrent CountDownLatch ExecutionException)
+           (java.util.concurrent CountDownLatch ExecutionException TimeUnit)
            (net.uncontended.precipice.timeout PrecipiceTimeoutException)))
 
 (set! *warn-on-reflection* true)
@@ -27,10 +29,14 @@
 (def service nil)
 
 (defn- start-and-stop [f]
-  (let [metrics-config {:slots-to-track 3600 :resolution 1 :time-unit :seconds}]
+  (let [hive (beehive/beehive
+               ""
+               (metrics/count-metrics 15 1 :minutes)
+               (metrics/count-metrics 15 1 :minutes)
+               :backpressure {:max-concurrency (semaphore/semaphore 1)})]
     (alter-var-root
       #'service
-      (fn [_] (threadpool/threadpool "" 1 1 metrics-config))))
+      (fn [_] (threadpool/threadpool 1 3 hive))))
   (f)
   (threadpool/shutdown service))
 
@@ -99,7 +105,7 @@
     (let [latch (CountDownLatch. 1)
           _ (threadpool/submit service (block-fn 1 latch))
           f (threadpool/submit service (success-fn 1))]
-      (is (= :max-concurrency-level-exceeded (:rejected-reason f)))
+      (is (= :max-concurrency (:rejected-reason f)))
       (is (:rejected? f))
       (is (not (:timeout? f)))
       (is (not (:success? f)))
@@ -142,9 +148,13 @@
 
 (deftest metrics-test
   (testing "Testing that metrics are updated with result of action"
-    (let [{:keys [result-metrics] :as threadpool}
-          (threadpool/threadpool "test" 1 100)
-          latch (CountDownLatch. 1)]
+    (let [hive (beehive/beehive
+                 ""
+                 (metrics/count-metrics)
+                 (metrics/count-metrics))
+          threadpool (threadpool/threadpool 1 100 hive)
+          latch (CountDownLatch. 1)
+          result-metrics (:result-metrics hive)]
       (f/await (threadpool/submit threadpool (success-fn 1)))
       (f/await (threadpool/submit threadpool (error-fn (IOException.))))
       (f/await (threadpool/submit threadpool (block-fn 1 latch) 10))
@@ -154,13 +164,18 @@
       (is (= 1 (metrics/total-count result-metrics :error)))
       (threadpool/shutdown threadpool)))
   (testing "Testing that rejection reasons are updated"
-    (let [{:keys [rejected-metrics] :as threadpool}
-          (threadpool/threadpool "test" 1 1)
-          latch (CountDownLatch. 1)]
+    (let [hive (beehive/beehive
+                 ""
+                 (metrics/count-metrics)
+                 (metrics/count-metrics)
+                 :backpressure {:max-concurrency (semaphore/semaphore 1)})
+          threadpool (threadpool/threadpool 1 1 hive)
+          latch (CountDownLatch. 1)
+          rejected-metrics (:rejected-metrics hive)]
       (threadpool/submit threadpool (block-fn 1 latch))
       (threadpool/submit threadpool (success-fn 1))
       (.countDown latch)
-      (is (= 1 (metrics/total-count rejected-metrics :max-concurrency-level-exceeded)))
+      (is (= 1 (metrics/total-count rejected-metrics :max-concurrency)))
       (threadpool/shutdown threadpool))))
 
 (defn- assert-not-zero
@@ -188,8 +203,15 @@
   (is (= latency-mean 0.0)))
 
 (deftest latency-test
-  (let [{:keys [latency-metrics] :as threadpool} (threadpool/threadpool "test" 1 100)
-        latch (CountDownLatch. 1)]
+  (let [hive (beehive/beehive
+               ""
+               (metrics/count-metrics)
+               (metrics/count-metrics)
+               :latency-metrics (metrics/latency-metrics (.toNanos TimeUnit/HOURS 1) 2)
+               :result->success? {:success true :error false :timeout false})
+        threadpool (threadpool/threadpool 1 100 hive)
+        latch (CountDownLatch. 1)
+        latency-metrics (:latency-metrics hive)]
     (testing "Testing that success latency is updated"
       (f/await (service/submit threadpool (success-fn 1)))
       (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)

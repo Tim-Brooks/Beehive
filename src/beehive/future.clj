@@ -18,8 +18,9 @@
            (java.util.concurrent TimeUnit)
            (net.uncontended.precipice PrecipiceFunction)
            (net.uncontended.precipice.concurrent PrecipiceFuture)
-           (net.uncontended.precipice.rejected RejectedException Rejected)
-           (net.uncontended.precipice.result TimeoutableResult)))
+           (net.uncontended.precipice.rejected RejectedException)
+           (net.uncontended.precipice.result TimeoutableResult)
+           (beehive.enums ToCLJ)))
 
 (set! *warn-on-reflection* true)
 
@@ -78,12 +79,8 @@
       :rejected-reason reason
       default)))
 
-(def ^:private reject-enum->keyword
-  {Rejected/CIRCUIT_OPEN :circuit-open
-   Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED :max-concurrency-level-exceeded})
-
 (defn rejected-action-future [^RejectedException ex]
-  (->BeehiveRejectedFuture ex (get reject-enum->keyword (.reason ex))))
+  (->BeehiveRejectedFuture ex (.keyword ^ToCLJ (.reason ex))))
 
 (defn cancel! [f]
   (when (instance? BeehiveFuture f)
