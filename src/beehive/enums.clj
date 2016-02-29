@@ -7,7 +7,8 @@
   (.replace (name k) "-" "$DASH$"))
 
 (defn- result-enum-string [k s?]
-  (str (enum-string k) (when-not s? "_F")))
+  ;; TODO: Need to assert that these do no contain dash or end with failure
+  (str (enum-string k) (when-not s? "$FAILURE$")))
 
 (defn- generate-rejected-enum [rejected-keys]
   (let [key->enum-string (into {} (map (fn [k]

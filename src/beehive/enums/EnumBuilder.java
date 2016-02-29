@@ -110,8 +110,7 @@ public final class EnumBuilder {
     public static class FailableBuilder {
 
         public static void construct(@This Object o, String name, int ordinal) throws NoSuchFieldException, IllegalAccessException {
-            // TODO: Naive
-            boolean isFailure = name.endsWith("_F");
+            boolean isFailure = name.endsWith("$FAILURE$");
             Field failureField = o.getClass().getDeclaredField("isFailure");
             failureField.setAccessible(true);
             failureField.set(o, isFailure);
