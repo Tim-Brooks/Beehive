@@ -63,9 +63,6 @@
       (.countDown latch)
       (is (= 64 @f))
       (is (= :success (:status f)))
-      (is (:success? f))
-      (is (not (:error? f)))
-      (is (not (:timeout? f)))
       (is (not (:rejected? f)))
       (is (nil? (:error f)))))
   (testing "Submitted action can return error"
@@ -74,9 +71,6 @@
       (f/await f)
       (is (= exception (:error f)))
       (is (nil? (:result f)))
-      (is (:error? f))
-      (is (not (:success? f)))
-      (is (not (:timeout? f)))
       (is (not (:rejected? f)))
       (is (= :error (:status f)))
       (try
@@ -88,9 +82,6 @@
     (let [latch (CountDownLatch. 1)
           f (threadpool/submit service (block-fn 1 latch) 50)]
       (f/await f)
-      (is (:timeout? f))
-      (is (not (:success? f)))
-      (is (not (:error? f)))
       (is (not (:rejected? f)))
       (is (= :timeout (:status f)))
       (.countDown latch)
@@ -107,9 +98,6 @@
           f (threadpool/submit service (success-fn 1))]
       (is (= :max-concurrency (:rejected-reason f)))
       (is (:rejected? f))
-      (is (not (:timeout? f)))
-      (is (not (:success? f)))
-      (is (not (:error? f)))
       (is (= :rejected (:status f)))
       (.countDown latch))))
 

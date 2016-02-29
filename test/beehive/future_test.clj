@@ -20,10 +20,10 @@
 
 (set! *warn-on-reflection* true)
 
-(def pending [:success? :error? :timeout? :rejected? :cancelled? :result :error])
-(def success [:pending? :error? :timeout? :rejected? :cancelled? :error])
-(def error [:pending? :success? :timeout? :rejected? :cancelled? :result])
-(def timeout [:pending? :success? :error? :rejected? :cancelled? :result :error])
+(def pending [:rejected? :cancelled? :result :error])
+(def success [:pending? :rejected? :cancelled? :error])
+(def error [:pending? :rejected? :cancelled? :result])
+(def timeout [:pending? :rejected? :cancelled? :result :error])
 
 (defn- remove-false [f ks]
   (filter (fn [func] (func f)) ks))
@@ -43,7 +43,6 @@
       (.complete eventual TimeoutableResult/SUCCESS 4)
       (is (= :success (:status future)))
       (is (= 4 (:result future)))
-      (is (:success? future))
       (is (= [] (remove-false future success)))))
 
   (testing "Test that error futures work correctly."
@@ -53,7 +52,6 @@
       (.completeExceptionally eventual TimeoutableResult/ERROR ex)
       (is (= :error (:status future)))
       (is (= ex (:error future)))
-      (is (:error? future))
       (is (= [] (remove-false future error)))))
 
   (testing "Test that timeout futures work correctly."
@@ -61,5 +59,4 @@
           future (f/->BeehiveFuture eventual)]
       (.completeExceptionally eventual TimeoutableResult/TIMEOUT nil)
       (is (= :timeout (:status future)))
-      (is (:timeout? future))
       (is (= [] (remove-false future timeout))))))

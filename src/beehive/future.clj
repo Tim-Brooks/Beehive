@@ -47,9 +47,6 @@
   (valAt [this key default]
     (case key
       :status (or (status (.getStatus future)) :pending)
-      :success? (identical? TimeoutableResult/SUCCESS (.getStatus future))
-      :timeout? (identical? TimeoutableResult/TIMEOUT (.getStatus future))
-      :error? (identical? TimeoutableResult/ERROR (.getStatus future))
       :pending? (not (.isRealized this))
       :cancelled? (.isCancelled future)
       :rejected? false
