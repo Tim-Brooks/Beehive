@@ -13,8 +13,6 @@
 ;; limitations under the License.
 
 (ns beehive.patterns
-  (:require [beehive.compatibility :as c]
-            [beehive.future :as f])
   (:import (net.uncontended.precipice.pattern Pattern RoundRobinLoadBalancer)))
 
 (set! *warn-on-reflection* true)

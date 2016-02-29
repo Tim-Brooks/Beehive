@@ -13,13 +13,12 @@
 ;; limitations under the License.
 
 (ns beehive.metrics
-  (:require [beehive.compatibility :as c]
-            [beehive.utils :as utils])
+  (:require [beehive.utils :as utils])
   (:import (net.uncontended.precipice.metrics CountMetrics
                                               RollingCountMetrics
-                                              IntervalLatencyMetrics
-                                              LatencyMetrics)
-           (net.uncontended.precipice.result TimeoutableResult)))
+                                              IntervalLatencyMetrics MetricCounter NoOpLatencyMetrics)
+           (net.uncontended.precipice.result TimeoutableResult)
+           (net.uncontended.precipice.rejected Unrejectable)))
 
 (set! *warn-on-reflection* true)
 
@@ -44,14 +43,20 @@
 
 (defn count-metrics
   ([] (count-metrics (* 60 15) 1 :seconds))
+  ([default-key->result] (count-metrics default-key->result (* 60 15) 1 :seconds))
   ([slots-to-track resolution time-unit]
    (count-metrics default-key->result slots-to-track resolution time-unit))
   ([key->result slots-to-track resolution time-unit]
-   (let [type (class (val (first key->result)))]
+   (if-let [first-type (first key->result)]
      (->MetricHolder
        (RollingCountMetrics.
-         type slots-to-track resolution (utils/->time-unit time-unit))
-       key->result))))
+         (class (val first-type))
+         slots-to-track
+         resolution
+         (utils/->time-unit time-unit))
+       key->result)
+     ;; TODO: Obviously this is a bit of a hack - maybe create specific enum
+     (->MetricHolder (MetricCounter/noOpCounter Unrejectable) {}))))
 
 (defn interval-latency-snapshot [^MetricHolder latency-metrics metric]
   (when-let [enum (get (.keyToEnum latency-metrics) metric)]
@@ -83,9 +88,11 @@
   ([highest-trackable-value significant-digits]
    (latency-metrics default-key->result highest-trackable-value significant-digits))
   ([key->result highest-trackable-value significant-digits]
-   (->MetricHolder
-     (IntervalLatencyMetrics.
-       (class (val (first key->result)))
-       (long highest-trackable-value)
-       (long significant-digits))
-     key->result)))
+   (if-let [first-type (first key->result)]
+     (->MetricHolder
+       (IntervalLatencyMetrics.
+         (class (val first-type))
+         (long highest-trackable-value)
+         (long significant-digits))
+       key->result)
+     (->MetricHolder (NoOpLatencyMetrics.) {}))))
