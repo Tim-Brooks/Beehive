@@ -14,7 +14,8 @@
 
 (ns beehive.hive
   (:require [beehive.enums :as enums])
-  (:import (clojure.lang ILookup)))
+  (:import (clojure.lang ILookup)
+           (net.uncontended.precipice GuardRail)))
 
 (set! *warn-on-reflection* true)
 
@@ -23,7 +24,7 @@
    :error false
    :timeout false})
 
-(defn return-nil [x] nil)
+(defn- return-nil [x] nil)
 
 (deftype Hive
   [^net.uncontended.precipice.GuardRail guard-rail result-metrics rejected-metrics
@@ -45,10 +46,6 @@
           :rejected-metrics rejected-metrics
           :latency-metrics latency-metrics
           :backpressure backpressure})))
-
-(defn- do-new-assertions [clauses]
-  (assert (every? keyword? (keys clauses)))
-  (assert (every? seq? (vals (rest clauses)))))
 
 (defn add-bp [^net.uncontended.precipice.GuardRailBuilder builder reason->backpressure]
   (doseq [backpressure (vals reason->backpressure)]
@@ -98,3 +95,24 @@
          backpressure#
          result-key->enum#
          rejected-key->enum#))))
+
+(defn release
+  ([^Hive beehive {:keys [permit-count]}]
+   (when permit-count
+     (let [^GuardRail guard-rail (.-guard_rail beehive)
+           end-nanos (.nanoTime (.getClock guard-rail))]
+       (.releasePermitsWithoutResult guard-rail permit-count end-nanos))))
+  ([^Hive beehive {:keys [permit-count start-nanos]} result]
+   (when permit-count
+     (let [^GuardRail guard-rail (.-guard_rail beehive)
+           result-enum (get (.-result_enums beehive) result)
+           end-nanos (.nanoTime (.getClock guard-rail))]
+       (.releasePermits
+         guard-rail result-enum permit-count start-nanos end-nanos)))))
+
+(defn acquire [^Hive beehive permits]
+  (let [^GuardRail guard-rail (.-guard_rail beehive)
+        start-nanos (.nanoTime (.getClock guard-rail))]
+    (if-let [rejected-reason (.acquirePermits guard-rail permits start-nanos)]
+      {:rejected? true :reason (get (.-rejected_enum beehive) rejected-reason)}
+      {:start-nanos start-nanos :permit-count permits})))
