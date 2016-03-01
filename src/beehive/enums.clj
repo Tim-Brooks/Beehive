@@ -3,6 +3,16 @@
 
 (set! *warn-on-reflection* true)
 
+(defn result-assertions [ks]
+  (doseq [k ks]
+    (assert (not (.contains (name k) "$FAILURE$"))
+            "Result keyword cannot contain the string \"$FAILURE$\".")))
+
+(defn enum-assertions [ks]
+  (doseq [k ks]
+    (assert (not (.contains (name k) "$DASH$"))
+            "Enum keyword cannot contain the string \"$DASH$\".")))
+
 (defn- enum-string [k]
   (.replace (name k) "-" "$DASH$"))
 
@@ -11,6 +21,7 @@
   (str (enum-string k) (when-not s? "$FAILURE$")))
 
 (defn- generate-rejected-enum [rejected-keys]
+  (enum-assertions rejected-keys)
   (let [key->enum-string (into {} (map (fn [k]
                                          [k (enum-string k)])
                                        rejected-keys))
@@ -20,6 +31,9 @@
      :key->enum-string key->enum-string}))
 
 (defn- generate-result-enum [result->success?]
+  (let [ks (keys result->success?)]
+    (result-assertions ks)
+    (enum-assertions ks))
   (let [key->enum-string (into {} (map (fn [[k s?]]
                                          [k (result-enum-string k s?)])
                                        result->success?))
