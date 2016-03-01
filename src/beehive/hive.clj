@@ -28,7 +28,7 @@
 
 (deftype Hive
   [^net.uncontended.precipice.GuardRail guard-rail result-metrics rejected-metrics
-   latency-metrics backpressure result-enums rejected-enum]
+   latency-metrics back-pressure result-enums rejected-enums]
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [this key default]
@@ -37,7 +37,7 @@
       :result-metrics result-metrics
       :rejected-metrics rejected-metrics
       :latency-metrics latency-metrics
-      :backpressure backpressure
+      :back-pressure back-pressure
       default))
   Object
   (toString [this]
@@ -45,14 +45,14 @@
           :result-metrics result-metrics
           :rejected-metrics rejected-metrics
           :latency-metrics latency-metrics
-          :backpressure backpressure})))
+          :back-pressure back-pressure})))
 
-(defn add-bp [^net.uncontended.precipice.GuardRailBuilder builder reason->backpressure]
-  (doseq [backpressure (vals reason->backpressure)]
-    (.addBackPressure builder backpressure))
+(defn add-bp [^net.uncontended.precipice.GuardRailBuilder builder reason->back-pressure]
+  (doseq [back-pressure (vals reason->back-pressure)]
+    (.addBackPressure builder back-pressure))
   builder)
 
-(defmacro create-bp [reason->backpressure rejected-key->enum]
+(defmacro create-bp [reason->back-pressure rejected-key->enum]
   (let [r (gensym)]
     `(let [~r ~rejected-key->enum]
        (-> {}
@@ -60,11 +60,11 @@
                     (list assoc reason `(~(first bp-fn-seq)
                                           ~@(rest bp-fn-seq)
                                           (get ~r ~reason))))
-                  reason->backpressure)))))
+                  reason->back-pressure)))))
 
 (defmacro beehive
   [name result-metrics rejected-metrics &
-   {:keys [latency-metrics backpressure result->success?]}]
+   {:keys [latency-metrics back-pressure result->success?]}]
   (let [res-metrics-fn (first result-metrics)
         rej-metrics-fn (first rejected-metrics)
         res-metrics-args (rest result-metrics)
@@ -73,8 +73,8 @@
         latency-args (rest latency-metrics)
         result->success? (or result->success? default-result-type)]
     `(let [result-key->enum# (enums/result-keys->enum ~result->success?)
-           rejected-key->enum# (enums/rejected-keys->enum ~(keys backpressure))
-           backpressure# (create-bp ~backpressure rejected-key->enum#)
+           rejected-key->enum# (enums/rejected-keys->enum ~(keys back-pressure))
+           back-pressure# (create-bp ~back-pressure rejected-key->enum#)
            result-metrics# (~res-metrics-fn result-key->enum# ~@res-metrics-args)
            rejected-metrics# (~rej-metrics-fn rejected-key->enum# ~@rej-metrics-args)
            latency-metrics# (~latency-metrics-fn result-key->enum# ~@latency-args)
@@ -85,14 +85,14 @@
                         (cond->
                           latency-metrics#
                           (.resultLatency (.metrics ^beehive.metrics.MetricHolder latency-metrics#))
-                          backpressure#
-                          (add-bp backpressure#)))]
+                          back-pressure#
+                          (add-bp back-pressure#)))]
        (Hive.
          (.build ^net.uncontended.precipice.GuardRailBuilder builder#)
          result-metrics#
          rejected-metrics#
          latency-metrics#
-         backpressure#
+         back-pressure#
          result-key->enum#
          rejected-key->enum#))))
 
@@ -114,5 +114,5 @@
   (let [^GuardRail guard-rail (.-guard_rail beehive)
         start-nanos (.nanoTime (.getClock guard-rail))]
     (if-let [rejected-reason (.acquirePermits guard-rail permits start-nanos)]
-      {:rejected? true :reason (get (.-rejected_enum beehive) rejected-reason)}
+      {:rejected? true :reason (get (.rejected_enums beehive) rejected-reason)}
       {:start-nanos start-nanos :permit-count permits})))

@@ -33,7 +33,7 @@
                ""
                (metrics/count-metrics 15 1 :minutes)
                (metrics/count-metrics 15 1 :minutes)
-               :backpressure {:max-concurrency (semaphore/semaphore 1)})]
+               :back-pressure {:max-concurrency (semaphore/semaphore 1)})]
     (alter-var-root
       #'service
       (fn [_] (threadpool/threadpool 1 3 hive))))
@@ -156,7 +156,7 @@
                  ""
                  (metrics/count-metrics)
                  (metrics/count-metrics)
-                 :backpressure {:max-concurrency (semaphore/semaphore 1)})
+                 :back-pressure {:max-concurrency (semaphore/semaphore 1)})
           threadpool (threadpool/threadpool 1 1 hive)
           latch (CountDownLatch. 1)
           rejected-metrics (:rejected-metrics hive)]

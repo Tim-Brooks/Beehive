@@ -120,7 +120,11 @@ public final class EnumBuilder {
 
             Field keywordField = o.getClass().getDeclaredField("keyword");
             keywordField.setAccessible(true);
-            keywordField.set(o, Keyword.intern(name.replace("$DASH$", "-")));
+            String keyword = name.replace("$DASH$", "-");
+            if (isFailure) {
+                keyword= keyword.substring(0, keyword.length() - "$FAILURE$".length());
+            }
+            keywordField.set(o, Keyword.intern(keyword));
         }
     }
 }
