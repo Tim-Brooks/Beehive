@@ -71,7 +71,7 @@
   (testing "Submitted action can return error"
     (let [exception (IOException.)
           f (threadpool/submit service (error-fn exception) 10000)]
-      (f/await f)
+      (f/await! f)
       (is (= exception (:error f)))
       (is (nil? (:result f)))
       (is (not (:rejected? f)))
@@ -84,7 +84,7 @@
   (testing "Submitted action can timeout"
     (let [latch (CountDownLatch. 1)
           f (threadpool/submit service (block-fn 1 latch) 50)]
-      (f/await f)
+      (f/await! f)
       (is (not (:rejected? f)))
       (is (= :timeout (:status f)))
       (.countDown latch)
@@ -149,9 +149,9 @@
           threadpool (threadpool/threadpool 1 100 hive)
           latch (CountDownLatch. 1)
           result-metrics (:result-metrics hive)]
-      (f/await (threadpool/submit threadpool (success-fn 1)))
-      (f/await (threadpool/submit threadpool (error-fn (IOException.))))
-      (f/await (threadpool/submit threadpool (block-fn 1 latch) 10))
+      (f/await! (threadpool/submit threadpool (success-fn 1)))
+      (f/await! (threadpool/submit threadpool (error-fn (IOException.))))
+      (f/await! (threadpool/submit threadpool (block-fn 1 latch) 10))
       (.countDown latch)
       (is (= 1 (metrics/total-count result-metrics :success)))
       (is (= 1 (metrics/total-count result-metrics :timeout)))
@@ -212,7 +212,7 @@
         latch (CountDownLatch. 1)
         latency-metrics (:latency-metrics hive)]
     (testing "Testing that success latency is updated"
-      (f/await (service/submit threadpool (success-fn 1)))
+      (f/await! (service/submit threadpool (success-fn 1)))
       (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)
             error-latency (metrics/interval-latency-snapshot latency-metrics :error)
             timeout-latency (metrics/interval-latency-snapshot latency-metrics :timeout)]
@@ -221,7 +221,7 @@
         (assert-zero timeout-latency)))
 
     (testing "Testing that error latency is updated"
-      (f/await (service/submit threadpool (error-fn (IOException.))))
+      (f/await! (service/submit threadpool (error-fn (IOException.))))
       (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)
             error-latency (metrics/interval-latency-snapshot latency-metrics :error)
             timeout-latency (metrics/interval-latency-snapshot latency-metrics :timeout)]
@@ -230,7 +230,7 @@
         (assert-zero timeout-latency)))
 
     (testing "Testing that timeout latency is updated"
-      (f/await (service/submit threadpool (block-fn 1 latch) 10))
+      (f/await! (service/submit threadpool (block-fn 1 latch) 10))
       (.countDown latch)
       (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)
             error-latency (metrics/interval-latency-snapshot latency-metrics :error)

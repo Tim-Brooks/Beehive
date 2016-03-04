@@ -17,34 +17,34 @@
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
            (net.uncontended.precipice PrecipiceFunction)
-           (net.uncontended.precipice.concurrent PrecipiceFuture)
+           (net.uncontended.precipice.concurrent  Eventual)
            (net.uncontended.precipice.rejected RejectedException)
            (beehive.enums ToCLJ)))
 
 (set! *warn-on-reflection* true)
 
-(deftype BeehiveFuture [^PrecipiceFuture future status-fn]
+(deftype BeehiveFuture [^Eventual eventual status-fn]
   IDeref
   (deref [this]
-    (.get future))
+    (.get eventual))
   IBlockingDeref
   (deref [this timeout-ms timeout-val]
-    (if (.await future timeout-ms TimeUnit/MILLISECONDS)
-      (.get future)
+    (if (.await eventual timeout-ms TimeUnit/MILLISECONDS)
+      (.get eventual)
       timeout-val))
   IPending
   (isRealized [_]
-    (not (nil? (.getStatus future))))
+    (not (nil? (.getStatus eventual))))
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [this key default]
     (case key
-      :status (or (status-fn (.getStatus future)) :pending)
+      :status (or (status-fn (.getStatus eventual)) :pending)
       :pending? (not (.isRealized this))
-      :cancelled? (.isCancelled future)
+      :cancelled? (.isCancelled eventual)
       :rejected? false
-      :result (.getResult future)
-      :error (.getError future)
+      :result (.getResult eventual)
+      :error (.getError eventual)
       default)))
 
 (deftype BeehiveRejectedFuture [^RejectedException ex reason]
@@ -53,8 +53,7 @@
   IBlockingDeref
   (deref [this timeout-ms timeout-val] (throw ex))
   IPending
-  (isRealized [_]
-    true)
+  (isRealized [_] true)
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
@@ -74,15 +73,17 @@
 
 (defn cancel! [f]
   (when (instance? BeehiveFuture f)
-    (.cancel ^PrecipiceFuture (.future ^BeehiveFuture f) true)))
+    (.cancel ^Eventual (.eventual ^BeehiveFuture f) true)))
 
-(defn await
+(defn await!
   ([f]
    (when (instance? BeehiveFuture f)
-     (.await ^PrecipiceFuture (.future ^BeehiveFuture f))))
+     (.await ^Eventual (.eventual ^BeehiveFuture f))))
   ([f timeout-ms]
    (when (instance? BeehiveFuture f)
-     (.await ^PrecipiceFuture (.future ^BeehiveFuture f) timeout-ms TimeUnit/MILLISECONDS))))
+     (.await ^Eventual (.eventual ^BeehiveFuture f)
+             timeout-ms
+             TimeUnit/MILLISECONDS))))
 
 (deftype CLJCallback [^BeehiveFuture future fn]
   PrecipiceFunction
@@ -92,7 +93,7 @@
 (defn on-complete [f function]
   (if (:rejected? f)
     (function :rejected (:rejected-reason f))
-    (let [^PrecipiceFuture java-f (.future ^BeehiveFuture f)
+    (let [^Eventual java-f (.eventual ^BeehiveFuture f)
           cb (CLJCallback. f function)]
       (.onSuccess java-f cb)
       (.onError java-f cb))))
