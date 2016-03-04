@@ -17,10 +17,9 @@
   (.replace (name k) "-" "$DASH$"))
 
 (defn- result-enum-string [k s?]
-  ;; TODO: Need to assert that these do no contain dash or end with failure
   (str (enum-string k) (when-not s? "$FAILURE$")))
 
-(defn- generate-rejected-enum [rejected-keys]
+(defn generate-rejected-enum [rejected-keys]
   (enum-assertions rejected-keys)
   (let [key->enum-string (into {} (map (fn [k]
                                          [k (enum-string k)])
@@ -30,7 +29,7 @@
     {:cpath cpath
      :key->enum-string key->enum-string}))
 
-(defn- generate-result-enum [result->success?]
+(defn generate-result-enum [result->success?]
   (let [ks (keys result->success?)]
     (result-assertions ks)
     (enum-assertions ks))
@@ -41,6 +40,9 @@
         cpath (symbol cpath)]
     {:cpath cpath
      :key->enum-string key->enum-string}))
+
+(defn enum-form [cpath string]
+  `(. ~cpath ~(symbol string)))
 
 (defmacro create-type-map [key->enum-string cpath]
   `(do

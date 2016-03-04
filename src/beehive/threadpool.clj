@@ -16,36 +16,52 @@
   (:require [beehive.future :as f]
             [beehive.hive])
   (:import (net.uncontended.precipice.concurrent PrecipiceFuture)
-           (net.uncontended.precipice GuardRail)
            (net.uncontended.precipice.threadpool ThreadPoolService)
            (net.uncontended.precipice.timeout TimeoutService)
-           (net.uncontended.precipice.rejected RejectedException)
-           (beehive.hive Hive)))
+           (net.uncontended.precipice.result TimeoutableResult)
+           (net.uncontended.precipice.rejected RejectedException)))
 
 (set! *warn-on-reflection* true)
 
+(def key-enums
+  {:success '(. net.uncontended.precipice.result.TimeoutableResult SUCCESS)
+   :error '(. net.uncontended.precipice.result.TimeoutableResult ERROR)
+   :timeout '(. net.uncontended.precipice.result.TimeoutableResult TIMEOUT)})
+
+(defn- status [status-enum]
+  (cond
+    (identical? TimeoutableResult/SUCCESS status-enum) :success
+    (identical? TimeoutableResult/ERROR status-enum) :error
+    (identical? TimeoutableResult/TIMEOUT status-enum) :timeout))
+
 (defn submit
-  ([threadpool fn]
-    (submit threadpool fn TimeoutService/NO_TIMEOUT))
-  ([thread-pool fn timeout-millis]
+  ([thread-pool fn]
+   (submit thread-pool fn TimeoutService/NO_TIMEOUT))
+  ([{:keys [thread-pool]} fn timeout-millis]
    (let [^ThreadPoolService thread-pool thread-pool]
      (try
        (f/->BeehiveFuture
-         ^PrecipiceFuture (.submit thread-pool fn (long timeout-millis)))
+         ^PrecipiceFuture (.submit thread-pool fn (long timeout-millis))
+         status)
        (catch RejectedException e
          (f/rejected-action-future e))))))
 
-(defn shutdown [thread-pool]
+(defn shutdown [{:keys [thread-pool]}]
   (.shutdown ^ThreadPoolService thread-pool))
 
-(defn threadpool [guard-rail pool-size max-concurrency]
-  (let [guard-rail ^GuardRail guard-rail]
-    {:result-metrics (.getResultMetrics guard-rail)
-     :rejected-metrics (.getRejectedMetrics guard-rail)
-     :latency-metrics (.getLatencyMetrics guard-rail)
-     :thread-pool (ThreadPoolService. pool-size
-                                      (+ max-concurrency 2)
-                                      guard-rail)}))
+(defn threadpool [pool-size queue-size beehive]
+  (assoc beehive
+    :thread-pool (ThreadPoolService. pool-size queue-size (:guard-rail beehive))))
 
-(defn threadpool [pool-size queue-size ^Hive beehive]
-  (ThreadPoolService. pool-size queue-size (.guard_rail beehive)))
+(defmacro threadpool-results [metrics-seq & latency-metrics-seq]
+  (let [metrics-fn (first metrics-seq)
+        metric-fn-args (rest metrics-seq)
+        latency-metrics-seq (first latency-metrics-seq)
+        latency-metrics-fn (or (first latency-metrics-seq) identity)
+        latency-metrics-args (rest latency-metrics-seq)]
+    `(cond-> {:result-key->enum ~key-enums
+              :result-metrics (~metrics-fn ~key-enums ~@metric-fn-args)}
+             ~latency-metrics-seq
+             (assoc :latency-metrics (~latency-metrics-fn
+                                       ~key-enums
+                                       ~@latency-metrics-args)))))

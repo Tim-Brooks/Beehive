@@ -30,11 +30,8 @@
 (defn current-concurrency-level [semaphore]
   (.currentConcurrencyLevel ^PrecipiceSemaphore semaphore))
 
-(defn semaphore
-  ([max-concurrency]
-   (semaphore max-concurrency Rejected/MAX_CONCURRENCY_LEVEL_EXCEEDED))
-  ([max-concurrency reason]
-   (LongSemaphore. reason (long max-concurrency))))
+(defn semaphore [max-concurrency reason]
+  (LongSemaphore. reason (long max-concurrency)))
 
 (defn unlimited-semaphore [max-concurrency]
   (UnlimitedSemaphore.))

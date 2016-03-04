@@ -18,8 +18,7 @@
                                        CircuitBreakerConfigBuilder
                                        CircuitBreaker
                                        DefaultCircuitBreaker
-                                       NoOpCircuitBreaker)
-    (net.uncontended.precipice.rejected Rejected)))
+                                       NoOpCircuitBreaker)))
 
 (set! *warn-on-reflection* true)
 
@@ -64,8 +63,10 @@
 (defn open-circuit! [breaker]
   (.forceOpen ^CircuitBreaker breaker))
 
-(defn set-config! [breaker config-map]
-  (.setBreakerConfig ^CircuitBreaker breaker (create-breaker-config config-map)))
+(defn set-config! [^CircuitBreaker breaker config-map]
+  (let [current-config (.getBreakerConfig breaker)]
+    (.setBreakerConfig breaker (create-breaker-config
+                                 config-map (.reason current-config)))))
 
 (defn get-config [breaker]
   (let [^CircuitBreakerConfig config (.getBreakerConfig ^CircuitBreaker breaker)]

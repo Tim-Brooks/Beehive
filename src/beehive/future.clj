@@ -19,18 +19,11 @@
            (net.uncontended.precipice PrecipiceFunction)
            (net.uncontended.precipice.concurrent PrecipiceFuture)
            (net.uncontended.precipice.rejected RejectedException)
-           (net.uncontended.precipice.result TimeoutableResult)
            (beehive.enums ToCLJ)))
 
 (set! *warn-on-reflection* true)
 
-(defn- status [status-enum]
-  (cond
-    (identical? TimeoutableResult/SUCCESS status-enum) :success
-    (identical? TimeoutableResult/ERROR status-enum) :error
-    (identical? TimeoutableResult/TIMEOUT status-enum) :timeout))
-
-(deftype BeehiveFuture [^PrecipiceFuture future]
+(deftype BeehiveFuture [^PrecipiceFuture future status-fn]
   IDeref
   (deref [this]
     (.get future))
@@ -46,7 +39,7 @@
   (valAt [this key] (.valAt this key nil))
   (valAt [this key default]
     (case key
-      :status (or (status (.getStatus future)) :pending)
+      :status (or (status-fn (.getStatus future)) :pending)
       :pending? (not (.isRealized this))
       :cancelled? (.isCancelled future)
       :rejected? false

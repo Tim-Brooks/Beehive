@@ -21,7 +21,7 @@
 
 (deftest metrics-test
   (testing "Testing metrics return the results of the underlying java class"
-    (let [^MetricHolder metrics (metrics/count-metrics)
+    (let [^MetricHolder metrics (metrics/rolling-count-metrics)
           ^RollingCountMetrics java-metrics (.metrics metrics)]
       (.incrementMetricCount java-metrics TimeoutableResult/SUCCESS)
       (.incrementMetricCount java-metrics TimeoutableResult/ERROR)

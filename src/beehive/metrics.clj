@@ -14,9 +14,12 @@
 
 (ns beehive.metrics
   (:require [beehive.utils :as utils])
-  (:import (net.uncontended.precipice.metrics CountMetrics
+  (:import (beehive.enums EmptyEnum)
+           (net.uncontended.precipice.metrics CountMetrics
                                               RollingCountMetrics
-                                              IntervalLatencyMetrics MetricCounter NoOpLatencyMetrics)
+                                              IntervalLatencyMetrics
+                                              MetricCounter
+                                              NoOpLatencyMetrics)
            (net.uncontended.precipice.result TimeoutableResult)
            (net.uncontended.precipice.rejected Unrejectable)))
 
@@ -41,11 +44,22 @@
       duration
       (utils/->time-unit time-unit))))
 
+(defn no-op-metrics []
+  (->MetricHolder (MetricCounter/noOpCounter EmptyEnum) {}))
+
 (defn count-metrics
-  ([] (count-metrics (* 60 15) 1 :seconds))
-  ([key->result] (count-metrics key->result (* 60 15) 1 :seconds))
+  ([] (count-metrics default-key->result))
+  ([key->result]
+   (if-let [first-type (first key->result)]
+     (->MetricHolder
+       (MetricCounter/newCounter (class (val first-type))) key->result)
+     (no-op-metrics))))
+
+(defn rolling-count-metrics
+  ([] (rolling-count-metrics (* 60 15) 1 :seconds))
+  ([key->result] (rolling-count-metrics key->result (* 60 15) 1 :seconds))
   ([slots-to-track resolution time-unit]
-   (count-metrics default-key->result slots-to-track resolution time-unit))
+   (rolling-count-metrics default-key->result slots-to-track resolution time-unit))
   ([key->result slots-to-track resolution time-unit]
    (if-let [first-type (first key->result)]
      (->MetricHolder
@@ -55,8 +69,7 @@
          resolution
          (utils/->time-unit time-unit))
        key->result)
-     ;; TODO: Obviously this is a bit of a hack - maybe create specific enum
-     (->MetricHolder (MetricCounter/noOpCounter Unrejectable) {}))))
+     (no-op-metrics))))
 
 (defn interval-latency-snapshot [^MetricHolder latency-metrics metric]
   (when-let [enum (get (.keyToEnum latency-metrics) metric)]
@@ -74,7 +87,7 @@
 (defn latency-snapshot [^MetricHolder latency-metrics metric]
   (when-let [enum (get (.keyToEnum latency-metrics) metric)]
     (let [snapshot (.latencySnapshot ^IntervalLatencyMetrics
-                                      (.-metrics latency-metrics) enum)]
+                                     (.-metrics latency-metrics) enum)]
       {:latency-50 (.-latency50 snapshot)
        :latency-90 (.-latency90 snapshot)
        :latency-99 (.-latency99 snapshot)

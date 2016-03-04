@@ -4,19 +4,21 @@
             [beehive.metrics :as metrics]
             [beehive.semaphore :as semaphore])
   (:import (beehive.enums ToCLJ)
-           (beehive.hive Hive)
            (net.uncontended.precipice Failable)))
 
 (deftest guard-rail-test
   (testing "Types are properly generated."
-    (let [^Hive hive (hive/beehive
-                       "Test"
-                       (metrics/count-metrics)
-                       (metrics/count-metrics)
-                       :back-pressure {:max-concurrency (semaphore/semaphore 4)}
-                       :result->success? {:test-success true :test-error false})
-          {:keys [test-success test-error]} (.-result_enums hive)
-          {:keys [max-concurrency]} (.rejected_enums hive)]
+    (let [hive (hive/beehive
+                 "Test"
+                 (hive/results
+                   {:test-success true :test-error false}
+                   (metrics/rolling-count-metrics))
+                 (hive/create-back-pressure
+                   #{:max-concurrency}
+                   (metrics/rolling-count-metrics)
+                   (semaphore/semaphore 4 :max-concurrency)))
+          {:keys [test-success test-error]} (:result-key->enum hive)
+          {:keys [max-concurrency]} (:rejected-key->enum hive)]
       (is (= "test$DASH$success" (str test-success)))
       (is (not (.isFailure ^Failable test-success)))
       (is (.isSuccess ^Failable test-success))

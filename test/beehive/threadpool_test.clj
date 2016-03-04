@@ -31,9 +31,12 @@
 (defn- start-and-stop [f]
   (let [hive (beehive/beehive
                ""
-               (metrics/count-metrics 15 1 :minutes)
-               (metrics/count-metrics 15 1 :minutes)
-               :back-pressure {:max-concurrency (semaphore/semaphore 1)})]
+               (threadpool/threadpool-results
+                 (metrics/rolling-count-metrics 15 1 :minutes))
+               (beehive/create-back-pressure
+                 #{:max-concurrency}
+                 (metrics/rolling-count-metrics 15 1 :minutes)
+                 (semaphore/semaphore 1 :max-concurrency)))]
     (alter-var-root
       #'service
       (fn [_] (threadpool/threadpool 1 3 hive))))
@@ -138,8 +141,11 @@
   (testing "Testing that metrics are updated with result of action"
     (let [hive (beehive/beehive
                  ""
-                 (metrics/count-metrics)
-                 (metrics/count-metrics))
+                 (threadpool/threadpool-results
+                   (metrics/rolling-count-metrics))
+                 (beehive/create-back-pressure
+                   #{}
+                   (metrics/rolling-count-metrics)))
           threadpool (threadpool/threadpool 1 100 hive)
           latch (CountDownLatch. 1)
           result-metrics (:result-metrics hive)]
@@ -154,9 +160,12 @@
   (testing "Testing that rejection reasons are updated"
     (let [hive (beehive/beehive
                  ""
-                 (metrics/count-metrics)
-                 (metrics/count-metrics)
-                 :back-pressure {:max-concurrency (semaphore/semaphore 1)})
+                 (threadpool/threadpool-results
+                   (metrics/rolling-count-metrics))
+                 (beehive/create-back-pressure
+                   #{:max-concurrency}
+                   (metrics/rolling-count-metrics)
+                   (semaphore/semaphore 1 :max-concurrency)))
           threadpool (threadpool/threadpool 1 1 hive)
           latch (CountDownLatch. 1)
           rejected-metrics (:rejected-metrics hive)]
@@ -193,10 +202,12 @@
 (deftest latency-test
   (let [hive (beehive/beehive
                ""
-               (metrics/count-metrics)
-               (metrics/count-metrics)
-               :latency-metrics (metrics/latency-metrics (.toNanos TimeUnit/HOURS 1) 2)
-               :result->success? {:success true :error false :timeout false})
+               (threadpool/threadpool-results
+                 (metrics/rolling-count-metrics)
+                 (metrics/latency-metrics (.toNanos TimeUnit/HOURS 1) 2))
+               (beehive/create-back-pressure
+                 #{}
+                 (metrics/rolling-count-metrics)))
         threadpool (threadpool/threadpool 1 100 hive)
         latch (CountDownLatch. 1)
         latency-metrics (:latency-metrics hive)]

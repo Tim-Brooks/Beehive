@@ -13,106 +13,105 @@
 ;; limitations under the License.
 
 (ns beehive.hive
-  (:require [beehive.enums :as enums])
-  (:import (clojure.lang ILookup)
-           (net.uncontended.precipice GuardRail)))
+  (:require [beehive.enums :as enums]
+            [beehive.metrics :as metrics])
+  (:import (clojure.lang APersistentMap)
+           (net.uncontended.precipice GuardRail GuardRailBuilder)
+           (beehive.metrics MetricHolder)))
 
 (set! *warn-on-reflection* true)
 
-(def default-result-type
-  {:success true
-   :error false
-   :timeout false})
+(defprotocol NewHive
+  (beehive-name [this])
+  (result-metrics [this])
+  (rejected-metrics [this])
+  (latency-metrics [this])
+  (back-pressure [this]))
 
-(defn- return-nil [x] nil)
+(extend-protocol NewHive
+  APersistentMap
+  (beehive-name [this] (:name this))
+  (result-metrics [this] (:result-metrics this))
+  (rejected-metrics [this] (:rejected-metrics this))
+  (latency-metrics [this] (:latency-metrics this))
+  (back-pressure [this] (:back-pressure this)))
 
-(deftype Hive
-  [^net.uncontended.precipice.GuardRail guard-rail result-metrics rejected-metrics
-   latency-metrics back-pressure result-enums rejected-enums]
-  ILookup
-  (valAt [this key] (.valAt this key nil))
-  (valAt [this key default]
-    (case key
-      :name (.getName guard-rail)
-      :result-metrics result-metrics
-      :rejected-metrics rejected-metrics
-      :latency-metrics latency-metrics
-      :back-pressure back-pressure
-      default))
-  Object
-  (toString [this]
-    (str {:name (.getName guard-rail)
-          :result-metrics result-metrics
-          :rejected-metrics rejected-metrics
-          :latency-metrics latency-metrics
-          :back-pressure back-pressure})))
-
-(defn add-bp [^net.uncontended.precipice.GuardRailBuilder builder reason->back-pressure]
-  (doseq [back-pressure (vals reason->back-pressure)]
+(defn add-bp [^GuardRailBuilder builder mechanisms]
+  (doseq [back-pressure mechanisms]
     (.addBackPressure builder back-pressure))
   builder)
 
-(defmacro create-bp [reason->back-pressure rejected-key->enum]
-  (let [r (gensym)]
-    `(let [~r ~rejected-key->enum]
-       (-> {}
-           ~@(map (fn [[reason bp-fn-seq]]
-                    (list assoc reason `(~(first bp-fn-seq)
-                                          ~@(rest bp-fn-seq)
-                                          (get ~r ~reason))))
-                  reason->back-pressure)))))
+(defmacro create-back-pressure [rejected-keys metrics & mechanisms]
+  (let [{:keys [key->enum-string cpath]} (enums/generate-rejected-enum rejected-keys)
+        key->form (into {} (map (fn [[k s]]
+                                  [k (enums/enum-form cpath s)])
+                                key->enum-string))
+        metrics-fn (first metrics)
+        metric-fn-args (rest metrics)]
+    `{:rejected-key->enum ~key->form
+      :rejected-metrics (~metrics-fn ~key->form ~@metric-fn-args)
+      :back-pressure [~@(for [form mechanisms]
+                          (clojure.walk/postwalk-replace key->form form))]}))
 
-(defmacro beehive
-  [name result-metrics rejected-metrics &
-   {:keys [latency-metrics back-pressure result->success?]}]
-  (let [res-metrics-fn (first result-metrics)
-        rej-metrics-fn (first rejected-metrics)
-        res-metrics-args (rest result-metrics)
-        rej-metrics-args (rest rejected-metrics)
-        latency-metrics-fn (or (first latency-metrics) return-nil)
-        latency-args (rest latency-metrics)
-        result->success? (or result->success? default-result-type)]
-    `(let [result-key->enum# (enums/result-keys->enum ~result->success?)
-           rejected-key->enum# (enums/rejected-keys->enum ~(keys back-pressure))
-           back-pressure# (create-bp ~back-pressure rejected-key->enum#)
-           result-metrics# (~res-metrics-fn result-key->enum# ~@res-metrics-args)
-           rejected-metrics# (~rej-metrics-fn rejected-key->enum# ~@rej-metrics-args)
-           latency-metrics# (~latency-metrics-fn result-key->enum# ~@latency-args)
-           builder# (-> (net.uncontended.precipice.GuardRailBuilder.)
-                        (.name ~name)
-                        (.resultMetrics (.metrics ^beehive.metrics.MetricHolder result-metrics#))
-                        (.rejectedMetrics (.metrics ^beehive.metrics.MetricHolder rejected-metrics#))
-                        (cond->
-                          latency-metrics#
-                          (.resultLatency (.metrics ^beehive.metrics.MetricHolder latency-metrics#))
-                          back-pressure#
-                          (add-bp back-pressure#)))]
-       (Hive.
-         (.build ^net.uncontended.precipice.GuardRailBuilder builder#)
-         result-metrics#
-         rejected-metrics#
-         latency-metrics#
-         back-pressure#
-         result-key->enum#
-         rejected-key->enum#))))
+(defmacro results
+  [result->success? metrics-seq & latency-metrics-seq]
+  (let [{:keys [key->enum-string cpath]} (enums/generate-result-enum
+                                           result->success?)
+        key->form (into {} (map (fn [[k s]]
+                                  [k (enums/enum-form cpath s)])
+                                key->enum-string))
+        metrics-fn (first metrics-seq)
+        metric-fn-args (rest metrics-seq)
+        latency-metrics-seq (first latency-metrics-seq)
+        latency-metrics-fn (or (first latency-metrics-seq) identity)
+        latency-metrics-args (rest latency-metrics-seq)]
+    `(cond-> {:result-key->enum ~key->form
+              :result-metrics (~metrics-fn ~key->form ~@metric-fn-args)}
+             ~latency-metrics-seq
+             (assoc :latency-metrics (~latency-metrics-fn
+                                       ~key->form
+                                       ~@latency-metrics-args)))))
+
+(defn beehive
+  [name
+   {:keys [result-key->enum result-metrics latency-metrics]}
+   {:keys [rejected-key->enum rejected-metrics back-pressure]}]
+  (let [builder (-> (GuardRailBuilder.)
+                    (.name name)
+                    (.resultMetrics (.metrics ^MetricHolder result-metrics))
+                    (.rejectedMetrics (.metrics ^MetricHolder rejected-metrics))
+                    (cond->
+                      latency-metrics
+                      (.resultLatency (.metrics ^MetricHolder latency-metrics))
+                      back-pressure
+                      (add-bp back-pressure)))]
+    (cond-> {:result-metrics result-metrics
+             :rejected-metrics rejected-metrics
+             :result-key->enum result-key->enum
+             :rejected-key->enum rejected-key->enum
+             :guard-rail (.build ^GuardRailBuilder builder)}
+            latency-metrics
+            (assoc :latency-metrics latency-metrics)
+            back-pressure
+            (assoc :back-pressure back-pressure))))
 
 (defn release
-  ([^Hive beehive {:keys [permit-count]}]
+  ([beehive {:keys [permit-count]}]
    (when permit-count
-     (let [^GuardRail guard-rail (.-guard_rail beehive)
+     (let [^GuardRail guard-rail (:guard-rail beehive)
            end-nanos (.nanoTime (.getClock guard-rail))]
        (.releasePermitsWithoutResult guard-rail permit-count end-nanos))))
-  ([^Hive beehive {:keys [permit-count start-nanos]} result]
+  ([beehive {:keys [permit-count start-nanos]} result]
    (when permit-count
-     (let [^GuardRail guard-rail (.-guard_rail beehive)
-           result-enum (get (.-result_enums beehive) result)
+     (let [^GuardRail guard-rail (:guard-rail beehive)
+           result-enum (get (:result-key->enum beehive) result)
            end-nanos (.nanoTime (.getClock guard-rail))]
        (.releasePermits
          guard-rail result-enum permit-count start-nanos end-nanos)))))
 
-(defn acquire [^Hive beehive permits]
-  (let [^GuardRail guard-rail (.-guard_rail beehive)
+(defn acquire [beehive permits]
+  (let [^GuardRail guard-rail (:guard-rail beehive)
         start-nanos (.nanoTime (.getClock guard-rail))]
     (if-let [rejected-reason (.acquirePermits guard-rail permits start-nanos)]
-      {:rejected? true :reason (get (.rejected_enums beehive) rejected-reason)}
+      {:rejected? true :reason (get (:rejected-key->enum beehive) rejected-reason)}
       {:start-nanos start-nanos :permit-count permits})))

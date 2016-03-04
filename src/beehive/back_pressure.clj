@@ -1,4 +1,4 @@
-;; Copyright 2014 Timothy Brooks
+;; Copyright 2016 Timothy Brooks
 ;;
 ;; Licensed under the Apache License, Version 2.0 (the "License");
 ;; you may not use this file except in compliance with the License.
@@ -12,15 +12,7 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
-(ns beehive.core)
+(ns beehive.back-pressure)
 
-(set! *warn-on-reflection* true)
-
-(when
-  (try
-    (require '[clojure.core.async])
-    true
-    (catch Exception _
-      false))
-  (do (require '[beehive.async])))
-
+(defn back-pressure [hive]
+  )
