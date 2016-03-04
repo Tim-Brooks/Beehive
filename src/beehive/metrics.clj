@@ -20,8 +20,7 @@
                                               IntervalLatencyMetrics
                                               MetricCounter
                                               NoOpLatencyMetrics)
-           (net.uncontended.precipice.result TimeoutableResult)
-           (net.uncontended.precipice.rejected Unrejectable)))
+           (net.uncontended.precipice.result TimeoutableResult)))
 
 (set! *warn-on-reflection* true)
 

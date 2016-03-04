@@ -13,11 +13,16 @@
 ;; limitations under the License.
 
 (ns beehive.hive
+  (:refer-clojure :exclude [promise])
   (:require [beehive.enums :as enums]
+            [beehive.future :as f]
             [beehive.metrics :as metrics])
   (:import (clojure.lang APersistentMap)
            (net.uncontended.precipice GuardRail GuardRailBuilder)
-           (beehive.metrics MetricHolder)))
+           (beehive.metrics MetricHolder)
+           (net.uncontended.precipice.factories Asynchronous Synchronous)
+           (net.uncontended.precipice.rejected RejectedException)
+           (net.uncontended.precipice.concurrent PrecipicePromise)))
 
 (set! *warn-on-reflection* true)
 
@@ -35,6 +40,7 @@
   (rejected-metrics [this] (:rejected-metrics this))
   (latency-metrics [this] (:latency-metrics this))
   (back-pressure [this] (:back-pressure this)))
+
 
 (defn add-bp [^GuardRailBuilder builder mechanisms]
   (doseq [back-pressure mechanisms]
@@ -94,6 +100,22 @@
             (assoc :latency-metrics latency-metrics)
             back-pressure
             (assoc :back-pressure back-pressure))))
+
+(defn promise
+  [{:keys [guard-rail rejected-metrics]} permits]
+  (try
+    (let [^PrecipicePromise java-p (Asynchronous/acquirePermitsAndPromise
+                                     guard-rail permits)]
+      )
+    (catch RejectedException e
+      {:rejected? true :reason (get rejected-metrics (.reason e))})))
+
+(defn completable
+  [{:keys [guard-rail rejected-metrics]} permits]
+  (try
+    (Synchronous/acquirePermitsAndCompletable guard-rail permits)
+    (catch RejectedException e
+      {:rejected? true :reason (get rejected-metrics (.reason e))})))
 
 (defn release
   ([beehive {:keys [permit-count]}]

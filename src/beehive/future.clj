@@ -69,7 +69,7 @@
       :rejected-reason reason
       default)))
 
-(defn rejected-action-future [^RejectedException ex]
+(defn rejected-future [^RejectedException ex]
   (->BeehiveRejectedFuture ex (.keyword ^ToCLJ (.reason ex))))
 
 (defn cancel! [f]

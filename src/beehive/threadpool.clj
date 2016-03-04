@@ -44,7 +44,7 @@
          ^PrecipiceFuture (.submit thread-pool fn (long timeout-millis))
          status)
        (catch RejectedException e
-         (f/rejected-action-future e))))))
+         (f/rejected-future e))))))
 
 (defn shutdown [{:keys [thread-pool]}]
   (.shutdown ^ThreadPoolService thread-pool))

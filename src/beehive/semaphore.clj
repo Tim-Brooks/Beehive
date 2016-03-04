@@ -13,11 +13,9 @@
 ;; limitations under the License.
 
 (ns beehive.semaphore
-  (:import
-    (net.uncontended.precipice.rejected Rejected)
-    (net.uncontended.precipice.semaphore LongSemaphore
-                                         PrecipiceSemaphore
-                                         UnlimitedSemaphore)))
+  (:import (net.uncontended.precipice.semaphore LongSemaphore
+                                                PrecipiceSemaphore
+                                                UnlimitedSemaphore)))
 
 (set! *warn-on-reflection* true)
 
