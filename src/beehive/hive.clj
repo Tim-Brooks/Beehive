@@ -21,14 +21,14 @@
 
 (set! *warn-on-reflection* true)
 
-(defprotocol NewHive
+(defprotocol Hive
   (beehive-name [this])
   (result-metrics [this])
   (rejected-metrics [this])
   (latency-metrics [this])
   (back-pressure [this]))
 
-(extend-protocol NewHive
+(extend-protocol Hive
   APersistentMap
   (beehive-name [this] (:name this))
   (result-metrics [this] (:result-metrics this))
