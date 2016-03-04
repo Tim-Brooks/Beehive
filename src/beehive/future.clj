@@ -90,8 +90,8 @@
     (fn (:status future) result)))
 
 (defn on-complete [f function]
-  (if (instance? BeehiveRejectedFuture f)
-    (function :rejected (.reason ^BeehiveRejectedFuture f))
+  (if (:rejected? f)
+    (function :rejected (:rejected-reason f))
     (let [^PrecipiceFuture java-f (.future ^BeehiveFuture f)
           cb (CLJCallback. f function)]
       (.onSuccess java-f cb)
