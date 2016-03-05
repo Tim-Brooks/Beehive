@@ -13,16 +13,16 @@
 ;; limitations under the License.
 
 (ns beehive.hive
-  (:refer-clojure :exclude [promise])
+  (:refer-clojure :exclude [promise future])
   (:require [beehive.enums :as enums]
             [beehive.future :as f]
             [beehive.metrics :as metrics])
   (:import (clojure.lang APersistentMap)
-           (net.uncontended.precipice GuardRail GuardRailBuilder)
-           (beehive.metrics MetricHolder)
+           (beehive.metrics BeehiveMetrics)
+           (net.uncontended.precipice GuardRail GuardRailBuilder Failable)
+           (net.uncontended.precipice.concurrent Completable PrecipicePromise)
            (net.uncontended.precipice.factories Asynchronous Synchronous)
-           (net.uncontended.precipice.rejected RejectedException)
-           (net.uncontended.precipice.concurrent PrecipicePromise)))
+           (net.uncontended.precipice.rejected RejectedException)))
 
 (set! *warn-on-reflection* true)
 
@@ -41,6 +41,7 @@
   (latency-metrics [this] (:latency-metrics this))
   (back-pressure [this] (:back-pressure this)))
 
+(deftype BeehiveCompletable [^Completable completable result-key->enum])
 
 (defn add-bp [^GuardRailBuilder builder mechanisms]
   (doseq [back-pressure mechanisms]
@@ -69,11 +70,12 @@
         metrics-fn (first metrics-seq)
         metric-fn-args (rest metrics-seq)
         latency-metrics-seq (first latency-metrics-seq)
+        latency? (not (empty? latency-metrics-seq))
         latency-metrics-fn (or (first latency-metrics-seq) identity)
         latency-metrics-args (rest latency-metrics-seq)]
     `(cond-> {:result-key->enum ~key->form
               :result-metrics (~metrics-fn ~key->form ~@metric-fn-args)}
-             ~latency-metrics-seq
+             ~latency?
              (assoc :latency-metrics (~latency-metrics-fn
                                        ~key->form
                                        ~@latency-metrics-args)))))
@@ -84,11 +86,11 @@
    {:keys [rejected-key->enum rejected-metrics back-pressure]}]
   (let [builder (-> (GuardRailBuilder.)
                     (.name name)
-                    (.resultMetrics (.metrics ^MetricHolder result-metrics))
-                    (.rejectedMetrics (.metrics ^MetricHolder rejected-metrics))
+                    (.resultMetrics (.metrics ^BeehiveMetrics result-metrics))
+                    (.rejectedMetrics (.metrics ^BeehiveMetrics rejected-metrics))
                     (cond->
                       latency-metrics
-                      (.resultLatency (.metrics ^MetricHolder latency-metrics))
+                      (.resultLatency (.metrics ^BeehiveMetrics latency-metrics))
                       back-pressure
                       (add-bp back-pressure)))]
     (cond-> {:result-metrics result-metrics
@@ -102,20 +104,34 @@
             (assoc :back-pressure back-pressure))))
 
 (defn promise
-  [{:keys [guard-rail rejected-metrics]} permits]
+  [{:keys [guard-rail rejected-metrics result-key->enum]} permits]
   (try
-    (let [^PrecipicePromise java-p (Asynchronous/acquirePermitsAndPromise
-                                     guard-rail permits)]
-      )
+    (->BeehiveCompletable
+      (Asynchronous/acquirePermitsAndPromise guard-rail permits)
+      result-key->enum)
     (catch RejectedException e
       {:rejected? true :reason (get rejected-metrics (.reason e))})))
 
 (defn completable
-  [{:keys [guard-rail rejected-metrics]} permits]
+  [{:keys [guard-rail rejected-metrics result-key->enum]} permits]
   (try
-    (Synchronous/acquirePermitsAndCompletable guard-rail permits)
+    (->BeehiveCompletable
+      (Synchronous/acquirePermitsAndCompletable guard-rail permits)
+      result-key->enum)
     (catch RejectedException e
       {:rejected? true :reason (get rejected-metrics (.reason e))})))
+
+(defn complete! [^BeehiveCompletable completable result value]
+  (if-let [^Failable result-enum (get (.-result_key__GT_enum completable) result)]
+    (let [^Completable java-c (.-completable completable)]
+      (if (.isSuccess result-enum)
+        (.complete java-c result-enum value)
+        (.completeExceptionally java-c result-enum value)))
+    (throw (IllegalArgumentException. "Invalid status."))))
+
+(defn future [^BeehiveCompletable completable]
+  (let [java-f (.future ^PrecipicePromise (.-completable completable))]
+    (f/->BeehiveFuture java-f (.-result_key__GT_enum completable))))
 
 (defn release
   ([beehive {:keys [permit-count]}]

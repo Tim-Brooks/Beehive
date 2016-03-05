@@ -57,11 +57,12 @@
   (let [metrics-fn (first metrics-seq)
         metric-fn-args (rest metrics-seq)
         latency-metrics-seq (first latency-metrics-seq)
+        latency? (not (empty? latency-metrics-seq))
         latency-metrics-fn (or (first latency-metrics-seq) identity)
         latency-metrics-args (rest latency-metrics-seq)]
     `(cond-> {:result-key->enum ~key-enums
               :result-metrics (~metrics-fn ~key-enums ~@metric-fn-args)}
-             ~latency-metrics-seq
+             ~latency?
              (assoc :latency-metrics (~latency-metrics-fn
                                        ~key-enums
                                        ~@latency-metrics-args)))))

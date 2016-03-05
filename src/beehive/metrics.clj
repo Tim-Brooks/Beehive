@@ -24,17 +24,13 @@
 
 (set! *warn-on-reflection* true)
 
-(def default-key->result {:success TimeoutableResult/SUCCESS
-                          :error TimeoutableResult/ERROR
-                          :timeout TimeoutableResult/TIMEOUT})
+(deftype BeehiveMetrics [metrics keyToEnum])
 
-(deftype MetricHolder [metrics keyToEnum])
-
-(defn total-count [^MetricHolder metrics metric]
+(defn total-count [^BeehiveMetrics metrics metric]
   (when-let [enum (get (.keyToEnum metrics) metric)]
     (.getMetricCount ^CountMetrics (.metrics metrics) enum)))
 
-(defn count-for-period [^MetricHolder metrics metric duration time-unit]
+(defn count-for-period [^BeehiveMetrics metrics metric duration time-unit]
   (when-let [enum (get (.keyToEnum metrics) metric)]
     (.getMetricCountForPeriod
       ^RollingCountMetrics
@@ -44,24 +40,19 @@
       (utils/->time-unit time-unit))))
 
 (defn no-op-metrics []
-  (->MetricHolder (MetricCounter/noOpCounter EmptyEnum) {}))
+  (->BeehiveMetrics (MetricCounter/noOpCounter EmptyEnum) {}))
 
-(defn count-metrics
-  ([] (count-metrics default-key->result))
-  ([key->result]
-   (if-let [first-type (first key->result)]
-     (->MetricHolder
-       (MetricCounter/newCounter (class (val first-type))) key->result)
-     (no-op-metrics))))
+(defn count-metrics [key->result]
+  (if-let [first-type (first key->result)]
+    (->BeehiveMetrics
+      (MetricCounter/newCounter (class (val first-type))) key->result)
+    (no-op-metrics)))
 
 (defn rolling-count-metrics
-  ([] (rolling-count-metrics (* 60 15) 1 :seconds))
   ([key->result] (rolling-count-metrics key->result (* 60 15) 1 :seconds))
-  ([slots-to-track resolution time-unit]
-   (rolling-count-metrics default-key->result slots-to-track resolution time-unit))
   ([key->result slots-to-track resolution time-unit]
    (if-let [first-type (first key->result)]
-     (->MetricHolder
+     (->BeehiveMetrics
        (RollingCountMetrics.
          (class (val first-type))
          slots-to-track
@@ -70,7 +61,7 @@
        key->result)
      (no-op-metrics))))
 
-(defn interval-latency-snapshot [^MetricHolder latency-metrics metric]
+(defn interval-latency-snapshot [^BeehiveMetrics latency-metrics metric]
   (when-let [enum (get (.keyToEnum latency-metrics) metric)]
     (let [snapshot (.intervalSnapshot ^IntervalLatencyMetrics
                                       (.-metrics latency-metrics) enum)]
@@ -83,7 +74,7 @@
        :latency-max (.-latencyMax snapshot)
        :latency-mean (.-latencyMean snapshot)})))
 
-(defn latency-snapshot [^MetricHolder latency-metrics metric]
+(defn latency-snapshot [^BeehiveMetrics latency-metrics metric]
   (when-let [enum (get (.keyToEnum latency-metrics) metric)]
     (let [snapshot (.latencySnapshot ^IntervalLatencyMetrics
                                      (.-metrics latency-metrics) enum)]
@@ -96,15 +87,12 @@
        :latency-max (.-latencyMax snapshot)
        :latency-mean (.-latencyMean snapshot)})))
 
-(defn latency-metrics
-  ([highest-trackable-value significant-digits]
-   (latency-metrics default-key->result highest-trackable-value significant-digits))
-  ([key->result highest-trackable-value significant-digits]
-   (if-let [first-type (first key->result)]
-     (->MetricHolder
-       (IntervalLatencyMetrics.
-         (class (val first-type))
-         (long highest-trackable-value)
-         (long significant-digits))
-       key->result)
-     (->MetricHolder (NoOpLatencyMetrics.) {}))))
+(defn latency-metrics [key->result highest-trackable-value significant-digits]
+  (if-let [first-type (first key->result)]
+    (->BeehiveMetrics
+      (IntervalLatencyMetrics.
+        (class (val first-type))
+        (long highest-trackable-value)
+        (long significant-digits))
+      key->result)
+    (->BeehiveMetrics (NoOpLatencyMetrics.) {})))
