@@ -86,8 +86,8 @@
    {:keys [rejected-key->enum rejected-metrics back-pressure]}]
   (let [builder (-> (GuardRailBuilder.)
                     (.name name)
-                    (.resultMetrics (.metrics ^BeehiveMetrics result-metrics))
-                    (.rejectedMetrics (.metrics ^BeehiveMetrics rejected-metrics))
+                    (.resultMetrics (:precipice-metrics (meta result-metrics)))
+                    (.rejectedMetrics (:precipice-metrics (meta rejected-metrics)))
                     (cond->
                       latency-metrics
                       (.resultLatency (.metrics ^BeehiveMetrics latency-metrics))

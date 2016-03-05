@@ -25,39 +25,68 @@
 
 (deftype BeehiveMetrics [metrics keyToEnum])
 
-(defn total-count [^BeehiveMetrics metrics metric]
-  (when-let [enum (get (.keyToEnum metrics) metric)]
-    (.getMetricCount ^CountMetrics (.metrics metrics) enum)))
+(defprotocol RollingCountsView
+  (count-for-period [this metric duration time-unit]))
 
-(defn count-for-period [^BeehiveMetrics metrics metric duration time-unit]
-  (when-let [enum (get (.keyToEnum metrics) metric)]
+(defprotocol CountsView
+  (total-count [this metric]))
+
+(defn- get-total-metric-count [^CountMetrics metrics metric key->enum]
+  (when-let [metric (get key->enum metric)]
+    (.getMetricCount metrics metric)))
+
+(defn- get-metric-count-for-period
+  [^RollingCountMetrics metrics metric duration time-unit key->enum]
+  (when-let [metric (get key->enum metric)]
     (.getMetricCountForPeriod
-      ^RollingCountMetrics
-      (.metrics metrics)
-      enum
-      duration
-      (utils/->time-unit time-unit))))
+      metrics metric duration (utils/->time-unit time-unit))))
 
-(defn no-op-metrics []
-  (->BeehiveMetrics (MetricCounter/noOpCounter EmptyEnum) {}))
+(defn no-op-metrics
+  ([] (no-op-metrics {}))
+  ([key->enum]
+   (let [first-enum (first key->enum)
+         enum-class (if first-enum (class (val first-enum)) EmptyEnum)
+         metrics (MetricCounter/noOpCounter enum-class)]
+     (with-meta
+       (reify
+         CountsView
+         (total-count [this metric]
+           (get-total-metric-count metrics metric key->enum))
+         RollingCountsView
+         (count-for-period [this metric duration time-unit]
+           (get-metric-count-for-period
+             metrics metric duration time-unit key->enum)))
+       {:precipice-metrics metrics}))))
 
-(defn count-metrics [key->result]
-  (if-let [first-type (first key->result)]
-    (->BeehiveMetrics
-      (MetricCounter/newCounter (class (val first-type))) key->result)
+(defn count-metrics [key->enum]
+  (if-let [first-enum (first key->enum)]
+    (let [precipice-metrics (MetricCounter/newCounter (class (val first-enum)))]
+      (with-meta
+        (reify CountsView
+          (total-count [this metric]
+            (get-total-metric-count precipice-metrics metric key->enum)))
+        {:precipice-metrics precipice-metrics}))
     (no-op-metrics)))
 
 (defn rolling-count-metrics
-  ([key->result] (rolling-count-metrics key->result (* 60 15) 1 :seconds))
-  ([key->result slots-to-track resolution time-unit]
-   (if-let [first-type (first key->result)]
-     (->BeehiveMetrics
-       (RollingCountMetrics.
-         (class (val first-type))
-         slots-to-track
-         resolution
-         (utils/->time-unit time-unit))
-       key->result)
+  ([key->enum] (rolling-count-metrics key->enum (* 60 15) 1 :seconds))
+  ([key->enum slots-to-track resolution time-unit]
+   (if-let [first-type (first key->enum)]
+     (let [precipice-metrics (RollingCountMetrics.
+                               (class (val first-type))
+                               slots-to-track
+                               resolution
+                               (utils/->time-unit time-unit))]
+       (with-meta
+         (reify
+           RollingCountsView
+           (count-for-period [this metric duration time-unit]
+             (get-metric-count-for-period
+               precipice-metrics metric duration time-unit key->enum))
+           CountsView
+           (total-count [this metric]
+             (get-total-metric-count precipice-metrics metric key->enum)))
+         {:precipice-metrics precipice-metrics}))
      (no-op-metrics))))
 
 (defn interval-latency-snapshot [^BeehiveMetrics latency-metrics metric]
@@ -86,12 +115,12 @@
        :latency-max (.-latencyMax snapshot)
        :latency-mean (.-latencyMean snapshot)})))
 
-(defn latency-metrics [key->result highest-trackable-value significant-digits]
-  (if-let [first-type (first key->result)]
+(defn latency-metrics [key->enum highest-trackable-value significant-digits]
+  (if-let [first-type (first key->enum)]
     (->BeehiveMetrics
       (IntervalLatencyMetrics.
         (class (val first-type))
         (long highest-trackable-value)
         (long significant-digits))
-      key->result)
+      key->enum)
     (->BeehiveMetrics (NoOpLatencyMetrics.) {})))

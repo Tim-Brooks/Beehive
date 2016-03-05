@@ -15,8 +15,7 @@
 (ns beehive.metrics-test
   (:require [clojure.test :refer :all]
             [beehive.metrics :as metrics])
-  (:import (beehive.metrics BeehiveMetrics)
-           (net.uncontended.precipice.result TimeoutableResult)
+  (:import (net.uncontended.precipice.result TimeoutableResult)
            (net.uncontended.precipice.metrics RollingCountMetrics)))
 
 (def default-key->enum {:success TimeoutableResult/SUCCESS
@@ -25,8 +24,8 @@
 
 (deftest metrics-test
   (testing "Testing metrics return the results of the underlying java class"
-    (let [^BeehiveMetrics metrics (metrics/rolling-count-metrics default-key->enum)
-          ^RollingCountMetrics java-metrics (.metrics metrics)]
+    (let [metrics (metrics/rolling-count-metrics default-key->enum)
+          ^RollingCountMetrics java-metrics (:precipice-metrics (meta metrics))]
       (.incrementMetricCount java-metrics TimeoutableResult/SUCCESS)
       (.incrementMetricCount java-metrics TimeoutableResult/ERROR)
       (.incrementMetricCount java-metrics TimeoutableResult/TIMEOUT)
