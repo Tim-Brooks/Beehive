@@ -19,8 +19,7 @@
                                               RollingCountMetrics
                                               IntervalLatencyMetrics
                                               MetricCounter
-                                              NoOpLatencyMetrics)
-           (net.uncontended.precipice.result TimeoutableResult)))
+                                              NoOpLatencyMetrics)))
 
 (set! *warn-on-reflection* true)
 

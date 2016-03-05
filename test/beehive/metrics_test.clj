@@ -15,8 +15,8 @@
 (ns beehive.metrics-test
   (:require [clojure.test :refer :all]
             [beehive.metrics :as metrics])
-  (:import (net.uncontended.precipice.result TimeoutableResult)
-           (beehive.metrics BeehiveMetrics)
+  (:import (beehive.metrics BeehiveMetrics)
+           (net.uncontended.precipice.result TimeoutableResult)
            (net.uncontended.precipice.metrics RollingCountMetrics)))
 
 (def default-key->enum {:success TimeoutableResult/SUCCESS
