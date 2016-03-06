@@ -1,5 +1,5 @@
 (ns beehive.enums
-  (:import (beehive.enums EnumBuilder)))
+  (:import (beehive.enums EnumBuilder ToCLJ)))
 
 (set! *warn-on-reflection* true)
 
@@ -58,3 +58,7 @@
 (defmacro result-keys->enum [result->success?]
   (let [{:keys [key->enum-string cpath]} (generate-result-enum result->success?)]
     `(create-type-map ~key->enum-string ~cpath)))
+
+(defn keyword->enum [type keyword]
+  (first (filter #(identical? keyword (.keyword ^ToCLJ %))
+                 (.getEnumConstants ^Class type))))

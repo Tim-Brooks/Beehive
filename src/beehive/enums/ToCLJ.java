@@ -22,4 +22,5 @@ import clojure.lang.Keyword;
 public interface ToCLJ {
 
     Keyword keyword();
+    
 }

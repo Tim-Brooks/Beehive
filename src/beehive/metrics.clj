@@ -13,7 +13,8 @@
 ;; limitations under the License.
 
 (ns beehive.metrics
-  (:require [beehive.utils :as utils])
+  (:require [beehive.enums :as enums]
+            [beehive.utils :as utils])
   (:import (beehive.enums EmptyEnum)
            (net.uncontended.precipice.metrics CountMetrics
                                               RollingCountMetrics
