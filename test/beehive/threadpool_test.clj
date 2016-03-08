@@ -214,18 +214,18 @@
         latency-metrics (:latency-metrics hive)]
     (testing "Testing that success latency is updated"
       (f/await! (service/submit threadpool (success-fn 1)))
-      (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)
-            error-latency (metrics/interval-latency-snapshot latency-metrics :error)
-            timeout-latency (metrics/interval-latency-snapshot latency-metrics :timeout)]
+      (let [success-latency (metrics/interval-latency latency-metrics :success)
+            error-latency (metrics/interval-latency latency-metrics :error)
+            timeout-latency (metrics/interval-latency latency-metrics :timeout)]
         (assert-not-zero success-latency)
         (assert-zero error-latency)
         (assert-zero timeout-latency)))
 
     (testing "Testing that error latency is updated"
       (f/await! (service/submit threadpool (error-fn (IOException.))))
-      (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)
-            error-latency (metrics/interval-latency-snapshot latency-metrics :error)
-            timeout-latency (metrics/interval-latency-snapshot latency-metrics :timeout)]
+      (let [success-latency (metrics/interval-latency latency-metrics :success)
+            error-latency (metrics/interval-latency latency-metrics :error)
+            timeout-latency (metrics/interval-latency latency-metrics :timeout)]
         (assert-not-zero error-latency)
         (assert-zero success-latency)
         (assert-zero timeout-latency)))
@@ -233,9 +233,9 @@
     (testing "Testing that timeout latency is updated"
       (f/await! (service/submit threadpool (block-fn 1 latch) 10))
       (.countDown latch)
-      (let [success-latency (metrics/interval-latency-snapshot latency-metrics :success)
-            error-latency (metrics/interval-latency-snapshot latency-metrics :error)
-            timeout-latency (metrics/interval-latency-snapshot latency-metrics :timeout)]
+      (let [success-latency (metrics/interval-latency latency-metrics :success)
+            error-latency (metrics/interval-latency latency-metrics :error)
+            timeout-latency (metrics/interval-latency latency-metrics :timeout)]
         (assert-not-zero timeout-latency)
         (assert-zero success-latency)
         (assert-zero error-latency)))))

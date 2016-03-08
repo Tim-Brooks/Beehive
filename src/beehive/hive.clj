@@ -15,10 +15,8 @@
 (ns beehive.hive
   (:refer-clojure :exclude [promise future])
   (:require [beehive.enums :as enums]
-            [beehive.future :as f]
-            [beehive.metrics :as metrics])
+            [beehive.future :as f])
   (:import (clojure.lang APersistentMap)
-           (beehive.metrics BeehiveMetrics)
            (net.uncontended.precipice GuardRail GuardRailBuilder Failable)
            (net.uncontended.precipice.concurrent Completable PrecipicePromise)
            (net.uncontended.precipice.factories Asynchronous Synchronous)
@@ -91,7 +89,7 @@
                     (.rejectedMetrics (:precipice-metrics (meta rejected-metrics)))
                     (cond->
                       latency-metrics
-                      (.resultLatency (.metrics ^BeehiveMetrics latency-metrics))
+                      (.resultLatency (:precipice-metrics (meta latency-metrics)))
                       back-pressure
                       (add-bp back-pressure)))]
     (cond-> {:result-metrics result-metrics

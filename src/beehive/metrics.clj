@@ -17,14 +17,14 @@
             [beehive.utils :as utils])
   (:import (beehive.enums EmptyEnum)
            (net.uncontended.precipice.metrics CountMetrics
-                                              RollingCountMetrics
                                               IntervalLatencyMetrics
+                                              LatencyMetrics
+                                              LatencySnapshot
                                               MetricCounter
-                                              NoOpLatencyMetrics)))
+                                              NoOpLatencyMetrics
+                                              RollingCountMetrics)))
 
 (set! *warn-on-reflection* true)
-
-(deftype BeehiveMetrics [metrics keyToEnum])
 
 (defprotocol RollingCountsView
   (count-for-period [this metric duration time-unit]))
@@ -90,38 +90,49 @@
          {:precipice-metrics precipice-metrics}))
      (no-op-metrics))))
 
-(defn interval-latency-snapshot [^BeehiveMetrics latency-metrics metric]
-  (when-let [enum (get (.keyToEnum latency-metrics) metric)]
-    (let [snapshot (.intervalSnapshot ^IntervalLatencyMetrics
-                                      (.-metrics latency-metrics) enum)]
-      {:latency-50 (.-latency50 snapshot)
-       :latency-90 (.-latency90 snapshot)
-       :latency-99 (.-latency99 snapshot)
-       :latency-99-9 (.-latency999 snapshot)
-       :latency-99-99 (.-latency9999 snapshot)
-       :latency-99-999 (.-latency99999 snapshot)
-       :latency-max (.-latencyMax snapshot)
-       :latency-mean (.-latencyMean snapshot)})))
+(defprotocol LatencyView
+  (latency [this metric]))
 
-(defn latency-snapshot [^BeehiveMetrics latency-metrics metric]
-  (when-let [enum (get (.keyToEnum latency-metrics) metric)]
-    (let [snapshot (.latencySnapshot ^IntervalLatencyMetrics
-                                     (.-metrics latency-metrics) enum)]
-      {:latency-50 (.-latency50 snapshot)
-       :latency-90 (.-latency90 snapshot)
-       :latency-99 (.-latency99 snapshot)
-       :latency-99-9 (.-latency999 snapshot)
-       :latency-99-99 (.-latency9999 snapshot)
-       :latency-99-999 (.-latency99999 snapshot)
-       :latency-max (.-latencyMax snapshot)
-       :latency-mean (.-latencyMean snapshot)})))
+(defprotocol IntervalLatencyView
+  (interval-latency [this metric]))
+
+(defn- snapshot-to-map [^LatencySnapshot snapshot]
+  {:latency-50 (.-latency50 snapshot)
+   :latency-90 (.-latency90 snapshot)
+   :latency-99 (.-latency99 snapshot)
+   :latency-99-9 (.-latency999 snapshot)
+   :latency-99-99 (.-latency9999 snapshot)
+   :latency-99-999 (.-latency99999 snapshot)
+   :latency-max (.-latencyMax snapshot)
+   :latency-mean (.-latencyMean snapshot)})
+
+(defn- interval-latency-snapshot
+  [^IntervalLatencyMetrics latency-metrics metric key->enum]
+  (when-let [enum (get key->enum metric)]
+    (snapshot-to-map (.intervalSnapshot latency-metrics enum))))
+
+(defn- latency-snapshot
+  [^LatencyMetrics latency-metrics metric key->enum]
+  (when-let [enum (get key->enum metric)]
+    (snapshot-to-map (.latencySnapshot latency-metrics enum))))
+
+(defn- precipice-metrics [key->enum highest-trackable-value significant-digits]
+  (if-let [first-type (first key->enum)]
+    (IntervalLatencyMetrics.
+      (class (val first-type))
+      (long highest-trackable-value)
+      (long significant-digits))
+    (NoOpLatencyMetrics.)))
 
 (defn latency-metrics [key->enum highest-trackable-value significant-digits]
-  (if-let [first-type (first key->enum)]
-    (->BeehiveMetrics
-      (IntervalLatencyMetrics.
-        (class (val first-type))
-        (long highest-trackable-value)
-        (long significant-digits))
-      key->enum)
-    (->BeehiveMetrics (NoOpLatencyMetrics.) {})))
+  (let [precipice-metrics (precipice-metrics
+                            key->enum highest-trackable-value significant-digits)]
+    (with-meta
+      (reify
+        LatencyView
+        (latency [this metric]
+          (latency-snapshot precipice-metrics metric key->enum))
+        IntervalLatencyView
+        (interval-latency [this metric]
+          (interval-latency-snapshot precipice-metrics metric key->enum)))
+      {:precipice-metrics precipice-metrics})))

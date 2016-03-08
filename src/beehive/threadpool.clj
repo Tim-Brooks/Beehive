@@ -17,16 +17,14 @@
             [beehive.future :as f]
             [beehive.hive]
             [beehive.hive :as hive])
-  (:import (beehive.enums ToCLJ)
-           (net.uncontended.precipice.concurrent PrecipicePromise)
+  (:import (net.uncontended.precipice.concurrent PrecipicePromise)
            (net.uncontended.precipice.timeout TimeoutService TimeoutTask PrecipiceTimeoutException)
            (net.uncontended.precipice GuardRail ExecutionContext)
            (java.util.concurrent ExecutorService Executors TimeoutException)
            (beehive.hive BeehiveCompletable)
            (net.uncontended.precipice.threadpool CancellableTask
                                                  CancellableTask$ResultToStatus
-                                                 CancellableTask$ThrowableToStatus
-                                                 ThreadPoolTimeoutTask)))
+                                                 CancellableTask$ThrowableToStatus)))
 
 (set! *warn-on-reflection* true)
 
@@ -106,6 +104,3 @@
                (assoc :latency-metrics (~latency-metrics-fn
                                          ~key->form
                                          ~@latency-metrics-args))))))
-
-(threadpool-results
-  (beehive.metrics/rolling-count-metrics 15 1 :minutes))
