@@ -15,38 +15,33 @@
 (ns beehive.future-test
   (:require [clojure.test :refer :all]
             [beehive.future :as f])
-  (:import (net.uncontended.precipice.concurrent Eventual)
-           (net.uncontended.precipice.result TimeoutableResult)))
+  (:import (net.uncontended.precipice.concurrent Eventual)))
 
 (set! *warn-on-reflection* true)
 
 (def pending [:rejected? :cancelled? :result :error])
 (def success [:pending? :rejected? :cancelled? :error])
 (def error [:pending? :rejected? :cancelled? :result])
-(def timeout [:pending? :rejected? :cancelled? :result :error])
 
 (defn- remove-false [f ks]
   (filter (fn [func] (func f)) ks))
 
-(defn- status-fn [status-enum]
-  (cond
-    (identical? TimeoutableResult/SUCCESS status-enum) :test-success
-    (identical? TimeoutableResult/ERROR status-enum) :test-error
-    (identical? TimeoutableResult/TIMEOUT status-enum) :test-timeout))
+(def statuses (beehive.enums/result-keys->enum {:test-success true
+                                                :test-error false}))
 
 (deftest future-test
   (testing "Test that pending futures work correctly."
     (let [eventual (Eventual.)
-          future (f/->BeehiveFuture eventual status-fn)]
+          future (f/->BeehiveFuture eventual)]
       (is (= :pending (:status future)))
       (is (:pending? future))
       (is (= [] (remove-false future pending)))
-      (.complete eventual TimeoutableResult/SUCCESS 4)))
+      (.complete eventual (:test-success statuses) 4)))
 
   (testing "Test that success futures work correctly."
     (let [eventual (Eventual.)
-          future (f/->BeehiveFuture eventual status-fn)]
-      (.complete eventual TimeoutableResult/SUCCESS 4)
+          future (f/->BeehiveFuture eventual)]
+      (.complete eventual (:test-success statuses) 4)
       (is (= :test-success (:status future)))
       (is (= 4 (:result future)))
       (is (= [] (remove-false future success)))))
@@ -54,15 +49,8 @@
   (testing "Test that error futures work correctly."
     (let [eventual (Eventual.)
           ex (RuntimeException.)
-          future (f/->BeehiveFuture eventual status-fn)]
-      (.completeExceptionally eventual TimeoutableResult/ERROR ex)
+          future (f/->BeehiveFuture eventual)]
+      (.completeExceptionally eventual (:test-error statuses) ex)
       (is (= :test-error (:status future)))
       (is (= ex (:error future)))
-      (is (= [] (remove-false future error)))))
-
-  (testing "Test that timeout futures work correctly."
-    (let [eventual (Eventual.)
-          future (f/->BeehiveFuture eventual status-fn)]
-      (.completeExceptionally eventual TimeoutableResult/TIMEOUT nil)
-      (is (= :test-timeout (:status future)))
-      (is (= [] (remove-false future timeout))))))
+      (is (= [] (remove-false future error))))))

@@ -39,7 +39,7 @@
                  (semaphore/semaphore 1 :max-concurrency)))]
     (alter-var-root
       #'service
-      (fn [_] (threadpool/threadpool 1 3 hive))))
+      (fn [_] (threadpool/threadpool 1 hive))))
   (f)
   (threadpool/shutdown service))
 
@@ -95,6 +95,7 @@
         (is false)
         (catch ExecutionException e
           (is (instance? PrecipiceTimeoutException (.getCause e)))))))
+
   (testing "If concurrency level exhausted, action rejected"
     (let [latch (CountDownLatch. 1)
           _ (threadpool/submit service (block-fn 1 latch))
@@ -146,7 +147,7 @@
                  (beehive/create-back-pressure
                    #{}
                    (metrics/rolling-count-metrics)))
-          threadpool (threadpool/threadpool 1 100 hive)
+          threadpool (threadpool/threadpool 1 hive)
           latch (CountDownLatch. 1)
           result-metrics (:result-metrics hive)]
       (f/await! (threadpool/submit threadpool (success-fn 1)))
@@ -166,7 +167,7 @@
                    #{:max-concurrency}
                    (metrics/rolling-count-metrics)
                    (semaphore/semaphore 1 :max-concurrency)))
-          threadpool (threadpool/threadpool 1 1 hive)
+          threadpool (threadpool/threadpool 1 hive)
           latch (CountDownLatch. 1)
           rejected-metrics (:rejected-metrics hive)]
       (threadpool/submit threadpool (block-fn 1 latch))
@@ -208,7 +209,7 @@
                (beehive/create-back-pressure
                  #{}
                  (metrics/rolling-count-metrics)))
-        threadpool (threadpool/threadpool 1 100 hive)
+        threadpool (threadpool/threadpool 1 hive)
         latch (CountDownLatch. 1)
         latency-metrics (:latency-metrics hive)]
     (testing "Testing that success latency is updated"

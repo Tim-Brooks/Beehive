@@ -14,16 +14,16 @@
 
 (ns beehive.future
   (:refer-clojure :exclude [await])
+  (:require [beehive.enums :as enums])
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
            (net.uncontended.precipice PrecipiceFunction)
-           (net.uncontended.precipice.concurrent  Eventual)
-           (net.uncontended.precipice.rejected RejectedException)
-           (beehive.enums ToCLJ)))
+           (net.uncontended.precipice.concurrent Eventual)
+           (net.uncontended.precipice.rejected RejectedException)))
 
 (set! *warn-on-reflection* true)
 
-(deftype BeehiveFuture [^Eventual eventual status-fn]
+(deftype BeehiveFuture [^Eventual eventual]
   IDeref
   (deref [this]
     (.get eventual))
@@ -39,7 +39,7 @@
   (valAt [this key] (.valAt this key nil))
   (valAt [this key default]
     (case key
-      :status (or (status-fn (.getStatus eventual)) :pending)
+      :status (or (enums/enum->keyword (.getStatus eventual)) :pending)
       :pending? (not (.isRealized this))
       :cancelled? (.isCancelled eventual)
       :rejected? false
@@ -68,8 +68,8 @@
       :rejected-reason reason
       default)))
 
-(defn rejected-future [^RejectedException ex]
-  (->BeehiveRejectedFuture ex (.keyword ^ToCLJ (.reason ex))))
+(defn rejected-future [reason]
+  (->BeehiveRejectedFuture nil reason))
 
 (defn cancel! [f]
   (when (instance? BeehiveFuture f)

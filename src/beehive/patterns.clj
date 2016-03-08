@@ -13,13 +13,28 @@
 ;; limitations under the License.
 
 (ns beehive.patterns
-  (:import (net.uncontended.precipice.pattern Pattern RoundRobinLoadBalancer)))
+  (:import (net.uncontended.precipice Precipice)
+           (net.uncontended.precipice.pattern Pattern
+                                              PatternStrategy
+                                              RoundRobinLoadBalancer
+                                              Shotgun)))
 
 (set! *warn-on-reflection* true)
 
-(defn load-balancer [precipice-list]
-  (Pattern. precipice-list (RoundRobinLoadBalancer. (count precipice-list))))
+(deftype BeehivePrecipice [beehive]
+  Precipice
+  (guardRail [this] (:guard-rail beehive)))
 
 (defn pattern-seq [pattern permit-number]
   (let [^Pattern pattern pattern]
-    (.getPrecipices pattern permit-number (System/nanoTime))))
+    (map #(.-beehive ^BeehivePrecipice %)
+         (.getPrecipices pattern permit-number (System/nanoTime)))))
+
+(defn pattern [beehive-vec strategy]
+  (Pattern. (mapv ->BeehivePrecipice beehive-vec) ^PatternStrategy strategy))
+
+(defn load-balancer [beehive-vec]
+  (pattern beehive-vec (RoundRobinLoadBalancer. (count beehive-vec))))
+
+(defn shotgun [beehive-vec submission-count]
+  (pattern beehive-vec (Shotgun. (count beehive-vec) submission-count)))

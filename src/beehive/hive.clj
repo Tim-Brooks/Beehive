@@ -22,7 +22,8 @@
            (net.uncontended.precipice GuardRail GuardRailBuilder Failable)
            (net.uncontended.precipice.concurrent Completable PrecipicePromise)
            (net.uncontended.precipice.factories Asynchronous Synchronous)
-           (net.uncontended.precipice.rejected RejectedException)))
+           (net.uncontended.precipice.rejected RejectedException)
+           (beehive.enums ToCLJ)))
 
 (set! *warn-on-reflection* true)
 
@@ -104,22 +105,22 @@
             (assoc :back-pressure back-pressure))))
 
 (defn promise
-  [{:keys [guard-rail rejected-metrics result-key->enum]} permits]
+  [{:keys [guard-rail result-key->enum]} permits]
   (try
     (->BeehiveCompletable
       (Asynchronous/acquirePermitsAndPromise guard-rail permits)
       result-key->enum)
     (catch RejectedException e
-      {:rejected? true :reason (get rejected-metrics (.reason e))})))
+      {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))})))
 
 (defn completable
-  [{:keys [guard-rail rejected-metrics result-key->enum]} permits]
+  [{:keys [guard-rail result-key->enum]} permits]
   (try
     (->BeehiveCompletable
       (Synchronous/acquirePermitsAndCompletable guard-rail permits)
       result-key->enum)
     (catch RejectedException e
-      {:rejected? true :reason (get rejected-metrics (.reason e))})))
+      {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))})))
 
 (defn complete! [^BeehiveCompletable completable result value]
   (if-let [^Failable result-enum (get (.-result_key__GT_enum completable) result)]

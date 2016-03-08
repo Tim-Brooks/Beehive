@@ -44,7 +44,7 @@
 (defn enum-form [cpath string]
   `(. ~cpath ~(symbol string)))
 
-(defmacro create-type-map [key->enum-string cpath]
+(defmacro create-type-map [{:keys [key->enum-string cpath]}]
   `(do
      (-> {}
          ~@(map (fn [[k es]]
@@ -52,13 +52,16 @@
                 key->enum-string))))
 
 (defmacro rejected-keys->enum [rejected-keys]
-  (let [{:keys [key->enum-string cpath]} (generate-rejected-enum rejected-keys)]
-    `(create-type-map ~key->enum-string ~cpath)))
+  (let [enum-map (generate-rejected-enum rejected-keys)]
+    `(create-type-map ~enum-map)))
 
 (defmacro result-keys->enum [result->success?]
-  (let [{:keys [key->enum-string cpath]} (generate-result-enum result->success?)]
-    `(create-type-map ~key->enum-string ~cpath)))
+  (let [enum-map (generate-result-enum result->success?)]
+    `(create-type-map ~enum-map)))
 
 (defn keyword->enum [type keyword]
   (first (filter #(identical? keyword (.keyword ^ToCLJ %))
                  (.getEnumConstants ^Class type))))
+
+(defn enum->keyword [enum]
+  (when enum (.keyword ^ToCLJ enum)))

@@ -13,45 +13,83 @@
 ;; limitations under the License.
 
 (ns beehive.threadpool
-  (:require [beehive.future :as f]
-            [beehive.hive])
-  (:import (net.uncontended.precipice.concurrent PrecipiceFuture)
-           (net.uncontended.precipice.threadpool ThreadPoolService)
-           (net.uncontended.precipice.timeout TimeoutService)
-           (net.uncontended.precipice.result TimeoutableResult)
-           (net.uncontended.precipice.rejected RejectedException)))
+  (:require [beehive.enums :as enums]
+            [beehive.future :as f]
+            [beehive.hive]
+            [beehive.hive :as hive])
+  (:import (beehive.enums ToCLJ)
+           (net.uncontended.precipice.concurrent PrecipicePromise)
+           (net.uncontended.precipice.timeout TimeoutService TimeoutTask PrecipiceTimeoutException)
+           (net.uncontended.precipice GuardRail ExecutionContext)
+           (java.util.concurrent ExecutorService Executors TimeoutException)
+           (beehive.hive BeehiveCompletable)
+           (net.uncontended.precipice.threadpool CancellableTask
+                                                 CancellableTask$ResultToStatus
+                                                 CancellableTask$ThrowableToStatus
+                                                 ThreadPoolTimeoutTask)))
 
 (set! *warn-on-reflection* true)
 
-(def key-enums
-  {:success '(. net.uncontended.precipice.result.TimeoutableResult SUCCESS)
-   :error '(. net.uncontended.precipice.result.TimeoutableResult ERROR)
-   :timeout '(. net.uncontended.precipice.result.TimeoutableResult TIMEOUT)})
+(def enum-map (enums/generate-result-enum {:success true
+                                           :error false
+                                           :timeout false}))
 
-(defn- status [status-enum]
-  (cond
-    (identical? TimeoutableResult/SUCCESS status-enum) :success
-    (identical? TimeoutableResult/ERROR status-enum) :error
-    (identical? TimeoutableResult/TIMEOUT status-enum) :timeout))
+(defn key->enum-form []
+  (into {} (map (fn [[k s]]
+                  [k (enums/enum-form (:cpath enum-map) s)])
+                (:key->enum-string enum-map))))
+
+(def key->enum (eval (key->enum-form)))
+
+(defmacro success-converter []
+  (let [success (:success (key->enum-form))]
+    `(reify CancellableTask$ResultToStatus
+       (resultToStatus [this result]
+         ~success))))
+
+(defmacro error-converter []
+  (let [t-map (key->enum-form)
+        error (:error t-map)
+        timeout (:timeout t-map)]
+    `(reify CancellableTask$ThrowableToStatus
+       (throwableToStatus [this throwable#]
+         (if (instance? TimeoutException throwable#)
+           ~timeout
+           ~error)))))
+
+(def ^TimeoutService timeout-service TimeoutService/DEFAULT_TIMEOUT_SERVICE)
+
+(deftype BeehiveTimeout [^CancellableTask task]
+  TimeoutTask
+  (setTimedOut [this]
+    (.cancel task (:timeout key->enum) (PrecipiceTimeoutException.))))
+
+(defn submit1 [{:keys [thread-pool]} fn timeout-millis promise]
+  (let [^PrecipicePromise precipice-promise (.completable ^BeehiveCompletable promise)
+        ^ExecutionContext context precipice-promise
+        task (CancellableTask. (success-converter) (error-converter) fn precipice-promise)]
+    (.execute ^ExecutorService thread-pool task)
+    (when timeout-millis
+      (.scheduleTimeout
+        timeout-service (->BeehiveTimeout task)
+        timeout-millis
+        (.startNanos context)))
+    (f/->BeehiveFuture (.future precipice-promise))))
 
 (defn submit
-  ([thread-pool fn]
-   (submit thread-pool fn TimeoutService/NO_TIMEOUT))
-  ([{:keys [thread-pool]} fn timeout-millis]
-   (let [^ThreadPoolService thread-pool thread-pool]
-     (try
-       (f/->BeehiveFuture
-         ^PrecipiceFuture (.submit thread-pool fn (long timeout-millis))
-         status)
-       (catch RejectedException e
-         (f/rejected-future e))))))
+  ([thread-pool fn] (submit thread-pool fn nil))
+  ([beehive fn timeout-millis]
+   (let [{:keys [rejected? rejected-reason] :as promise} (hive/promise beehive 1)]
+     (if rejected?
+       (f/rejected-future rejected-reason)
+       (submit1 beehive fn timeout-millis promise)))))
 
-(defn shutdown [{:keys [thread-pool]}]
-  (.shutdown ^ThreadPoolService thread-pool))
+(defn shutdown [{:keys [thread-pool guard-rail]}]
+  (.shutdown ^GuardRail guard-rail)
+  (.shutdown ^ExecutorService thread-pool))
 
-(defn threadpool [pool-size queue-size beehive]
-  (assoc beehive
-    :thread-pool (ThreadPoolService. pool-size queue-size (:guard-rail beehive))))
+(defn threadpool [pool-size beehive]
+  (assoc beehive :thread-pool (Executors/newFixedThreadPool pool-size)))
 
 (defmacro threadpool-results [metrics-seq & latency-metrics-seq]
   (let [metrics-fn (first metrics-seq)
@@ -59,10 +97,15 @@
         latency-metrics-seq (first latency-metrics-seq)
         latency? (not (empty? latency-metrics-seq))
         latency-metrics-fn (or (first latency-metrics-seq) identity)
-        latency-metrics-args (rest latency-metrics-seq)]
-    `(cond-> {:result-key->enum ~key-enums
-              :result-metrics (~metrics-fn ~key-enums ~@metric-fn-args)}
-             ~latency?
-             (assoc :latency-metrics (~latency-metrics-fn
-                                       ~key-enums
-                                       ~@latency-metrics-args)))))
+        latency-metrics-args (rest latency-metrics-seq)
+        key->form (key->enum-form)]
+    `(let []
+       (cond-> {:result-key->enum ~key->form
+                :result-metrics (~metrics-fn ~key->form ~@metric-fn-args)}
+               ~latency?
+               (assoc :latency-metrics (~latency-metrics-fn
+                                         ~key->form
+                                         ~@latency-metrics-args))))))
+
+(threadpool-results
+  (beehive.metrics/rolling-count-metrics 15 1 :minutes))

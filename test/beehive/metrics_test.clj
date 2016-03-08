@@ -15,24 +15,23 @@
 (ns beehive.metrics-test
   (:require [clojure.test :refer :all]
             [beehive.metrics :as metrics])
-  (:import (net.uncontended.precipice.result TimeoutableResult)
-           (net.uncontended.precipice.metrics RollingCountMetrics)))
+  (:import (net.uncontended.precipice.metrics RollingCountMetrics)))
 
-(def default-key->enum {:success TimeoutableResult/SUCCESS
-                        :error TimeoutableResult/ERROR
-                        :timeout TimeoutableResult/TIMEOUT})
+(def key->enum (beehive.enums/result-keys->enum {:test-success true
+                                                 :test-error false
+                                                 :test-timeout false}))
 
 (deftest metrics-test
   (testing "Testing metrics return the results of the underlying java class"
-    (let [metrics (metrics/rolling-count-metrics default-key->enum)
+    (let [metrics (metrics/rolling-count-metrics key->enum)
           ^RollingCountMetrics java-metrics (:precipice-metrics (meta metrics))]
-      (.incrementMetricCount java-metrics TimeoutableResult/SUCCESS)
-      (.incrementMetricCount java-metrics TimeoutableResult/ERROR)
-      (.incrementMetricCount java-metrics TimeoutableResult/TIMEOUT)
-      (is (= 1 (metrics/total-count metrics :success)))
-      (is (= 1 (metrics/total-count metrics :timeout)))
-      (is (= 1 (metrics/total-count metrics :error)))
+      (.incrementMetricCount java-metrics (:test-success key->enum))
+      (.incrementMetricCount java-metrics (:test-error key->enum))
+      (.incrementMetricCount java-metrics (:test-timeout key->enum))
+      (is (= 1 (metrics/total-count metrics :test-success)))
+      (is (= 1 (metrics/total-count metrics :test-error)))
+      (is (= 1 (metrics/total-count metrics :test-timeout)))
 
-      (is (= 1 (metrics/count-for-period metrics :success 1 :minutes)))
-      (is (= 1 (metrics/count-for-period metrics :timeout 1 :minutes)))
-      (is (= 1 (metrics/count-for-period metrics :error 1 :minutes))))))
+      (is (= 1 (metrics/count-for-period metrics :test-success 1 :minutes)))
+      (is (= 1 (metrics/count-for-period metrics :test-error 1 :minutes)))
+      (is (= 1 (metrics/count-for-period metrics :test-timeout 1 :minutes))))))
