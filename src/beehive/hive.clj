@@ -132,7 +132,7 @@
 
 (defn future [^BeehiveCompletable completable]
   (let [java-f (.future ^PrecipicePromise (.-completable completable))]
-    (f/->BeehiveFuture java-f (.-result_key__GT_enum completable))))
+    (f/->BeehiveFuture java-f)))
 
 (defn release
   ([beehive {:keys [permit-count]}]
