@@ -34,8 +34,9 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
 (defn execute-synchronous-risky-task []
   (let [c (beehive/completable example-beehive 1)]
     (if (:rejected? c)
-      (println "The beehive has told us not do execute this task right now")
-      (println "The rejected reason is: " (:rejected-reason c))
+      (do
+        (println "The beehive has told us not do execute this task right now")
+        (println "The rejected reason is: " (:rejected-reason c)))
       (try
         ;; Do something that can fail like an http request
         (beehive/complete! c :success http-response)
@@ -46,8 +47,9 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
 (defn execute-asynchronous-risky-task []
   (let [p (beehive/promise example-beehive 1)]
     (if (:rejected? c)
-      (println "The beehive has told us not do execute this task right now")
-      (println "The rejected reason is: " (:rejected-reason c))
+      (do
+        (println "The beehive has told us not do execute this task right now")
+        (println "The rejected reason is: " (:rejected-reason c)))
       (future
         (try
           ;; Do something that can fail like an http request
