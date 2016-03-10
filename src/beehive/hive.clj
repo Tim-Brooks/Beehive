@@ -17,14 +17,14 @@
   (:require [beehive.enums :as enums]
             [beehive.future :as f])
   (:import (clojure.lang APersistentMap ILookup)
+           (beehive.java ToCLJ)
            (net.uncontended.precipice Completable
                                       GuardRail
                                       GuardRailBuilder
                                       Failable)
            (net.uncontended.precipice.concurrent PrecipicePromise)
            (net.uncontended.precipice.factories Asynchronous Synchronous)
-           (net.uncontended.precipice.rejected RejectedException)
-           (beehive.enums ToCLJ)))
+           (net.uncontended.precipice.rejected RejectedException)))
 
 (set! *warn-on-reflection* true)
 
@@ -161,9 +161,12 @@
                      result
                      (keys (.-result_key__GT_enum completable)))))))
 
-(defn future [^BeehiveCompletable completable]
-  (let [java-f (.future ^PrecipicePromise (.-completable completable))]
-    (f/->BeehiveFuture java-f)))
+(defn future [completable]
+  (if (:rejected? completable)
+    (f/rejected-future (:rejected-reason completable))
+    (let [precipice-completable (.-completable ^BeehiveCompletable completable)
+          java-f (.future ^PrecipicePromise precipice-completable)]
+      (f/->BeehiveFuture java-f))))
 
 (defn release-raw-permits
   "Releases a raw permit count. This call would allows multiple calls to acquire

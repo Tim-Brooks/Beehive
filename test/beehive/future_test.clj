@@ -15,7 +15,8 @@
 (ns beehive.future-test
   (:require [clojure.test :refer :all]
             [beehive.future :as f])
-  (:import (net.uncontended.precipice.concurrent Eventual)))
+  (:import (beehive.java BeehiveRejected)
+           (net.uncontended.precipice.concurrent Eventual)))
 
 (set! *warn-on-reflection* true)
 
@@ -54,6 +55,18 @@
       (is (= ex (:value future)))
       (is (= [] (remove-false future error))))))
 
+(deftest rejected-future-test
+  (testing "Test that pending futures work correctly."
+    (let [future (f/rejected-future :circuit-open)]
+      (is (not (:pending? future)))
+      (is (not (:cancelled? future)))
+      (is (:rejected? future))
+      (is (= :circuit-open (:rejected-reason future)))
+      (try
+        @future
+        (catch BeehiveRejected e
+          (is (= :circuit-open (:rejected-reason e))))))))
+
 (deftest callback-test
   (testing "Test callback on success future."
     (let [eventual (Eventual.)
@@ -83,7 +96,7 @@
       (.completeExceptionally eventual (:test-error statuses) ex)))
 
   (testing "Test callback on rejected future."
-    (let [future (f/->BeehiveRejectedFuture :max-concurrency)]
+    (let [future (f/rejected-future :max-concurrency)]
       (f/on-complete
         future
         (fn [map]

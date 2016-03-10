@@ -14,7 +14,7 @@
 
 (ns beehive.metrics
   (:require [beehive.utils :as utils])
-  (:import (beehive.enums EmptyEnum)
+  (:import (beehive.java EmptyEnum)
            (net.uncontended.precipice.metrics CountMetrics
                                               IntervalLatencyMetrics
                                               LatencyMetrics

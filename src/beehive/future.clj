@@ -17,9 +17,9 @@
   (:require [beehive.enums :as enums])
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
+           (beehive.java BeehiveRejected)
            (net.uncontended.precipice PrecipiceFunction)
-           (net.uncontended.precipice.concurrent Eventual)
-           (net.uncontended.precipice.rejected RejectedException)))
+           (net.uncontended.precipice.concurrent Eventual)))
 
 (set! *warn-on-reflection* true)
 
@@ -55,9 +55,9 @@
 
 (deftype BeehiveRejectedFuture [reason]
   IDeref
-  (deref [this] (throw (RejectedException. reason)))
+  (deref [this] (throw (BeehiveRejected. reason)))
   IBlockingDeref
-  (deref [this timeout-ms timeout-val] (throw (RejectedException. reason)))
+  (deref [this timeout-ms timeout-val] (throw (BeehiveRejected. reason)))
   IPending
   (isRealized [_] true)
   ILookup

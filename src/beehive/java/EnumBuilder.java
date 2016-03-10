@@ -14,7 +14,7 @@
  * limitations under the License.
  *
  */
-package beehive.enums;
+package beehive.java;
 
 import clojure.lang.Compiler;
 import clojure.lang.Keyword;
@@ -52,7 +52,7 @@ public final class EnumBuilder {
         if (!rejectedCache.containsKey(setOfEnums)) {
             synchronized (lock) {
                 String className = "BeehiveRejected" + rejectedCount++;
-                String cpath = "beehive.enums." + className;
+                String cpath = "beehive.java." + className;
                 DynamicType.Unloaded<? extends Enum<?>> enumType = new ByteBuddy()
                         .makeEnumeration(enums)
                         .implement(ToCLJ.class)
@@ -75,7 +75,7 @@ public final class EnumBuilder {
         if (!resultCache.containsKey(setOfEnums)) {
             synchronized (lock) {
                 String className = "BeehiveResult" + resultCount++;
-                String cpath = "beehive.enums." + className;
+                String cpath = "beehive.java." + className;
                 DynamicType.Unloaded<? extends Enum<?>> enumType = new ByteBuddy()
                         .makeEnumeration(enums)
                         .implement(Failable.class)

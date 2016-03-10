@@ -3,7 +3,7 @@
             [beehive.hive :as hive]
             [beehive.metrics :as metrics]
             [beehive.semaphore :as semaphore])
-  (:import (beehive.enums ToCLJ)
+  (:import (beehive.java ToCLJ)
            (net.uncontended.precipice Failable)))
 
 (def beehive nil)

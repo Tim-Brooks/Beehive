@@ -15,7 +15,7 @@
  *
  */
 
-package beehive.enums;
+package beehive.java;
 
 import net.uncontended.precipice.Failable;
 

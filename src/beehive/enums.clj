@@ -1,5 +1,5 @@
 (ns beehive.enums
-  (:import (beehive.enums EnumBuilder ToCLJ)))
+  (:import (beehive.java EnumBuilder ToCLJ)))
 
 (set! *warn-on-reflection* true)
 
