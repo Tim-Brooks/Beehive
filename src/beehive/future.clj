@@ -24,7 +24,7 @@
 (set! *warn-on-reflection* true)
 
 (defn- success? [^Eventual eventual]
-  (if-let [status (.getStatus eventual)]
+  (if-let [status (.getResult eventual)]
     (.isSuccess status)
     false))
 
@@ -39,18 +39,18 @@
       timeout-val))
   IPending
   (isRealized [_]
-    (not (nil? (.getStatus eventual))))
+    (not (nil? (.getResult eventual))))
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [this key default]
     (case key
-      :result (enums/enum->keyword (.getStatus eventual))
+      :result (enums/enum->keyword (.getResult eventual))
       :pending? (not (.isRealized this))
       :cancelled? (.isCancelled eventual)
       :rejected? false
       :success? (success? eventual)
       :failure? (not (success? eventual))
-      :value (or (.getResult eventual) (.getError eventual))
+      :value (or (.getValue eventual) (.getError eventual))
       default)))
 
 (deftype BeehiveRejectedFuture [reason]

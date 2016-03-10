@@ -19,9 +19,10 @@
   (:import (clojure.lang APersistentMap ILookup)
            (beehive.java ToCLJ)
            (net.uncontended.precipice Completable
+                                      Failable
                                       GuardRail
                                       GuardRailBuilder
-                                      Failable)
+                                      ResultView)
            (net.uncontended.precipice.concurrent PrecipicePromise)
            (net.uncontended.precipice.factories Asynchronous Synchronous)
            (net.uncontended.precipice.rejected RejectedException)))
@@ -172,20 +173,20 @@
           java-f (.future ^PrecipicePromise precipice-completable)]
       (f/->BeehiveFuture java-f))))
 
-(defn to-readable
-  "Returns a readable map of the values contained in a completable.
+(defn to-result-view
+  "Returns a result map of the values contained in a completable.
 
   If this is called with a rejection map, then the rejection map will be returned."
   [completable]
   (if (:rejected? completable)
     completable
     (let [^Completable c (.-completable ^BeehiveCompletable completable)
-          ^net.uncontended.precipice.Readable r (.readable c)]
-      (if (.isSuccess (.getStatus r))
+          ^ResultView r (.resultView c)]
+      (if (.isSuccess (.getResult r))
         {:success? true :value (.getResult r)
-         :result (.keyword ^ToCLJ (.getStatus r)) :failure? false}
+         :result (.keyword ^ToCLJ (.getResult r)) :failure? false}
         {:success? false :value (.getError r)
-         :result (.keyword ^ToCLJ (.getStatus r)) :failure? true}))))
+         :result (.keyword ^ToCLJ (.getResult r)) :failure? true}))))
 
 (defn release-raw-permits
   "Releases a raw permit count. This call would allows multiple calls to acquire
