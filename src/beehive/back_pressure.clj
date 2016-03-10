@@ -15,21 +15,7 @@
 (ns beehive.back-pressure
   (:import (net.uncontended.precipice BackPressure)))
 
-(defn back-pressure-with-time
-  "This is experimental."
-  [fn]
-  (with-meta
-    (reify BackPressure
-      (acquirePermit [this permit-count nano-time]
-        (fn (:beehive (meta this)) permit-count nano-time))
-      (releasePermit [this permit-count nano-time]
-        )
-      (releasePermit [this permit-count result nano-time]
-        )
-      (registerGuardRail [this guard-rail]))
-    {:clj? true}))
-
-(defn back-pressure
+(defn mechanism
   "This is experimental."
   [fn & {:keys [pass-nano-time?] :or {pass-nano-time? false}}]
   (if pass-nano-time?

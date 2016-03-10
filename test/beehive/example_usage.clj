@@ -34,7 +34,7 @@
       {:success true :error false}
       (metrics/rolling-count-metrics)
       (metrics/latency-metrics (.toNanos TimeUnit/MINUTES 1) 3))
-    (hive/create-back-pressure
+    (hive/back-pressure
       #{:max-concurrency :circuit-open}
       (metrics/rolling-count-metrics)
       (semaphore/semaphore 5 :max-concurrency)

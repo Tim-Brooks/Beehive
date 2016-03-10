@@ -56,7 +56,7 @@
     (.addBackPressure builder back-pressure))
   builder)
 
-(defmacro create-back-pressure [rejected-keys metrics & mechanisms]
+(defmacro back-pressure [rejected-keys metrics & mechanisms]
   (let [{:keys [key->enum-string cpath]} (enums/generate-rejected-enum rejected-keys)
         key->form (into {} (map (fn [[k s]]
                                   [k (enums/enum-form cpath s)])

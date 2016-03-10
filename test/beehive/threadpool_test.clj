@@ -33,7 +33,7 @@
                ""
                (threadpool/threadpool-results
                  (metrics/rolling-count-metrics 15 1 :minutes))
-               (beehive/create-back-pressure
+               (beehive/back-pressure
                  #{:max-concurrency}
                  (metrics/rolling-count-metrics 15 1 :minutes)
                  (semaphore/semaphore 1 :max-concurrency)))]
@@ -140,7 +140,7 @@
                  ""
                  (threadpool/threadpool-results
                    (metrics/rolling-count-metrics))
-                 (beehive/create-back-pressure
+                 (beehive/back-pressure
                    #{}
                    (metrics/rolling-count-metrics)))
           threadpool (threadpool/threadpool 1 hive)
@@ -159,7 +159,7 @@
                  ""
                  (threadpool/threadpool-results
                    (metrics/rolling-count-metrics))
-                 (beehive/create-back-pressure
+                 (beehive/back-pressure
                    #{:max-concurrency}
                    (metrics/rolling-count-metrics)
                    (semaphore/semaphore 1 :max-concurrency)))
@@ -202,7 +202,7 @@
                (threadpool/threadpool-results
                  (metrics/rolling-count-metrics)
                  (metrics/latency-metrics (.toNanos TimeUnit/HOURS 1) 2))
-               (beehive/create-back-pressure
+               (beehive/back-pressure
                  #{}
                  (metrics/rolling-count-metrics)))
         threadpool (threadpool/threadpool 1 hive)

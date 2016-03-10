@@ -28,7 +28,7 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
       {:success true :error false :timeout false}
       (metrics/rolling-count-metrics)
       (metrics/latency-metrics (.toNanos TimeUnit/MINUTES 1) 3))
-    (hive/create-back-pressure
+    (hive/back-pressure
       #{:max-concurrency :circuit-open}
       (metrics/rolling-count-metrics)
       (semaphore/semaphore 5 :max-concurrency)
