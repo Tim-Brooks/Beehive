@@ -1,7 +1,7 @@
 # Beehive
 
 Beehive is a Clojure façade for the Precipice library. [Precipice](https://github.com/tbrooks8/Precipice) is a
-library designed to manage access to services.
+library that provides monitoring and back pressure for task execution.
 
 ## Version
 
@@ -13,19 +13,49 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
 
 ```clojure
 (ns your-namespace
-  (:require [beehive.core :as beehive]))
+  (:require [beehive.hive :as beehive]))
 
-(def service (beehive/service "Service" 1 1))
+(def example-beehive
+  (hive/beehive
+    "Beehive Name"
+    (hive/results
+      {:success true :error false}
+      (metrics/rolling-count-metrics))
+    (hive/create-back-pressure
+      #{:max-concurrency :circuit-open}
+      (metrics/rolling-count-metrics)
+      (semaphore/semaphore 5 :max-concurrency)
+      (breaker/default-breaker
+         (create-breaker-config
+           {:failure-percentage-threshold 20
+            :backoff-time-millis 3000})
+         :max-concurrency))))
 
-@(beehive/submit-action (fn [] (* 8 8)) 10)
-;; Returns 10
+(defn execute-synchronous-risky-task []
+  (let [c (beehive/completable example-beehive 1)]
+    (if (:rejected? c)
+      (println "The beehive has told us not do execute this task right now")
+      (println "The rejected reason is: " (:rejected-reason c))
+      (try
+        ;; Do something that can fail like an http request
+        (beehive/complete! c :success http-response)
+        http-response
+        (catch IOException e
+          (beehive/complete! c :error e)))))
 
-@(beehive/submit-action (fn [] (throw (RuntimeException.))) 10)
-;; Returns #<RuntimeException java.lang.RuntimeException>
-
-
-(defn perform []
-  (beehive/perform-action (fn [] (throw (RuntimeException.)))))
+(defn execute-asynchronous-risky-task []
+  (let [p (beehive/promise example-beehive 1)]
+    (if (:rejected? c)
+      (println "The beehive has told us not do execute this task right now")
+      (println "The rejected reason is: " (:rejected-reason c))
+      (future
+        (try
+          ;; Do something that can fail like an http request
+          (beehive/complete! p :success http-response)
+          http-response
+          (catch IOException e
+            (beehive/complete! p :error e))))
+      @(beehive/future p))))
 ```
 
 ## License
