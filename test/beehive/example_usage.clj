@@ -13,8 +13,7 @@
 ;; limitations under the License.
 
 (ns beehive.example-usage
-  (:require [clojure.core.async :as async :refer [<! >! <!! >!! go]]
-            [beehive.hive :as hive]
+  (:require [beehive.hive :as hive]
             [beehive.circuit-breaker :as breaker]
             [beehive.metrics :as metrics]
             [beehive.semaphore :as semaphore]

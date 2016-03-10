@@ -161,14 +161,22 @@
                      result
                      (keys (.-result_key__GT_enum completable)))))))
 
-(defn to-future [completable]
-  (if (:rejected? completable)
-    (f/rejected-future (:rejected-reason completable))
-    (let [precipice-completable (.-completable ^BeehiveCompletable completable)
+(defn to-future
+  "Returns a future of the values contained in a promise.
+
+  If this is called with a rejection map, then the rejection map will be returned."
+  [promise]
+  (if (:rejected? promise)
+    (f/rejected-future (:rejected-reason promise))
+    (let [precipice-completable (.-completable ^BeehiveCompletable promise)
           java-f (.future ^PrecipicePromise precipice-completable)]
       (f/->BeehiveFuture java-f))))
 
-(defn to-readable [completable]
+(defn to-readable
+  "Returns a readable map of the values contained in a completable.
+
+  If this is called with a rejection map, then the rejection map will be returned."
+  [completable]
   (if (:rejected? completable)
     completable
     (let [^Completable c (.-completable ^BeehiveCompletable completable)
