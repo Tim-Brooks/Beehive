@@ -23,6 +23,11 @@
 
 (set! *warn-on-reflection* true)
 
+(defn- success? [^Eventual eventual]
+  (if-let [status (.getStatus eventual)]
+    (.isSuccess status)
+    false))
+
 (deftype BeehiveFuture [^Eventual eventual]
   IDeref
   (deref [this]
@@ -39,37 +44,34 @@
   (valAt [this key] (.valAt this key nil))
   (valAt [this key default]
     (case key
-      :status (or (enums/enum->keyword (.getStatus eventual)) :pending)
+      :result (enums/enum->keyword (.getStatus eventual))
       :pending? (not (.isRealized this))
       :cancelled? (.isCancelled eventual)
       :rejected? false
-      :result (.getResult eventual)
-      :error (.getError eventual)
+      :success? (success? eventual)
+      :failure? (not (success? eventual))
+      :value (or (.getResult eventual) (.getError eventual))
       default)))
 
-(deftype BeehiveRejectedFuture [^RejectedException ex reason]
+(deftype BeehiveRejectedFuture [reason]
   IDeref
-  (deref [this] (throw ex))
+  (deref [this] (throw (RejectedException. reason)))
   IBlockingDeref
-  (deref [this timeout-ms timeout-val] (throw ex))
+  (deref [this timeout-ms timeout-val] (throw (RejectedException. reason)))
   IPending
   (isRealized [_] true)
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [_ key default]
     (case key
-      :status :rejected
       :rejected? true
-      :success? false
-      :timeout? false
-      :error? false
+      :rejected-reason reason
       :pending? false
       :cancelled? false
-      :rejected-reason reason
       default)))
 
 (defn rejected-future [reason]
-  (->BeehiveRejectedFuture nil reason))
+  (->BeehiveRejectedFuture reason))
 
 (defn cancel! [f]
   (when (instance? BeehiveFuture f)
@@ -87,12 +89,20 @@
 
 (deftype CLJCallback [^BeehiveFuture future fn]
   PrecipiceFunction
-  (apply [this status result]
-    (fn (:status future) result)))
+  (apply [this _ _]
+    (if (:success? future)
+      (fn {:success? true
+           :value (:value future)
+           :result (:result future)
+           :failure? false})
+      (fn {:failure? true
+           :value (:value future)
+           :result (:result future)
+           :success? false}))))
 
 (defn on-complete [f function]
   (if (:rejected? f)
-    (function :rejected (:rejected-reason f))
+    (function {:rejected? true :rejected-reason (:rejected-reason f)})
     (let [^Eventual java-f (.eventual ^BeehiveFuture f)
           cb (CLJCallback. f function)]
       (.onSuccess java-f cb)

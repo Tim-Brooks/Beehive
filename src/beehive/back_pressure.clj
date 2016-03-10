@@ -12,7 +12,44 @@
 ;; See the License for the specific language governing permissions and
 ;; limitations under the License.
 
-(ns beehive.back-pressure)
+(ns beehive.back-pressure
+  (:import (net.uncontended.precipice BackPressure)))
 
-(defn back-pressure [hive]
-  )
+(defn back-pressure-with-time
+  "This is experimental."
+  [fn]
+  (with-meta
+    (reify BackPressure
+      (acquirePermit [this permit-count nano-time]
+        (fn (:beehive (meta this)) permit-count nano-time))
+      (releasePermit [this permit-count nano-time]
+        )
+      (releasePermit [this permit-count result nano-time]
+        )
+      (registerGuardRail [this guard-rail]))
+    {:clj? true}))
+
+(defn back-pressure
+  "This is experimental."
+  [fn & {:keys [pass-nano-time?] :or {pass-nano-time? false}}]
+  (if pass-nano-time?
+    (with-meta
+      (reify BackPressure
+        (acquirePermit [this permit-count nano-time]
+          (fn (:beehive (meta this)) permit-count nano-time))
+        (releasePermit [this permit-count nano-time]
+          )
+        (releasePermit [this permit-count result nano-time]
+          )
+        (registerGuardRail [this guard-rail]))
+      {:clj? true})
+    (with-meta
+      (reify BackPressure
+        (acquirePermit [this permit-count nano-time]
+          (fn (:beehive (meta this)) permit-count))
+        (releasePermit [this permit-count nano-time]
+          )
+        (releasePermit [this permit-count result nano-time]
+          )
+        (registerGuardRail [this guard-rail]))
+      {:clj? true})))

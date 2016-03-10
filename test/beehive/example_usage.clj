@@ -15,7 +15,6 @@
 (ns beehive.example-usage
   (:require [clojure.core.async :as async :refer [<! >! <!! >!! go]]
             [clj-http.client :as http]
-            [beehive.core :as beehive]
             [beehive.threadpool :as service]))
 
 (def api-route (str "http://www.broadbandmap.gov/broadbandmap/"

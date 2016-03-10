@@ -17,11 +17,13 @@
             [beehive.future :as f]
             [beehive.hive]
             [beehive.hive :as hive])
-  (:import (net.uncontended.precipice.concurrent PrecipicePromise)
-           (net.uncontended.precipice.timeout TimeoutService TimeoutTask PrecipiceTimeoutException)
-           (net.uncontended.precipice GuardRail ExecutionContext)
-           (java.util.concurrent ExecutorService Executors TimeoutException)
+  (:import (java.util.concurrent ExecutorService Executors TimeoutException)
            (beehive.hive BeehiveCompletable)
+           (net.uncontended.precipice ExecutionContext)
+           (net.uncontended.precipice.concurrent PrecipicePromise)
+           (net.uncontended.precipice.timeout PrecipiceTimeoutException
+                                              TimeoutService
+                                              Timeout)
            (net.uncontended.precipice.threadpool CancellableTask
                                                  CancellableTask$ResultToStatus
                                                  CancellableTask$ThrowableToStatus)))
@@ -58,8 +60,8 @@
 (def ^TimeoutService timeout-service TimeoutService/DEFAULT_TIMEOUT_SERVICE)
 
 (deftype BeehiveTimeout [^CancellableTask task]
-  TimeoutTask
-  (setTimedOut [this]
+  Timeout
+  (timeout [this]
     (.cancel task (:timeout key->enum) (PrecipiceTimeoutException.))))
 
 (defn submit1 [{:keys [thread-pool]} fn timeout-millis promise]
@@ -83,7 +85,6 @@
        (submit1 beehive fn timeout-millis promise)))))
 
 (defn shutdown [{:keys [thread-pool guard-rail]}]
-  (.shutdown ^GuardRail guard-rail)
   (.shutdown ^ExecutorService thread-pool))
 
 (defn threadpool [pool-size beehive]

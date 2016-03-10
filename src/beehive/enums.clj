@@ -59,6 +59,8 @@
   (let [enum-map (generate-result-enum result->success?)]
     `(create-type-map ~enum-map)))
 
+;; Convertors
+
 (defn keyword->enum [type keyword]
   (first (filter #(identical? keyword (.keyword ^ToCLJ %))
                  (.getEnumConstants ^Class type))))

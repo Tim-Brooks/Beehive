@@ -59,23 +59,20 @@
   (testing "Submit action returns CLJ future wrapping result"
     (let [latch (CountDownLatch. 1)
           f (threadpool/submit service (block-fn 64 latch))]
-      (is (= :pending (:status f)))
       (is (not (realized? f)))
       (is (:pending? f))
       (is (= :not-done (deref f 100 :not-done)))
       (.countDown latch)
       (is (= 64 @f))
-      (is (= :success (:status f)))
-      (is (not (:rejected? f)))
-      (is (nil? (:error f)))))
+      (is (= :success (:result f)))
+      (is (not (:rejected? f)))))
   (testing "Submitted action can return error"
     (let [exception (IOException.)
           f (threadpool/submit service (error-fn exception) 10000)]
       (f/await! f)
-      (is (= exception (:error f)))
-      (is (nil? (:result f)))
+      (is (= exception (:value f)))
       (is (not (:rejected? f)))
-      (is (= :error (:status f)))
+      (is (= :error (:result f)))
       (try
         @f
         (is false)
@@ -86,10 +83,9 @@
           f (threadpool/submit service (block-fn 1 latch) 50)]
       (f/await! f)
       (is (not (:rejected? f)))
-      (is (= :timeout (:status f)))
+      (is (= :timeout (:result f)))
       (.countDown latch)
-      (is (nil? (:result f)))
-      (is (instance? PrecipiceTimeoutException (:error f)))
+      (is (instance? PrecipiceTimeoutException (:value f)))
       (try
         @f
         (is false)
@@ -102,40 +98,40 @@
           f (threadpool/submit service (success-fn 1))]
       (is (= :max-concurrency (:rejected-reason f)))
       (is (:rejected? f))
-      (is (= :rejected (:status f)))
+      (is (nil? (:result f)))
       (.countDown latch))))
 
 (deftest callback-test
   (testing "Test that future callback is executed"
-    (let [status (atom nil)
-          result (atom nil)
+    (let [result (atom nil)
           blocker (CountDownLatch. 1)
           f (threadpool/submit service (success-fn 64))]
       (f/on-complete
-        f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
+        f (fn [r] (reset! result r) (.countDown blocker)))
       (.await blocker)
-      (is (= :success @status))
-      (is (= 64 @result)))
-    (let [status (atom nil)
-          result (atom nil)
+      (is (= {:failure? false
+              :result :success
+              :success? true
+              :value 64} @result)))
+    (let [result (atom nil)
           blocker (CountDownLatch. 1)
           e (RuntimeException.)
           f (threadpool/submit service (error-fn e))]
       (f/on-complete
-        f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
+        f (fn [r] (reset! result r) (.countDown blocker)))
       (.await blocker)
-      (is (= :error @status))
-      (is (= e @result)))
+      (is (= {:failure? true
+              :result :error
+              :success? false
+              :value e} @result)))
     (let [action-blocker (CountDownLatch. 1)
-          status (atom nil)
           result (atom nil)
           blocker (CountDownLatch. 1)
           f (threadpool/submit service (block-fn 64 action-blocker) 10)]
       (f/on-complete
-        f (fn [s r] (reset! status s) (reset! result r) (.countDown blocker)))
+        f (fn [r] (reset! result r) (.countDown blocker)))
       (.await blocker)
-      (is (= :timeout @status))
-      (is (instance? PrecipiceTimeoutException @result))
+      (is (instance? PrecipiceTimeoutException (:value @result)))
       (.countDown action-blocker))))
 
 (deftest metrics-test

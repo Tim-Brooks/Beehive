@@ -13,12 +13,15 @@
 ;; limitations under the License.
 
 (ns beehive.hive
-  (:refer-clojure :exclude [promise future])
+  (:refer-clojure :exclude [promise future name])
   (:require [beehive.enums :as enums]
             [beehive.future :as f])
-  (:import (clojure.lang APersistentMap)
-           (net.uncontended.precipice GuardRail GuardRailBuilder Failable)
-           (net.uncontended.precipice.concurrent Completable PrecipicePromise)
+  (:import (clojure.lang APersistentMap ILookup)
+           (net.uncontended.precipice Completable
+                                      GuardRail
+                                      GuardRailBuilder
+                                      Failable)
+           (net.uncontended.precipice.concurrent PrecipicePromise)
            (net.uncontended.precipice.factories Asynchronous Synchronous)
            (net.uncontended.precipice.rejected RejectedException)
            (beehive.enums ToCLJ)))
@@ -26,7 +29,7 @@
 (set! *warn-on-reflection* true)
 
 (defprotocol Hive
-  (beehive-name [this])
+  (name [this])
   (result-metrics [this])
   (rejected-metrics [this])
   (latency-metrics [this])
@@ -40,7 +43,13 @@
   (latency-metrics [this] (:latency-metrics this))
   (back-pressure [this] (:back-pressure this)))
 
-(deftype BeehiveCompletable [^Completable completable result-key->enum])
+(deftype BeehiveCompletable [^Completable completable result-key->enum]
+  ILookup
+  (valAt [this key] (.valAt this key nil))
+  (valAt [this key default]
+    (case key
+      :rejected? false
+      default)))
 
 (defn add-bp [^GuardRailBuilder builder mechanisms]
   (doseq [back-pressure mechanisms]
@@ -103,6 +112,14 @@
             (assoc :back-pressure back-pressure))))
 
 (defn promise
+  "Attempts to acquire requested permits. If the permits are acquired, a promise
+  that can be completed is returned. The promise is internally wired to release
+  permits and update metrics upon completion.
+
+  The promise is thread-safe and can be written to by multiple threads.
+
+  If the permits cannot be acquired, a map with the reason will be returned.
+  `{:rejected? true :reason :max-concurrency-level-violated}"
   [{:keys [guard-rail result-key->enum]} permits]
   (try
     (->BeehiveCompletable
@@ -112,6 +129,15 @@
       {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))})))
 
 (defn completable
+  "Attempts to acquires requested permits. If the permits are acquired, a
+  completable that can be completed is returned. The completable is internally
+  wired to release permits and update metrics upon completion.
+
+  The completable is not thread-safe and cannot be written to from multiple
+  threads. If you would like a thread-safe alternative you should use a promise.
+
+  If the permits cannot be acquired, a map with the reason will be returned.
+  `{:rejected? true :reason :max-concurrency-level-violated}"
   [{:keys [guard-rail result-key->enum]} permits]
   (try
     (->BeehiveCompletable
@@ -120,35 +146,86 @@
     (catch RejectedException e
       {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))})))
 
-(defn complete! [^BeehiveCompletable completable result value]
+(defn complete!
+  "Completes the supplied completable with the result and the value provided. The
+  result is constrained to the results associated with the beehive that created
+  this completable. An invalid result will cause an exception to be thrown."
+  [^BeehiveCompletable completable result value]
   (if-let [^Failable result-enum (get (.-result_key__GT_enum completable) result)]
     (let [^Completable java-c (.-completable completable)]
       (if (.isSuccess result-enum)
         (.complete java-c result-enum value)
         (.completeExceptionally java-c result-enum value)))
-    (throw (IllegalArgumentException. "Invalid status."))))
+    (throw (IllegalArgumentException.
+             (format "Invalid result '%s'; Valid results are '%s'"
+                     result
+                     (keys (.-result_key__GT_enum completable)))))))
 
 (defn future [^BeehiveCompletable completable]
   (let [java-f (.future ^PrecipicePromise (.-completable completable))]
     (f/->BeehiveFuture java-f)))
 
-(defn release
-  ([beehive {:keys [permit-count]}]
-   (when permit-count
-     (let [^GuardRail guard-rail (:guard-rail beehive)
-           end-nanos (.nanoTime (.getClock guard-rail))]
-       (.releasePermitsWithoutResult guard-rail permit-count end-nanos))))
-  ([beehive {:keys [permit-count start-nanos]} result]
-   (when permit-count
-     (let [^GuardRail guard-rail (:guard-rail beehive)
-           result-enum (get (:result-key->enum beehive) result)
-           end-nanos (.nanoTime (.getClock guard-rail))]
-       (.releasePermits
-         guard-rail result-enum permit-count start-nanos end-nanos)))))
+(defn release-raw-permits
+  "Releases a raw permit count. This call would allows multiple calls to acquire
+  to be released in one call. Since this call will simply release x number of
+  permits, no metrics will be updated. Generally it is preferable to call
+  release-without-result or release for each context returned by successful calls
+  to acquire."
+  ([beehive permit-count]
+   (let [nano-time (.nanoTime (.getClock ^GuardRail (:guard-rail beehive)))]
+     (release-raw-permits beehive permit-count nano-time)))
+  ([beehive permit-count nano-time]
+   (let [^GuardRail guard-rail (:guard-rail beehive)]
+     (.releasePermitsWithoutResult guard-rail permit-count nano-time))))
 
-(defn acquire [beehive permits]
-  (let [^GuardRail guard-rail (:guard-rail beehive)
-        start-nanos (.nanoTime (.getClock guard-rail))]
-    (if-let [rejected-reason (.acquirePermits guard-rail permits start-nanos)]
-      {:rejected? true :reason (get (:rejected-key->enum beehive) rejected-reason)}
-      {:start-nanos start-nanos :permit-count permits})))
+(defn release-without-result
+  "Releases permits with out considering the result. This means that result
+  metrics and latency will not be updated. The caller should pass the context
+  map returned by a successful acquire call. The map should contain the
+  start-nanos and permit-count.
+  `{:start-nanos 12973909840390 :permit-count 2}`
+
+  If the context map lacks the permit-count key, this function will
+  not do anything."
+  ([beehive context]
+   (release-without-result
+     beehive context (.nanoTime (.getClock ^GuardRail (:guard-rail beehive)))))
+  ([beehive {:keys [permit-count] :as context} nano-time]
+   (when permit-count
+     (release-raw-permits beehive permit-count nano-time))))
+
+(defn release
+  "Releases permits and updates metrics with the result. The caller should pass
+  the context map returned by a successful acquire call. The map should contain the
+  start-nanos and permit-count.
+  `{:start-nanos 12973909840390 :permit-count 2}`
+
+  If the context map lacks the permit-count key, this function will
+  not do anything."
+  ([beehive context result]
+   (let [nano-time (.nanoTime (.getClock ^GuardRail (:guard-rail beehive)))]
+     (release beehive context result nano-time)))
+  ([beehive {:keys [permit-count start-nanos] :as context} result nano-time]
+   (when permit-count
+     (let [^GuardRail guard-rail (:guard-rail beehive)
+           result-enum (get (:result-key->enum beehive) result)]
+       (.releasePermits
+         guard-rail permit-count result-enum start-nanos nano-time)))))
+
+(defn acquire
+  "Attempts to acquire requested permits. Permits will be successfully acquired
+  if none of the back pressure mechanisms trigger a rejection.
+
+  If the attempt is successful, a map with start time in nanoseconds and the
+  number of permits will be returned.
+  `{:start-nanos 12973909840390 :permit-count 2}`
+
+  If the attempt fails, a map with the reason will be returned.
+  `{:rejected? true :rejected-reason :max-concurrency-level-violated}`"
+  ([{:keys [guard-rail] :as beehive} permits]
+   (acquire beehive permits (.nanoTime (.getClock ^GuardRail guard-rail))))
+  ([beehive permits nano-time]
+   (let [^GuardRail guard-rail (:guard-rail beehive)]
+     (if-let [rejected-reason (.acquirePermits ^GuardRail guard-rail permits nano-time)]
+       {:rejected? true :rejected-reason (.keyword ^ToCLJ rejected-reason)}
+       {:start-nanos nano-time :permit-count permits}))))

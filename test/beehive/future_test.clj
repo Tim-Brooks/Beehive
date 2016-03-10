@@ -19,9 +19,9 @@
 
 (set! *warn-on-reflection* true)
 
-(def pending [:rejected? :cancelled? :result :error])
-(def success [:pending? :rejected? :cancelled? :error])
-(def error [:pending? :rejected? :cancelled? :result])
+(def pending [:rejected? :cancelled? :result :value])
+(def success [:pending? :rejected? :cancelled? :failure?])
+(def error [:pending? :rejected? :cancelled? :success?])
 
 (defn- remove-false [f ks]
   (filter (fn [func] (func f)) ks))
@@ -33,7 +33,6 @@
   (testing "Test that pending futures work correctly."
     (let [eventual (Eventual.)
           future (f/->BeehiveFuture eventual)]
-      (is (= :pending (:status future)))
       (is (:pending? future))
       (is (= [] (remove-false future pending)))
       (.complete eventual (:test-success statuses) 4)))
@@ -42,8 +41,8 @@
     (let [eventual (Eventual.)
           future (f/->BeehiveFuture eventual)]
       (.complete eventual (:test-success statuses) 4)
-      (is (= :test-success (:status future)))
-      (is (= 4 (:result future)))
+      (is (= :test-success (:result future)))
+      (is (= 4 (:value future)))
       (is (= [] (remove-false future success)))))
 
   (testing "Test that error futures work correctly."
@@ -51,6 +50,43 @@
           ex (RuntimeException.)
           future (f/->BeehiveFuture eventual)]
       (.completeExceptionally eventual (:test-error statuses) ex)
-      (is (= :test-error (:status future)))
-      (is (= ex (:error future)))
+      (is (= :test-error (:result future)))
+      (is (= ex (:value future)))
       (is (= [] (remove-false future error))))))
+
+(deftest callback-test
+  (testing "Test callback on success future."
+    (let [eventual (Eventual.)
+          future (f/->BeehiveFuture eventual)]
+      (f/on-complete
+        future
+        (fn [map]
+          (is (= {:failure? false
+                  :result :test-success
+                  :success? true
+                  :value 4}
+                 map))))
+      (.complete eventual (:test-success statuses) 4)))
+
+  (testing "Test callback on error future."
+    (let [eventual (Eventual.)
+          ex (RuntimeException.)
+          future (f/->BeehiveFuture eventual)]
+      (f/on-complete
+        future
+        (fn [map]
+          (is (= {:failure? true
+                  :result :test-error
+                  :success? false
+                  :value ex}
+                 map))))
+      (.completeExceptionally eventual (:test-error statuses) ex)))
+
+  (testing "Test callback on rejected future."
+    (let [future (f/->BeehiveRejectedFuture :max-concurrency)]
+      (f/on-complete
+        future
+        (fn [map]
+          (is (= {:rejected-reason :max-concurrency
+                  :rejected? true}
+                 map)))))))

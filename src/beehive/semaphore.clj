@@ -25,7 +25,7 @@
 (defn remaining-capacity [semaphore]
   (.remainingCapacity ^PrecipiceSemaphore semaphore))
 
-(defn current-concurrency-level [semaphore]
+(defn concurrency-level [semaphore]
   (.currentConcurrencyLevel ^PrecipiceSemaphore semaphore))
 
 (defn semaphore [max-concurrency reason]

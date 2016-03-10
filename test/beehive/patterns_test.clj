@@ -14,7 +14,6 @@
 
 (ns beehive.patterns-test
   (:require [clojure.test :refer :all]
-            [beehive.core :as beehive]
             [beehive.threadpool :as service]
             [beehive.patterns :as patterns])
   (:import (java.util.concurrent CountDownLatch)
