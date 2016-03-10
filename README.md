@@ -55,7 +55,7 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
         (println "The beehive has told us not do execute this task right now")
         (println "The rejected reason is: " (:rejected-reason c)))
       (do (perform-http c)
-          (hive/to-readable c)))))
+          (hive/to-result-view c)))))
 
 (defn execute-asynchronous-risky-task []
   (let [p (hive/promise example-beehive 1)]
