@@ -28,7 +28,7 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
       {:success true :error false :timeout false}
       (metrics/rolling-count-metrics)
       (metrics/latency-metrics (.toNanos TimeUnit/MINUTES 1) 3))
-    (hive/back-pressure
+    (hive/create-back-pressure
       #{:max-concurrency :circuit-open}
       (metrics/rolling-count-metrics)
       (semaphore/semaphore 5 :max-concurrency)
@@ -38,10 +38,15 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
         :max-concurrency))))
 
 (defn- perform-http [completable]
-  (let [http-response (make-http-request)]
-    ;; Do something that can fail like an http request
-    (hive/complete! completable :success http-response)
-    http-response))
+  (try
+    (let [http-response (make-http-request)]
+      ;; Do something that can fail like an http request
+      (hive/complete! completable :success http-response)
+      http-response)
+    (catch SocketTimeoutException e
+      (beehive/complete! completable :timeout e))
+    (catch IOException e
+      (beehive/complete! completable :error e))))
 
 (defn execute-synchronous-risky-task []
   (let [c (hive/completable example-beehive 1)]
@@ -49,12 +54,8 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
       (do
         (println "The beehive has told us not do execute this task right now")
         (println "The rejected reason is: " (:rejected-reason c)))
-      (try
-        (perform-http c)
-        (catch SocketTimeoutException e
-          (beehive/complete! c :timeout e))
-        (catch IOException e
-          (beehive/complete! c :error e))))))
+      (do (perform-http c)
+          (hive/to-readable c)))))
 
 (defn execute-asynchronous-risky-task []
   (let [p (hive/promise example-beehive 1)]
@@ -62,12 +63,8 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
       (do
         (println "The beehive has told us not do execute this task right now")
         (println "The rejected reason is: " (:rejected-reason p)))
-      (do (future
-            (try
-              (perform-http p)
-              (catch IOException e
-                (beehive/complete! p :error e))))
-          (hive/future p)))))
+      (do (future (perform-http p))
+          (hive/to-future p)))))
 
 ;; Will block until the completion (or error) of the http request
 (execute-synchronous-risky-task)

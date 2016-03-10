@@ -14,7 +14,7 @@
                (hive/results
                  {:test-success true :test-error false}
                  (metrics/rolling-count-metrics))
-               (hive/back-pressure
+               (hive/create-back-pressure
                  #{:max-concurrency}
                  (metrics/rolling-count-metrics)
                  (semaphore/semaphore 5 :max-concurrency)))]

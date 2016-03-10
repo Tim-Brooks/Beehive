@@ -56,7 +56,7 @@
     (.addBackPressure builder back-pressure))
   builder)
 
-(defmacro back-pressure [rejected-keys metrics & mechanisms]
+(defmacro create-back-pressure [rejected-keys metrics & mechanisms]
   (let [{:keys [key->enum-string cpath]} (enums/generate-rejected-enum rejected-keys)
         key->form (into {} (map (fn [[k s]]
                                   [k (enums/enum-form cpath s)])
@@ -161,12 +161,23 @@
                      result
                      (keys (.-result_key__GT_enum completable)))))))
 
-(defn future [completable]
+(defn to-future [completable]
   (if (:rejected? completable)
     (f/rejected-future (:rejected-reason completable))
     (let [precipice-completable (.-completable ^BeehiveCompletable completable)
           java-f (.future ^PrecipicePromise precipice-completable)]
       (f/->BeehiveFuture java-f))))
+
+(defn to-readable [completable]
+  (if (:rejected? completable)
+    completable
+    (let [^Completable c (.-completable ^BeehiveCompletable completable)
+          ^net.uncontended.precipice.Readable r (.readable c)]
+      (if (.isSuccess (.getStatus r))
+        {:success? true :value (.getResult r)
+         :result (.keyword ^ToCLJ (.getStatus r)) :failure? false}
+        {:success? false :value (.getError r)
+         :result (.keyword ^ToCLJ (.getStatus r)) :failure? true}))))
 
 (defn release-raw-permits
   "Releases a raw permit count. This call would allows multiple calls to acquire
