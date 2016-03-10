@@ -14,72 +14,71 @@
 
 (ns beehive.example-usage
   (:require [clojure.core.async :as async :refer [<! >! <!! >!! go]]
-            [clj-http.client :as http]
-            [beehive.threadpool :as service]))
+            [beehive.hive :as hive]
+            [beehive.circuit-breaker :as breaker]
+            [beehive.metrics :as metrics]
+            [beehive.semaphore :as semaphore]
+            [beehive.hive :as beehive])
+  (:import (java.util.concurrent TimeUnit)
+           (java.io IOException)))
 
-(def api-route (str "http://www.broadbandmap.gov/broadbandmap/"
-                    "census/county/%s?format=json"))
+(defn make-http-request []
+  ;; Do something that can fail like an http request
+  )
 
-;(defonce service (atom nil))
-;(defonce service2 (atom nil))
-;
-;(defn start-service []
-;  (let [service-name "Service with no circuit breaker"
-;        num-of-threads 1
-;        max-concurrency 100]
-;    (reset! service
-;            (beehive/service service-name num-of-threads max-concurrency)))
-;  (let [service-name "Service with circuit breaker"
-;        num-of-threads 1
-;        max-concurrency 100]
-;    (reset! service2
-;            (beehive/service service-name
-;                             num-of-threads
-;                             max-concurrency
-;                             :breaker {:failure-percentage-threshold 20
-;                                       :backoff-time-millis 2000}
-;                             :metrics {:slots-to-track 3600
-;                                       :resolution 500
-;                                       :time-unit :milliseconds}))))
-;
-;(defn lookup-state-action [county]
-;  (fn [] (-> (http/get (format api-route county) {:as :json})
-;             :body
-;             :Results
-;             :county)))
-;
-;(defn handle-success [success-channel]
-;  (go (loop []
-;        (let [success-future (<! success-channel)]
-;          (println "Success")
-;          (println (:result success-future))
-;          (recur)))))
-;
-;(defn handle-error [err-channel]
-;  (go (loop []
-;        (let [error-future (<! err-channel)]
-;          (println "Error")
-;          (println (:error error-future))
-;          (println (:status error-future))
-;          (recur)))))
-;
-;(defn thing [in-channel out-channel err-channel]
-;  (go
-;    (loop []
-;      (let [county (<! in-channel)
-;            f (service/submit @service
-;                              (lookup-state-action county)
-;                              (+ 850 (rand-int 200)))]
-;        (when (:rejected? f)
-;          (println (:rejected-reason f)))
-;        (recur)))))
-;
-;(defn run []
-;  (reset! service (beehive/service "example" 10 90))
-;  (let [in-channel (async/chan 10)
-;        out-channel (async/chan 10)
-;        err-channel (async/chan 10)]
-;    (thing in-channel out-channel err-channel)
-;    (handle-success out-channel)
-;    (handle-error err-channel)
-;    in-channel))
+(def example-beehive
+  (hive/beehive
+    "Beehive Name"
+    (hive/results
+      {:success true :error false}
+      (metrics/rolling-count-metrics)
+      (metrics/latency-metrics (.toNanos TimeUnit/MINUTES 1) 3))
+    (hive/create-back-pressure
+      #{:max-concurrency :circuit-open}
+      (metrics/rolling-count-metrics)
+      (semaphore/semaphore 5 :max-concurrency)
+      (breaker/default-breaker
+        {:failure-percentage-threshold 20
+         :backoff-time-millis 3000}
+        :max-concurrency))))
+
+
+
+(defn execute-synchronous-risky-task []
+  (let [c (hive/completable example-beehive 1)]
+    (if (:rejected? c)
+      (do
+        (println "The beehive has told us not do execute this task right now")
+        (println "The rejected reason is: " (:rejected-reason c)))
+      (try
+        (let [http-response (make-http-request)]
+          ;; Do something that can fail like an http request
+          (hive/complete! c :success http-response)
+          http-response)
+        (catch IOException e
+          (beehive/complete! c :error e))))))
+
+(defn execute-asynchronous-risky-task []
+  (let [p (hive/completable example-beehive 1)]
+    (if (:rejected? p)
+      (do
+        (println "The beehive has told us not do execute this task right now")
+        (println "The rejected reason is: " (:rejected-reason p)))
+      (do (future
+            (try
+              (let [http-response (make-http-request)]
+                ;; Do something that can fail like an http request
+                (hive/complete! p :success http-response)
+                http-response)
+              (catch IOException e
+                (beehive/complete! p :error e))))
+          @(hive/future p)))))
+
+;; Returns the number of successes
+(metrics/total-count (hive/result-metrics example-beehive) :success)
+
+;; Returns the number rejected by the semaphore due to max-concurrency being violated
+(metrics/total-count (hive/rejected-metrics example-beehive) :max-concurrency)
+
+;; Returns a latency percentile map for errors
+(metrics/latency (hive/latency-metrics example-beehive) :error)
