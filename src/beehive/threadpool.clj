@@ -79,9 +79,9 @@
 (defn submit
   ([thread-pool fn] (submit thread-pool fn nil))
   ([beehive fn timeout-millis]
-   (let [{:keys [rejected? rejected-reason] :as promise} (hive/promise beehive 1)]
+   (let [{:keys [rejected?] :as promise} (hive/acquire-promise beehive 1)]
      (if rejected?
-       (f/rejected-future rejected-reason)
+       (f/rejected-future (:rejected-reason promise))
        (submit1 beehive fn timeout-millis promise)))))
 
 (defn shutdown [{:keys [thread-pool guard-rail]}]

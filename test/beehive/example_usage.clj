@@ -54,7 +54,7 @@
       (beehive/complete! completable :error e))))
 
 (defn execute-synchronous-risky-task []
-  (let [c (hive/completable example-beehive 1)]
+  (let [c (hive/acquire-completable example-beehive 1)]
     (if (:rejected? c)
       (do
         (println "The beehive has told us not do execute this task right now")
@@ -63,7 +63,7 @@
           (hive/to-result-view c)))))
 
 (defn execute-asynchronous-risky-task []
-  (let [p (hive/promise example-beehive 1)]
+  (let [p (hive/acquire-promise example-beehive 1)]
     (if (:rejected? p)
       (do
         (println "The beehive has told us not do execute this task right now")

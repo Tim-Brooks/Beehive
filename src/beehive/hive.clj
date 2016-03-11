@@ -113,24 +113,14 @@
             back-pressure
             (assoc :back-pressure back-pressure))))
 
-(defn promise
-  "Attempts to acquire requested permits. If the permits are acquired, a promise
-  that can be completed is returned. The promise is internally wired to release
-  permits and update metrics upon completion.
+(defn completable
+  "Takes a context that was recieved when permits were acquired. And returns
+  a completable. The completable is internally wired to release permits and
+  update metrics upon completion.
 
-  The promise is thread-safe and can be written to by multiple threads.
-
-  If the permits cannot be acquired, a map with the reason will be returned.
-  `{:rejected? true :reason :max-concurrency-level-violated}"
-  [{:keys [guard-rail result-key->enum]} permits]
-  (try
-    (->BeehiveCompletable
-      (Asynchronous/acquirePermitsAndPromise guard-rail permits)
-      result-key->enum)
-    (catch RejectedException e
-      {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))})))
-
-(defn just-completable [context]
+  The completable is not thread-safe and cannot be written to from multiple
+  threads. If you would like a thread-safe alternative you should use a promise."
+  [context]
   (if (:rejected? context)
     context
     (try
@@ -144,7 +134,13 @@
       (catch RejectedException e
         {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))}))))
 
-(defn just-promise [context]
+(defn promise
+  "Takes a context that was recieved when permits were acquired. And returns
+  a promise. The promise is internally wired to release permits and
+  update metrics upon completion.
+
+  The promise is thread-safe and can be written to by multiple threads."
+  [context]
   (if (:rejected? context)
     context
     (try
@@ -157,24 +153,6 @@
           result-key->enum))
       (catch RejectedException e
         {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))}))))
-
-(defn completable
-  "Attempts to acquires requested permits. If the permits are acquired, a
-  completable that can be completed is returned. The completable is internally
-  wired to release permits and update metrics upon completion.
-
-  The completable is not thread-safe and cannot be written to from multiple
-  threads. If you would like a thread-safe alternative you should use a promise.
-
-  If the permits cannot be acquired, a map with the reason will be returned.
-  `{:rejected? true :reason :max-concurrency-level-violated}"
-  [{:keys [guard-rail result-key->enum]} permits]
-  (try
-    (->BeehiveCompletable
-      (Synchronous/acquirePermitsAndCompletable guard-rail permits)
-      result-key->enum)
-    (catch RejectedException e
-      {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))})))
 
 (defn complete!
   "Completes the supplied completable with the result and the value provided. The
@@ -288,6 +266,27 @@
        (with-meta {:start-nanos nano-time :permit-count permits}
                   {:beehive beehive})))))
 
-(def acquire-promise (comp just-promise acquire))
+(defn acquire-promise
+  "Attempts to acquire requested permits. If the permits are acquired, a promise
+  that can be completed is returned. The promise is internally wired to release
+  permits and update metrics upon completion.
 
-(def acquire-completable (comp just-promise completable))
+  The promise is thread-safe and can be written to by multiple threads.
+
+  If the permits cannot be acquired, a map with the reason will be returned.
+  `{:rejected? true :reason :max-concurrency-level-violated}"
+  [beehive permits]
+  (promise (acquire beehive permits)))
+
+(defn acquire-completable
+  "Attempts to acquire requested permits. If the permits are acquired, a
+  completable that can be completed is returned. The completable is internally
+  wired to release permits and update metrics upon completion.
+
+  The completable is not thread-safe and cannot be written to from multiple
+  threads. If you would like a thread-safe alternative you should use a promise.
+
+  If the permits cannot be acquired, a map with the reason will be returned.
+  `{:rejected? true :reason :max-concurrency-level-violated}"
+  [beehive permits]
+  (completable (acquire beehive permits)))
