@@ -257,6 +257,7 @@
 
   If the attempt fails, a map with the reason will be returned.
   `{:rejected? true :rejected-reason :max-concurrency-level-violated}`"
+  ([beehive] (acquire beehive 1))
   ([{:keys [guard-rail] :as beehive} permits]
    (acquire beehive permits (.nanoTime (.getClock ^GuardRail guard-rail))))
   ([beehive permits nano-time]
@@ -275,8 +276,9 @@
 
   If the permits cannot be acquired, a map with the reason will be returned.
   `{:rejected? true :reason :max-concurrency-level-violated}"
-  [beehive permits]
-  (promise (acquire beehive permits)))
+  ([beehive] (acquire-promise beehive 1))
+  ([beehive permits]
+   (promise (acquire beehive permits))))
 
 (defn acquire-completable
   "Attempts to acquire requested permits. If the permits are acquired, a
@@ -288,5 +290,6 @@
 
   If the permits cannot be acquired, a map with the reason will be returned.
   `{:rejected? true :reason :max-concurrency-level-violated}"
-  [beehive permits]
-  (completable (acquire beehive permits)))
+  ([beehive] (acquire-completable beehive 1))
+  ([beehive permits]
+   (completable (acquire beehive permits))))

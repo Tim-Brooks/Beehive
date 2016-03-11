@@ -27,10 +27,12 @@
 
 (defn pattern-seq
   ([pattern] (pattern-seq pattern 1))
-  ([pattern permit-number]
+  ([pattern permit-count]
    (let [^Pattern pattern pattern]
-     (mapv #(.-beehive ^BeehivePrecipice %)
-           (.getPrecipices pattern permit-number (System/nanoTime))))))
+     (let [start-nanos (System/nanoTime)
+           context {:start-nanos start-nanos :permit-count permit-count}]
+       (mapv #(assoc context :beehive (.-beehive ^BeehivePrecipice %))
+             (.getPrecipices pattern permit-count start-nanos))))))
 
 ;; TODO: function can be strategy
 (defn pattern [beehive-vec strategy]

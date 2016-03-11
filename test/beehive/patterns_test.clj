@@ -25,6 +25,9 @@
 (def beehive2 nil)
 (def beehive3 nil)
 
+(defn- beehive-name [context]
+  (get-in context [:beehive :name]))
+
 (defn- create-beehive [_ name address]
   (->
     (hive/beehive
@@ -51,18 +54,19 @@
   (testing "Acquire attempts are distributed properly."
     (let [load-balancer (patterns/load-balancer [beehive1 beehive2 beehive3])]
       (is (= #{"Test1" "Test2" "Test3"}
-             (set (map :name (concat (patterns/pattern-seq load-balancer)
-                                     (patterns/pattern-seq load-balancer)
-                                     (patterns/pattern-seq load-balancer))))))))
+             (set (map beehive-name
+                       (concat (patterns/pattern-seq load-balancer)
+                               (patterns/pattern-seq load-balancer)
+                               (patterns/pattern-seq load-balancer))))))))
   (doseq [b [beehive1 beehive2 beehive3]]
     (hive/release-raw-permits b 1))
   (testing "Individual rejections will be handled."
     (let [context (hive/acquire beehive1 1)
           load-balancer (patterns/load-balancer [beehive1 beehive2 beehive3])]
-      (is (= ["Test2"] (map :name (patterns/pattern-seq load-balancer))))
-      (is (= ["Test3"] (map :name (patterns/pattern-seq load-balancer))))
+      (is (= ["Test2"] (map beehive-name (patterns/pattern-seq load-balancer))))
+      (is (= ["Test3"] (map beehive-name (patterns/pattern-seq load-balancer))))
       (hive/release-without-result beehive3 context)
-      (is (= ["Test3"] (map :name (patterns/pattern-seq load-balancer))))
+      (is (= ["Test3"] (map beehive-name (patterns/pattern-seq load-balancer))))
       (doseq [b [beehive1 beehive2 beehive3]]
         (hive/release-raw-permits b 1)))))
 
@@ -71,9 +75,9 @@
     (let [shotgun (patterns/shotgun [beehive1 beehive2 beehive3] 2)
           beehives (atom #{})]
       (doseq [_ (range 20)]
-        (let [hives (patterns/pattern-seq shotgun)]
-          (is (= 2 (count (set (map :name hives)))))
-          (doseq [hive hives]
-            (swap! beehives conj hive)
-            (hive/release-raw-permits hive 1))))
-      (is (= beehives (set [beehive1 beehive2 beehive3]))))))
+        (let [contexts (patterns/pattern-seq shotgun)]
+          (is (= 2 (count (set (map beehive-name contexts)))))
+          (doseq [context contexts]
+            (swap! beehives conj (beehive-name context))
+            (hive/release-without-result (:beehive context) context 1))))
+      (is (= @beehives (set (map :name [beehive1 beehive2 beehive3])))))))
