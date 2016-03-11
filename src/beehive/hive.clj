@@ -102,7 +102,8 @@
                       (.resultLatency (:precipice-metrics (meta latency-metrics)))
                       back-pressure
                       (add-bp back-pressure)))]
-    (cond-> {:result-metrics result-metrics
+    (cond-> {:name name
+             :result-metrics result-metrics
              :rejected-metrics rejected-metrics
              :result-key->enum result-key->enum
              :rejected-key->enum rejected-key->enum
@@ -181,10 +182,15 @@
   (if (:rejected? completable)
     completable
     (let [^Completable c (.-completable ^BeehiveCompletable completable)
-          ^ResultView r (.resultView c)]
-      (if (.isSuccess (.getResult r))
-        {:success? true :value (.getResult r)
+          ^ResultView r (.resultView c)
+          result (.getResult r)]
+      (cond
+        (nil? result)
+        {:pending? true :rejected? false}
+        (.isSuccess result)
+        {:success? true :value (.getValue r)
          :result (.keyword ^ToCLJ (.getResult r)) :failure? false}
+        :else
         {:success? false :value (.getError r)
          :result (.keyword ^ToCLJ (.getResult r)) :failure? true}))))
 

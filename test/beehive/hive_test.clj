@@ -108,3 +108,34 @@
       (is (= 1 (metrics/total-count result-metrics :test-success)))
       (hive/complete! (hive/promise beehive 1) :test-success "result")
       (is (= 2 (metrics/total-count result-metrics :test-success))))))
+
+(deftest context-tests
+  (testing "Completable can be converted into result view"
+    (let [completable (hive/completable beehive 1)]
+      (is (= {:pending? true
+              :rejected? false} (hive/to-result-view completable)))
+      (hive/complete! completable :test-success 5)
+      (is (= {:failure? false
+              :result :test-success
+              :success? true
+              :value 5} (hive/to-result-view completable))))
+    (let [ex (RuntimeException.)
+          completable (hive/completable beehive 1)]
+      (hive/complete! completable :test-error ex)
+      (is (= {:failure? true
+              :result :test-error
+              :success? false
+              :value ex} (hive/to-result-view completable)))))
+  (testing "Promise can be converted into future"
+    (let [promise (hive/promise beehive 1)
+          future (hive/to-future promise)]
+      (is (:pending? future))
+      (hive/complete! promise :test-success 5)
+      (is (= :test-success (:result future)))
+      (is (= 5 (:value future))))
+    (let [ex (RuntimeException.)
+          promise (hive/promise beehive 1)
+          future (hive/to-future promise)]
+      (hive/complete! promise :test-error ex)
+      (is (= :test-error (:result future)))
+      (is (= ex (:value future))))))

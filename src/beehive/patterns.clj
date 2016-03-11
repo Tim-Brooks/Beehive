@@ -25,11 +25,14 @@
   Precipice
   (guardRail [this] (:guard-rail beehive)))
 
-(defn pattern-seq [pattern permit-number]
-  (let [^Pattern pattern pattern]
-    (map #(.-beehive ^BeehivePrecipice %)
-         (.getPrecipices pattern permit-number (System/nanoTime)))))
+(defn pattern-seq
+  ([pattern] (pattern-seq pattern 1))
+  ([pattern permit-number]
+   (let [^Pattern pattern pattern]
+     (mapv #(.-beehive ^BeehivePrecipice %)
+           (.getPrecipices pattern permit-number (System/nanoTime))))))
 
+;; TODO: function can be strategy
 (defn pattern [beehive-vec strategy]
   (Pattern. (mapv ->BeehivePrecipice beehive-vec) ^PatternStrategy strategy))
 
