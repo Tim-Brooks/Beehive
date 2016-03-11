@@ -84,7 +84,7 @@
 
   (testing "Promises are wired up to release permits on completion."
     (let [semaphore (first (hive/back-pressure beehive))
-          promise (hive/promise beehive 5)]
+          promise (hive/acquire-promise beehive 5)]
       (is (false? (:rejected? promise)))
       (is (= {:rejected-reason :max-concurrency
               :rejected? true} (hive/promise beehive 1)))

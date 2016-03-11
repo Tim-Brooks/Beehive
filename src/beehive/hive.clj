@@ -133,14 +133,30 @@
 (defn just-completable [context]
   (if (:rejected? context)
     context
-    (Synchronous/getCompletable
-      (:beehive (meta context)) (:permit-count context) (:start-nanos context))))
+    (try
+      (let [{:keys [guard-rail result-key->enum]} (:beehive (meta context))]
+        (->BeehiveCompletable
+          (Synchronous/getCompletable
+            guard-rail
+            (:permit-count context)
+            (:start-nanos context))
+          result-key->enum))
+      (catch RejectedException e
+        {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))}))))
 
 (defn just-promise [context]
   (if (:rejected? context)
     context
-    (Asynchronous/getPromise
-      (:beehive (meta context)) (:permit-count context) (:start-nanos context))))
+    (try
+      (let [{:keys [guard-rail result-key->enum]} (:beehive (meta context))]
+        (->BeehiveCompletable
+          (Asynchronous/getPromise
+            guard-rail
+            (:permit-count context)
+            (:start-nanos context))
+          result-key->enum))
+      (catch RejectedException e
+        {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))}))))
 
 (defn completable
   "Attempts to acquires requested permits. If the permits are acquired, a
@@ -269,7 +285,8 @@
    (let [^GuardRail guard-rail (:guard-rail beehive)]
      (if-let [rejected-reason (.acquirePermits ^GuardRail guard-rail permits nano-time)]
        {:rejected? true :rejected-reason (.keyword ^ToCLJ rejected-reason)}
-       {:start-nanos nano-time :permit-count permits}))))
+       (with-meta {:start-nanos nano-time :permit-count permits}
+                  {:beehive beehive})))))
 
 (def acquire-promise (comp just-promise acquire))
 
