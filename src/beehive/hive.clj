@@ -130,6 +130,18 @@
     (catch RejectedException e
       {:rejected? true :rejected-reason (.keyword ^ToCLJ (.reason e))})))
 
+(defn just-completable [context]
+  (if (:rejected? context)
+    context
+    (Synchronous/getCompletable
+      (:beehive (meta context)) (:permit-count context) (:start-nanos context))))
+
+(defn just-promise [context]
+  (if (:rejected? context)
+    context
+    (Asynchronous/getPromise
+      (:beehive (meta context)) (:permit-count context) (:start-nanos context))))
+
 (defn completable
   "Attempts to acquires requested permits. If the permits are acquired, a
   completable that can be completed is returned. The completable is internally
@@ -258,3 +270,7 @@
      (if-let [rejected-reason (.acquirePermits ^GuardRail guard-rail permits nano-time)]
        {:rejected? true :rejected-reason (.keyword ^ToCLJ rejected-reason)}
        {:start-nanos nano-time :permit-count permits}))))
+
+(def acquire-promise (comp just-promise acquire))
+
+(def acquire-completable (comp just-promise completable))
