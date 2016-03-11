@@ -68,4 +68,12 @@
 
 (deftest shotgun-test
   (testing "Acquire attempts are distributed to multiple beehives."
-    ))
+    (let [shotgun (patterns/shotgun [beehive1 beehive2 beehive3] 2)
+          beehives (atom #{})]
+      (doseq [_ (range 20)]
+        (let [hives (patterns/pattern-seq shotgun)]
+          (is (= 2 (count (set (map :name hives)))))
+          (doseq [hive hives]
+            (swap! beehives conj hive)
+            (hive/release-raw-permits hive 1))))
+      (is (= beehives (set [beehive1 beehive2 beehive3]))))))
