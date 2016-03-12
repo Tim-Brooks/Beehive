@@ -15,7 +15,8 @@
 (ns beehive.hive
   (:refer-clojure :exclude [promise future name])
   (:require [beehive.enums :as enums]
-            [beehive.future :as f])
+            [beehive.future :as f]
+            [beehive.metrics :as metrics])
   (:import (clojure.lang APersistentMap ILookup)
            (beehive.java ToCLJ)
            (net.uncontended.precipice Completable
@@ -90,28 +91,32 @@
                                        ~@latency-metrics-args)))))
 
 (defn beehive
-  [name
-   {:keys [result-key->enum result-metrics latency-metrics]}
-   {:keys [rejected-key->enum rejected-metrics back-pressure]}]
-  (let [builder (-> (GuardRailBuilder.)
-                    (.name name)
-                    (.resultMetrics (:precipice-metrics (meta result-metrics)))
-                    (.rejectedMetrics (:precipice-metrics (meta rejected-metrics)))
-                    (cond->
-                      latency-metrics
-                      (.resultLatency (:precipice-metrics (meta latency-metrics)))
-                      back-pressure
-                      (add-bp back-pressure)))]
-    (cond-> {:name name
-             :result-metrics result-metrics
-             :rejected-metrics rejected-metrics
-             :result-key->enum result-key->enum
-             :rejected-key->enum rejected-key->enum
-             :guard-rail (.build ^GuardRailBuilder builder)}
-            latency-metrics
-            (assoc :latency-metrics latency-metrics)
-            back-pressure
-            (assoc :back-pressure back-pressure))))
+  ([name results-map] (beehive name results-map nil))
+  ([name
+    {:keys [result-key->enum result-metrics latency-metrics]}
+    {:keys [rejected-key->enum rejected-metrics back-pressure]}]
+   (let [rejected-metrics1 (or rejected-metrics (metrics/no-op-metrics))
+         builder (-> (GuardRailBuilder.)
+                     (.name name)
+                     (.resultMetrics (:precipice-metrics (meta result-metrics)))
+                     (.rejectedMetrics (:precipice-metrics (meta rejected-metrics1)))
+                     (cond->
+                       latency-metrics
+                       (.resultLatency (:precipice-metrics (meta latency-metrics)))
+                       back-pressure
+                       (add-bp back-pressure)))]
+     (cond-> {:name name
+              :result-metrics result-metrics
+              :result-key->enum result-key->enum
+              :guard-rail (.build ^GuardRailBuilder builder)}
+             rejected-metrics
+             (assoc :rejected-metrics rejected-metrics)
+             rejected-key->enum
+             (assoc :rejected-key->enum rejected-key->enum)
+             latency-metrics
+             (assoc :latency-metrics latency-metrics)
+             back-pressure
+             (assoc :back-pressure back-pressure)))))
 
 (defn completable
   "Takes a context that was recieved when permits were acquired. And returns

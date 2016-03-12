@@ -25,16 +25,22 @@
   Precipice
   (guardRail [this] (:guard-rail beehive)))
 
+(defn- wire-up [context beehive]
+  (with-meta
+    (assoc context :beehive beehive)
+    {:beehive beehive}))
+
 (defn pattern-seq
   ([pattern] (pattern-seq pattern 1))
   ([pattern permit-count]
    (let [^Pattern pattern pattern]
      (let [start-nanos (System/nanoTime)
            context {:start-nanos start-nanos :permit-count permit-count}]
-       (mapv #(assoc context :beehive (.-beehive ^BeehivePrecipice %))
+       (mapv #(wire-up context (.-beehive ^BeehivePrecipice %))
              (.getPrecipices pattern permit-count start-nanos))))))
 
-(defn pattern [beehive-vec strategy-fn acquire-count]
+(defn pattern
+  [beehive-vec strategy-fn acquire-count]
   (Pattern. (mapv ->BeehivePrecipice beehive-vec)
             (reify PatternStrategy
               (nextIndices [this] (strategy-fn))

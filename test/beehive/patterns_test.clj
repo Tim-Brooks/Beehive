@@ -63,8 +63,8 @@
   (testing "Individual rejections will be handled."
     (let [context (hive/acquire beehive1 1)
           load-balancer (patterns/load-balancer [beehive1 beehive2 beehive3])]
-      (is (= ["Test2"] (map beehive-name (patterns/pattern-seq load-balancer))))
-      (is (= ["Test3"] (map beehive-name (patterns/pattern-seq load-balancer))))
+      (is (not= ["Test1"] (map beehive-name (patterns/pattern-seq load-balancer))))
+      (is (not= ["Test1"] (map beehive-name (patterns/pattern-seq load-balancer))))
       (hive/release-without-result beehive3 context)
       (is (= ["Test3"] (map beehive-name (patterns/pattern-seq load-balancer))))
       (doseq [b [beehive1 beehive2 beehive3]]
