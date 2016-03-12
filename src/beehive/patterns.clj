@@ -34,12 +34,16 @@
        (mapv #(assoc context :beehive (.-beehive ^BeehivePrecipice %))
              (.getPrecipices pattern permit-count start-nanos))))))
 
-;; TODO: function can be strategy
-(defn pattern [beehive-vec strategy]
-  (Pattern. (mapv ->BeehivePrecipice beehive-vec) ^PatternStrategy strategy))
+(defn pattern [beehive-vec strategy-fn acquire-count]
+  (Pattern. (mapv ->BeehivePrecipice beehive-vec)
+            (reify PatternStrategy
+              (nextIndices [this] (strategy-fn))
+              (acquireCount [this] acquire-count))))
 
 (defn load-balancer [beehive-vec]
-  (pattern beehive-vec (RoundRobinLoadBalancer. (count beehive-vec))))
+  (Pattern. (mapv ->BeehivePrecipice beehive-vec)
+            (RoundRobinLoadBalancer. (count beehive-vec))))
 
 (defn shotgun [beehive-vec submission-count]
-  (pattern beehive-vec (Shotgun. (count beehive-vec) submission-count)))
+  (Pattern. (mapv ->BeehivePrecipice beehive-vec)
+            (Shotgun. (count beehive-vec) submission-count)))
