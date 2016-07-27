@@ -23,7 +23,7 @@
            (net.uncontended.precipice.concurrent PrecipicePromise)
            (net.uncontended.precipice.timeout PrecipiceTimeoutException
                                               TimeoutService
-                                              Timeout)
+                                              Timeout DelayQueueTimeoutService)
            (net.uncontended.precipice.threadpool CancellableTask
                                                  CancellableTask$ResultToStatus
                                                  CancellableTask$ThrowableToStatus)))
@@ -57,7 +57,7 @@
            ~timeout
            ~error)))))
 
-(def ^TimeoutService timeout-service TimeoutService/DEFAULT_TIMEOUT_SERVICE)
+(def ^TimeoutService timeout-service DelayQueueTimeoutService/DEFAULT_TIMEOUT_SERVICE)
 
 (deftype BeehiveTimeout [^CancellableTask task]
   Timeout

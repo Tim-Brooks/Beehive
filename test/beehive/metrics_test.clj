@@ -15,7 +15,7 @@
 (ns beehive.metrics-test
   (:require [clojure.test :refer :all]
             [beehive.metrics :as metrics])
-  (:import (net.uncontended.precipice.metrics RollingCountMetrics)))
+  (:import (net.uncontended.precipice.metrics.counts TotalCounts)))
 
 (def key->enum (beehive.enums/result-keys->enum {:test-success true
                                                  :test-error false
@@ -23,15 +23,17 @@
 
 (deftest metrics-test
   (testing "Testing metrics return the results of the underlying java class"
-    (let [metrics (metrics/rolling-count-metrics key->enum)
-          ^RollingCountMetrics java-metrics (:precipice-metrics (meta metrics))]
-      (.incrementMetricCount java-metrics (:test-success key->enum))
-      (.incrementMetricCount java-metrics (:test-error key->enum))
-      (.incrementMetricCount java-metrics (:test-timeout key->enum))
-      (is (= 1 (metrics/total-count metrics :test-success)))
-      (is (= 1 (metrics/total-count metrics :test-error)))
-      (is (= 1 (metrics/total-count metrics :test-timeout)))
+    (let [metrics (metrics/count-metrics key->enum)
+          ^TotalCounts java-metrics (:precipice-metrics (meta metrics))]
+      (.add java-metrics (:test-success key->enum) 1)
+      (.add java-metrics (:test-error key->enum) 1)
+      (.add java-metrics (:test-timeout key->enum) 1)
+      (is (= 1 (metrics/get-count metrics :test-success)))
+      (is (= 1 (metrics/get-count metrics :test-error)))
+      (is (= 1 (metrics/get-count metrics :test-timeout)))
 
-      (is (= 1 (metrics/count-for-period metrics :test-success 1 :minutes)))
-      (is (= 1 (metrics/count-for-period metrics :test-error 1 :minutes)))
-      (is (= 1 (metrics/count-for-period metrics :test-timeout 1 :minutes))))))
+      ;(is (= 1 (metrics/count-for-period metrics :test-success 1 :minutes)))
+      ;(is (= 1 (metrics/count-for-period metrics :test-error 1 :minutes)))
+      ;(is (= 1 (metrics/count-for-period metrics :test-timeout 1 :minutes)))
+
+      )))

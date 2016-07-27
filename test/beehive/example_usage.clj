@@ -35,7 +35,7 @@
       (metrics/latency-metrics (.toNanos TimeUnit/MINUTES 1) 3))
     (hive/create-back-pressure
       #{:max-concurrency :circuit-open}
-      (metrics/rolling-count-metrics)
+      (metrics/count-metrics)
       (semaphore/semaphore 5 :max-concurrency)
       (breaker/default-breaker
         {:failure-percentage-threshold 20
@@ -78,10 +78,10 @@
 (execute-asynchronous-risky-task)
 
 ;; Returns the number of successes
-(metrics/total-count (hive/result-metrics example-beehive) :success)
+;(metrics/get-count (hive/result-metrics example-beehive) :success)
 
 ;; Returns the number rejected by the semaphore due to max-concurrency being violated
-(metrics/total-count (hive/rejected-metrics example-beehive) :max-concurrency)
+(metrics/get-count (hive/rejected-metrics example-beehive) :max-concurrency)
 
 ;; Returns a latency percentile map for errors
 (metrics/latency (hive/latency-metrics example-beehive) :error)

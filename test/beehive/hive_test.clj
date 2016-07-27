@@ -13,10 +13,10 @@
                "Test"
                (hive/results
                  {:test-success true :test-error false}
-                 (metrics/rolling-count-metrics))
+                 (metrics/count-metrics))
                (hive/create-back-pressure
                  #{:max-concurrency}
-                 (metrics/rolling-count-metrics)
+                 (metrics/count-metrics)
                  (semaphore/semaphore 5 :max-concurrency)))]
     (alter-var-root
       #'beehive
@@ -97,17 +97,17 @@
 (deftest metrics-test
   (let [result-metrics (hive/result-metrics beehive)]
     (testing "Metrics are updated on release with result."
-      (is (= 0 (metrics/total-count result-metrics :test-error)))
+      (is (= 0 (metrics/get-count result-metrics :test-error)))
       (hive/release beehive (hive/acquire beehive 1) :test-error)
-      (is (= 1 (metrics/total-count result-metrics :test-error))))
+      (is (= 1 (metrics/get-count result-metrics :test-error))))
     (testing "Metrics are updated on completable complete."
-      (is (= 0 (metrics/total-count result-metrics :test-success)))
+      (is (= 0 (metrics/get-count result-metrics :test-success)))
       (hive/complete! (hive/acquire-completable beehive 1) :test-success "result")
-      (is (= 1 (metrics/total-count result-metrics :test-success))))
+      (is (= 1 (metrics/get-count result-metrics :test-success))))
     (testing "Metrics are updated on promise complete."
-      (is (= 1 (metrics/total-count result-metrics :test-success)))
+      (is (= 1 (metrics/get-count result-metrics :test-success)))
       (hive/complete! (hive/acquire-promise beehive 1) :test-success "result")
-      (is (= 2 (metrics/total-count result-metrics :test-success))))))
+      (is (= 2 (metrics/get-count result-metrics :test-success))))))
 
 (deftest context-tests
   (testing "Completable can be converted into result view"
