@@ -70,6 +70,10 @@
       :back-pressure [~@(for [form mechanisms]
                           (clojure.walk/postwalk-replace key->form form))]}))
 
+;; TODO: Can get keyword for enum
+(defmacro gen-result-type [result->success?]
+  (:cpath (enums/generate-result-enum result->success?)))
+
 (defmacro results
   [result->success? metrics-seq & latency-metrics-seq]
   (let [{:keys [key->enum-string cpath]} (enums/generate-result-enum
