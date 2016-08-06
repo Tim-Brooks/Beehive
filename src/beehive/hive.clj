@@ -98,11 +98,11 @@
    (let [rejected-metrics1 (or rejected-metrics (metrics/no-op-metrics))
          builder (-> (GuardRailBuilder.)
                      (.name name)
-                     (.resultMetrics (:precipice-metrics (meta result-metrics)))
-                     (.rejectedMetrics (:precipice-metrics (meta rejected-metrics1)))
+                     (.addResultMetrics (:precipice-metrics (meta result-metrics)))
+                     (.addRejectedMetrics (:precipice-metrics (meta rejected-metrics1)))
                      (cond->
                        latency-metrics
-                       (.resultLatency (:precipice-metrics (meta latency-metrics)))
+                       (.addResultLatency (:precipice-metrics (meta latency-metrics)))
                        back-pressure
                        (add-bp back-pressure)))]
      (cond-> {:name name
