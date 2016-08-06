@@ -59,20 +59,14 @@
   builder)
 
 (defmacro create-back-pressure [rejected-keys metrics & mechanisms]
-  (let [{:keys [key->enum-string cpath]} (enums/generate-rejected-enum rejected-keys)
-        key->form (into {} (map (fn [[k s]]
-                                  [k (enums/enum-form cpath s)])
-                                key->enum-string))
+  (let [cpath (enums/generate-rejected-class rejected-keys)
+        key->form (enums/enum-class-to-key->form cpath)
         metrics-fn (first metrics)
         metric-fn-args (rest metrics)]
-    `{:rejected-key->enum ~key->form
+    `{:rejected-key->enum (enums/enum->keyword-map ~cpath)
       :rejected-metrics (~metrics-fn ~cpath ~@metric-fn-args)
       :back-pressure [~@(for [form mechanisms]
                           (clojure.walk/postwalk-replace key->form form))]}))
-
-;; TODO: Can get keyword for enum
-(defmacro gen-result-type [result->success?]
-  (:cpath (enums/generate-result-enum result->success?)))
 
 (defmacro results
   [result->success? metrics-seq & latency-metrics-seq]
