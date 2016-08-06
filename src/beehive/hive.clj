@@ -60,10 +60,10 @@
 
 (defmacro create-back-pressure [rejected-keys metrics & mechanisms]
   (let [cpath (enums/generate-rejected-class rejected-keys)
-        key->form (enums/enum-class-to-key->form cpath)
+        key->form (enums/enum-class-to-keyword->form cpath)
         metrics-fn (first metrics)
         metric-fn-args (rest metrics)]
-    `{:rejected-key->enum (enums/enum->keyword-map ~cpath)
+    `{:rejected-key->enum (enums/enum-class-to-keyword->enum ~cpath)
       :rejected-metrics (~metrics-fn ~cpath ~@metric-fn-args)
       :back-pressure [~@(for [form mechanisms]
                           (clojure.walk/postwalk-replace key->form form))]}))
@@ -77,7 +77,7 @@
         latency? (not (empty? latency-metrics-seq))
         latency-metrics-fn (or (first latency-metrics-seq) identity)
         latency-metrics-args (rest latency-metrics-seq)]
-    `(cond-> {:result-key->enum (enums/enum->keyword-map ~cpath)
+    `(cond-> {:result-key->enum (enums/enum-class-to-keyword->enum ~cpath)
               :result-metrics (~metrics-fn ~cpath ~@metric-fn-args)}
              ~latency?
              (assoc :latency-metrics (~latency-metrics-fn

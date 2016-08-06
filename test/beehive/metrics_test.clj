@@ -17,9 +17,12 @@
             [beehive.metrics :as metrics])
   (:import (net.uncontended.precipice.metrics.counts TotalCounts)))
 
-(def key->enum (beehive.enums/result-keys->enum {:test-success true
-                                                 :test-error false
-                                                 :test-timeout false}))
+(def key->enum
+  (beehive.enums/enum-class-to-keyword->enum
+    (beehive.enums/generate-result-class
+      {:test-success true
+       :test-error false
+       :test-timeout false})))
 
 (deftest metrics-test
   (testing "Testing metrics return the results of the underlying java class"

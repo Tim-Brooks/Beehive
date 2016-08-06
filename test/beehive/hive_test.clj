@@ -44,15 +44,19 @@
     (try
       (hive/complete! (hive/acquire-completable beehive 1) :wrong-type "result")
       (catch IllegalArgumentException e
-        (is (= "Invalid result ':wrong-type'; Valid results are '(:test-success :test-error)'"
-               (.getMessage e))))))
+        (let [message (.getMessage e)]
+          (is (.contains message "Invalid result ':wrong-type'; Valid results are "))
+          (is (.contains message ":test-success"))
+          (is (.contains message ":test-error"))))))
 
   (testing "Cannot pass arbitrary types to complete promise"
     (try
       (hive/complete! (hive/acquire-promise beehive 1) :wrong-type "result")
       (catch IllegalArgumentException e
-        (is (= "Invalid result ':wrong-type'; Valid results are '(:test-success :test-error)'"
-               (.getMessage e)))))))
+        (let [message (.getMessage e)]
+          (is (.contains message "Invalid result ':wrong-type'; Valid results are "))
+          (is (.contains message ":test-success"))
+          (is (.contains message ":test-error")))))))
 
 (deftest acquire-and-release-test
   (testing "Rejections and releases work as expected."

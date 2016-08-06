@@ -30,25 +30,20 @@
 
 (set! *warn-on-reflection* true)
 
-(def enum-map (enums/generate-result-enum {:success true
-                                           :error false
-                                           :timeout false}))
+(def enum-class (enums/generate-result-class {:success true
+                                              :error false
+                                              :timeout false}))
 
-(defn key->enum-form []
-  (into {} (map (fn [[k s]]
-                  [k (enums/enum-form (:cpath enum-map) s)])
-                (:key->enum-string enum-map))))
-
-(def key->enum (eval (key->enum-form)))
+(def key->enum (enums/enum-class-to-keyword->enum enum-class))
 
 (defmacro success-converter []
-  (let [success (:success (key->enum-form))]
+  (let [success (:success (enums/enum-class-to-keyword->form enum-class))]
     `(reify CancellableTask$ResultToStatus
        (resultToStatus [this result]
          ~success))))
 
 (defmacro error-converter []
-  (let [t-map (key->enum-form)
+  (let [t-map (enums/enum-class-to-keyword->form enum-class)
         error (:error t-map)
         timeout (:timeout t-map)]
     `(reify CancellableTask$ThrowableToStatus
@@ -96,12 +91,11 @@
         latency-metrics-seq (first latency-metrics-seq)
         latency? (not (empty? latency-metrics-seq))
         latency-metrics-fn (or (first latency-metrics-seq) identity)
-        latency-metrics-args (rest latency-metrics-seq)
-        key->form (key->enum-form)]
+        latency-metrics-args (rest latency-metrics-seq)]
     `(let []
-       (cond-> {:result-key->enum ~key->form
-                :result-metrics (~metrics-fn (class (val (first ~key->form))) ~@metric-fn-args)}
+       (cond-> {:result-key->enum (enums/enum-class-to-keyword->enum ~enum-class)
+                :result-metrics (~metrics-fn ~enum-class ~@metric-fn-args)}
                ~latency?
                (assoc :latency-metrics (~latency-metrics-fn
-                                         ~key->form
+                                         ~enum-class
                                          ~@latency-metrics-args))))))

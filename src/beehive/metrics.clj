@@ -49,7 +49,7 @@
 
 (defn count-metrics [^Class enum-class]
   (if-not (identical? enum-class EmptyEnum)
-    (let [key->enum (enums/enum->keyword-map enum-class)
+    (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
           precipice-metrics (TotalCounts. enum-class)]
       (with-meta
         (reify CountsView
@@ -62,7 +62,7 @@
   ([enum-class] (rolling-count-metrics enum-class (* 60 15) 1 :seconds))
   ([^Class enum-class slots-to-track resolution time-unit]
    (if-not (identical? enum-class EmptyEnum)
-     (let [key->enum (enums/enum->keyword-map enum-class)
+     (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
            precipice-metrics
            (RollingCounts.
              enum-class
@@ -92,7 +92,7 @@
 (defn no-op-latency-metrics
   ([] (no-op-latency-metrics EmptyEnum))
   ([^Class enum-class]
-   (let [key->enum (enums/enum->keyword-map enum-class)
+   (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
          precipice-metrics (TotalLatency. (NoOpLatency. enum-class))]
      (with-meta
        (reify
@@ -103,7 +103,7 @@
 
 (defn latency-metrics [enum-class highest-trackable-value significant-digits]
   (if-not (identical? enum-class EmptyEnum)
-    (let [key->enum (enums/enum->keyword-map enum-class)
+    (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
           precipice-metrics (precipice-metrics
                               enum-class highest-trackable-value significant-digits)]
       (with-meta

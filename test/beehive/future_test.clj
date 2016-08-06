@@ -27,8 +27,10 @@
 (defn- remove-false [f ks]
   (filter (fn [func] (func f)) ks))
 
-(def statuses (beehive.enums/result-keys->enum {:test-success true
-                                                :test-error false}))
+(def statuses (beehive.enums/enum-class-to-keyword->enum
+                (beehive.enums/generate-result-class
+                  {:test-success true
+                   :test-error false})))
 
 (deftest future-test
   (testing "Test that pending futures work correctly."
