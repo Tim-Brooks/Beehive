@@ -14,7 +14,7 @@
 
 (ns beehive.metrics
   (:require [beehive.utils :as utils])
-  (:import (beehive.java EmptyEnum)
+  (:import (beehive.java EmptyEnum ToCLJ)
            (net.uncontended.precipice.metrics Rolling)
            (net.uncontended.precipice.metrics.counts PartitionedCount
                                                      NoOpCounter
@@ -34,10 +34,10 @@
     (.getCount counter metric)))
 
 (defn no-op-metrics
-  ([] (no-op-metrics {}))
-  ([key->enum]
-   (let [first-enum (first key->enum)
-         enum-class (if first-enum (class (val first-enum)) EmptyEnum)
+  ([] (no-op-metrics EmptyEnum))
+  ([^Class enum-class]
+   (let [key->enum (into {} (map (fn [^ToCLJ e] [(.keyword e) e])
+                                 (.getEnumConstants enum-class)))
          metrics (TotalCounts. (NoOpCounter. enum-class))]
      (with-meta
        (reify
@@ -46,9 +46,11 @@
            (get-metric-count metrics metric key->enum)))
        {:precipice-metrics metrics}))))
 
-(defn count-metrics [key->enum]
-  (if-let [first-enum (first key->enum)]
-    (let [precipice-metrics (TotalCounts. (class (val first-enum)))]
+(defn count-metrics [^Class enum-class]
+  (if-not (identical? enum-class EmptyEnum)
+    (let [key->enum (into {} (map (fn [^ToCLJ e] [(.keyword e) e])
+                                  (.getEnumConstants enum-class)))
+          precipice-metrics (TotalCounts. enum-class)]
       (with-meta
         (reify CountsView
           (get-count [this metric]
@@ -57,12 +59,14 @@
     (no-op-metrics)))
 
 (defn rolling-count-metrics
-  ([key->enum] (rolling-count-metrics key->enum (* 60 15) 1 :seconds))
-  ([key->enum slots-to-track resolution time-unit]
-   (if-let [first-type (first key->enum)]
-     (let [precipice-metrics
+  ([enum-class] (rolling-count-metrics enum-class (* 60 15) 1 :seconds))
+  ([^Class enum-class  slots-to-track resolution time-unit]
+   (if-not (identical? enum-class EmptyEnum)
+     (let [key->enum (into {} (map (fn [^ToCLJ e] [(.keyword e) e])
+                                   (.getEnumConstants enum-class)))
+           precipice-metrics
            (RollingCounts.
-             (class (val first-type))
+             enum-class
              (int slots-to-track)
              (.toNanos ^TimeUnit (utils/->time-unit time-unit) (long resolution)))]
        (with-meta

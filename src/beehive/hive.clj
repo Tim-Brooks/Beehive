@@ -66,7 +66,7 @@
         metrics-fn (first metrics)
         metric-fn-args (rest metrics)]
     `{:rejected-key->enum ~key->form
-      :rejected-metrics (~metrics-fn ~key->form ~@metric-fn-args)
+      :rejected-metrics (~metrics-fn ~cpath ~@metric-fn-args)
       :back-pressure [~@(for [form mechanisms]
                           (clojure.walk/postwalk-replace key->form form))]}))
 
@@ -88,7 +88,7 @@
         latency-metrics-fn (or (first latency-metrics-seq) identity)
         latency-metrics-args (rest latency-metrics-seq)]
     `(cond-> {:result-key->enum ~key->form
-              :result-metrics (~metrics-fn ~key->form ~@metric-fn-args)}
+              :result-metrics (~metrics-fn ~cpath ~@metric-fn-args)}
              ~latency?
              (assoc :latency-metrics (~latency-metrics-fn
                                        ~key->form
@@ -113,8 +113,8 @@
               :result-metrics result-metrics
               :result-key->enum result-key->enum
               :guard-rail (.build ^GuardRailBuilder builder)}
-             rejected-metrics
-             (assoc :rejected-metrics rejected-metrics)
+             rejected-metrics1
+             (assoc :rejected-metrics rejected-metrics1)
              rejected-key->enum
              (assoc :rejected-key->enum rejected-key->enum)
              latency-metrics

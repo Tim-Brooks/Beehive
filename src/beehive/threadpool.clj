@@ -100,7 +100,7 @@
         key->form (key->enum-form)]
     `(let []
        (cond-> {:result-key->enum ~key->form
-                :result-metrics (~metrics-fn ~key->form ~@metric-fn-args)}
+                :result-metrics (~metrics-fn (class (val (first ~key->form))) ~@metric-fn-args)}
                ~latency?
                (assoc :latency-metrics (~latency-metrics-fn
                                          ~key->form

@@ -23,7 +23,7 @@
 
 (deftest metrics-test
   (testing "Testing metrics return the results of the underlying java class"
-    (let [metrics (metrics/count-metrics key->enum)
+    (let [metrics (metrics/count-metrics (class (val (first key->enum))))
           ^TotalCounts java-metrics (:precipice-metrics (meta metrics))]
       (.add java-metrics (:test-success key->enum) 1)
       (.add java-metrics (:test-error key->enum) 1)
