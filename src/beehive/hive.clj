@@ -76,22 +76,18 @@
 
 (defmacro results
   [result->success? metrics-seq & latency-metrics-seq]
-  (let [{:keys [key->enum-string cpath]} (enums/generate-result-enum
-                                           result->success?)
-        key->form (into {} (map (fn [[k s]]
-                                  [k (enums/enum-form cpath s)])
-                                key->enum-string))
+  (let [cpath (enums/generate-result-class result->success?)
         metrics-fn (first metrics-seq)
         metric-fn-args (rest metrics-seq)
         latency-metrics-seq (first latency-metrics-seq)
         latency? (not (empty? latency-metrics-seq))
         latency-metrics-fn (or (first latency-metrics-seq) identity)
         latency-metrics-args (rest latency-metrics-seq)]
-    `(cond-> {:result-key->enum ~key->form
+    `(cond-> {:result-key->enum (enums/enum->keyword-map ~cpath)
               :result-metrics (~metrics-fn ~cpath ~@metric-fn-args)}
              ~latency?
              (assoc :latency-metrics (~latency-metrics-fn
-                                       ~key->form
+                                       ~cpath
                                        ~@latency-metrics-args)))))
 
 (defn beehive

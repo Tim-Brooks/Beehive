@@ -13,7 +13,8 @@
 ;; limitations under the License.
 
 (ns beehive.metrics
-  (:require [beehive.utils :as utils])
+  (:require [beehive.utils :as utils]
+            [beehive.enums :as enums])
   (:import (beehive.java EmptyEnum ToCLJ)
            (net.uncontended.precipice.metrics Rolling)
            (net.uncontended.precipice.metrics.counts PartitionedCount
@@ -21,7 +22,7 @@
                                                      TotalCounts
                                                      RollingCounts)
            (net.uncontended.precipice.metrics.latency TotalLatency
-                                                      AtomicHistogram)
+                                                      AtomicHistogram NoOpLatency)
            (java.util.concurrent TimeUnit)))
 
 (set! *warn-on-reflection* true)
@@ -48,8 +49,7 @@
 
 (defn count-metrics [^Class enum-class]
   (if-not (identical? enum-class EmptyEnum)
-    (let [key->enum (into {} (map (fn [^ToCLJ e] [(.keyword e) e])
-                                  (.getEnumConstants enum-class)))
+    (let [key->enum (enums/enum->keyword-map enum-class)
           precipice-metrics (TotalCounts. enum-class)]
       (with-meta
         (reify CountsView
@@ -60,10 +60,9 @@
 
 (defn rolling-count-metrics
   ([enum-class] (rolling-count-metrics enum-class (* 60 15) 1 :seconds))
-  ([^Class enum-class  slots-to-track resolution time-unit]
+  ([^Class enum-class slots-to-track resolution time-unit]
    (if-not (identical? enum-class EmptyEnum)
-     (let [key->enum (into {} (map (fn [^ToCLJ e] [(.keyword e) e])
-                                   (.getEnumConstants enum-class)))
+     (let [key->enum (enums/enum->keyword-map enum-class)
            precipice-metrics
            (RollingCounts.
              enum-class
@@ -85,18 +84,32 @@
   (when-let [enum (get key->enum metric)]
     nil))
 
-(defn- precipice-metrics [key->enum highest-trackable-value significant-digits]
-  (let [first-type (first key->enum)]
-    (TotalLatency.
-      (AtomicHistogram.
-        (class (val first-type)) highest-trackable-value significant-digits))))
+(defn- precipice-metrics [enum-class highest-trackable-value significant-digits]
+  (TotalLatency.
+    (AtomicHistogram.
+      enum-class highest-trackable-value significant-digits)))
 
-(defn latency-metrics [key->enum highest-trackable-value significant-digits]
-  (let [precipice-metrics (precipice-metrics
-                            key->enum highest-trackable-value significant-digits)]
-    (with-meta
-      (reify
-        LatencyView
-        (latency [this metric]
-          (latency-snapshot precipice-metrics metric key->enum)))
-      {:precipice-metrics precipice-metrics})))
+(defn no-op-latency-metrics
+  ([] (no-op-latency-metrics EmptyEnum))
+  ([^Class enum-class]
+   (let [key->enum (enums/enum->keyword-map enum-class)
+         precipice-metrics (TotalLatency. (NoOpLatency. enum-class))]
+     (with-meta
+       (reify
+         LatencyView
+         (latency [this metric]
+           (latency-snapshot precipice-metrics metric key->enum)))
+       {:precipice-metrics precipice-metrics}))))
+
+(defn latency-metrics [enum-class highest-trackable-value significant-digits]
+  (if-not (identical? enum-class EmptyEnum)
+    (let [key->enum (enums/enum->keyword-map enum-class)
+          precipice-metrics (precipice-metrics
+                              enum-class highest-trackable-value significant-digits)]
+      (with-meta
+        (reify
+          LatencyView
+          (latency [this metric]
+            (latency-snapshot precipice-metrics metric key->enum)))
+        {:precipice-metrics precipice-metrics}))
+    (no-op-latency-metrics)))

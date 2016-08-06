@@ -29,6 +29,16 @@
     {:cpath cpath
      :key->enum-string key->enum-string}))
 
+(defn generate-result-class [result->success?]
+  (let [ks (keys result->success?)]
+    (result-assertions ks)
+    (enum-assertions ks))
+  (let [key->enum-string (map (fn [[k s?]]
+                                (result-enum-string k s?))
+                              result->success?)
+        cpath (EnumBuilder/buildResultEnum (or key->enum-string []))]
+    (symbol cpath)))
+
 (defn generate-result-enum [result->success?]
   (let [ks (keys result->success?)]
     (result-assertions ks)
@@ -67,3 +77,6 @@
 
 (defn enum->keyword [enum]
   (when enum (.keyword ^ToCLJ enum)))
+
+(defn enum->keyword-map [^Class enum]
+  (into {} (map (fn [^ToCLJ e] [(.keyword e) e]) (.getEnumConstants enum))))
