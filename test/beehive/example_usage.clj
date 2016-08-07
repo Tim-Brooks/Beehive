@@ -85,3 +85,19 @@
 
 ;; Returns a latency percentile map for errors
 (metrics/latency (hive/latency-metrics example-beehive) :error)
+
+(comment
+  ;; Replace keywords with enum impl
+  (lett [result-class {:success true :error false}
+         rejected-class #{:max-concurrency :breaker}]
+        (-> (hive result-class rejected-class)
+            (add-result-counts (count-metrics result-class))
+            (add-result-latency (latency-metrics result-class))
+            (add-backpressure (semaphore :max-concurrency)))))
+
+(comment
+  (hive-> (create-types {:success true :error false} #{:max-concurrency :breaker})
+          (add-result-counts (count-metrics))
+          (add-result-latency (latency-metrics))
+          (add-backpressure (semaphore :max-concurrency))
+          (add-backpressure (ciruit-breaker :max-concurrency))))
