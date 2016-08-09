@@ -292,3 +292,115 @@
   ([beehive] (acquire-completable beehive 1))
   ([beehive permits]
    (completable (acquire beehive permits))))
+
+
+;; Explore
+
+(defn beehive
+  ([name results-map] (beehive name results-map nil))
+  ([name
+    {:keys [result-key->enum result-metrics latency-metrics]}
+    {:keys [rejected-key->enum rejected-metrics back-pressure]}]
+   (let [rejected-metrics1 (or rejected-metrics (metrics/no-op-metrics))
+         builder (-> (GuardRailBuilder.)
+                     (.name name)
+                     (.addResultMetrics (:precipice-metrics (meta result-metrics)))
+                     (.addRejectedMetrics (:precipice-metrics (meta rejected-metrics1)))
+                     (cond->
+                       latency-metrics
+                       (.addResultLatency (:precipice-metrics (meta latency-metrics)))
+                       back-pressure
+                       (add-bp back-pressure)))]
+     (cond-> {:name name
+              :result-metrics result-metrics
+              :result-key->enum result-key->enum
+              :guard-rail (.build ^GuardRailBuilder builder)}
+             rejected-metrics1
+             (assoc :rejected-metrics rejected-metrics1)
+             rejected-key->enum
+             (assoc :rejected-key->enum rejected-key->enum)
+             latency-metrics
+             (assoc :latency-metrics latency-metrics)
+             back-pressure
+             (assoc :back-pressure back-pressure)))))
+
+;{:name ""
+; :result-key->enum {}
+; :result-metrics []
+; :latency-metrics []
+; :back-pressure []
+; :rejected-key->enum {}
+; :rejected-metrics []}
+
+(defn- add-result-metrics [^GuardRailBuilder builder result-metrics]
+  (doseq [rm result-metrics]
+    (.addResultMetrics builder (:precipice-metrics (meta rm))))
+  builder)
+
+(defn- add-result-latency [^GuardRailBuilder builder result-latency]
+  (doseq [rm result-metrics]
+    (.addResultLatency builder (:precipice-metrics (meta rm))))
+  builder)
+
+(defn- add-rejected-metrics [^GuardRailBuilder builder rejected-metrics]
+  (doseq [rm rejected-metrics]
+    (.addRejectedMetrics builder (:precipice-metrics (meta rm))))
+  builder)
+
+(defn map->hive
+  [{:keys [result-key->enum
+           result-metrics
+           result-latency
+           back-pressure
+           rejected-key->enum
+           rejected-metrics]}]
+  (let [builder (-> (GuardRailBuilder.)
+                    (.name name)
+                    (add-result-metrics result-metrics)
+                    (add-result-latency result-latency)
+                    (add-rejected-metrics rejected-metrics)
+                    (add-bp back-pressure))]
+    {:name name
+     :result-key->enum result-key->enum
+     :result-metrics (or result-metrics [])
+     :result-latency (or result-latency [])
+     :rejected-key->enum rejected-key->enum
+     :rejected-metrics (or rejected-metrics [])
+     :back-pressure (or back-pressure [])
+     :guard-rail (.build ^GuardRailBuilder builder)}))
+
+(defn- ^String compile-msg [msg]
+  (str msg " in " '*ns* ":" (:line (meta '&form))))
+
+(defn- h-assert [assertion msg]
+  (when-not assertion
+    (throw (IllegalArgumentException.
+             (compile-msg msg)))))
+
+(defn- run-assertions [bindings]
+  (h-assert (vector? bindings) "lett requires a vector for its binding")
+  (h-assert (= 4 (count bindings)) "lett requires four forms in binding vector")
+  (let [symbols (take-nth 2 bindings)]
+    (doseq [sym symbols]
+      (h-assert (symbol? sym)
+                (str "Non-symbol binding form: " sym))))
+  (let [map&set (take-nth 2 (rest bindings))]
+    (assert (= 1 (->> map&set
+                      (filter map?)
+                      count)))
+    (assert (= 1 (->> map&set
+                      (filter set?)
+                      count)))))
+
+(defn- replace-bindings [bindings]
+  (mapv (fn [x]
+          (cond (map? x) (enums/generate-result-class x)
+                (set? x) (enums/generate-rejected-class x)
+                :else x))
+        bindings))
+
+(defmacro lett [bindings & body]
+  (run-assertions bindings)
+  (let [bindings (replace-bindings bindings)]
+    `(let ~bindings
+       ~@body)))

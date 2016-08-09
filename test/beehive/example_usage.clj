@@ -92,12 +92,7 @@
          rejected-class #{:max-concurrency :breaker}]
         (-> (hive result-class rejected-class)
             (add-result-counts (count-metrics result-class))
+            (add-rejected-counts (count-metrics rejected-class))
             (add-result-latency (latency-metrics result-class))
-            (add-backpressure (semaphore :max-concurrency)))))
-
-(comment
-  (hive-> (create-types {:success true :error false} #{:max-concurrency :breaker})
-          (add-result-counts (count-metrics))
-          (add-result-latency (latency-metrics))
-          (add-backpressure (semaphore :max-concurrency))
-          (add-backpressure (ciruit-breaker :max-concurrency))))
+            (add-backpressure (semaphore :max-concurrency))
+            build)))
