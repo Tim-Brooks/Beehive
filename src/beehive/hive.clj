@@ -296,34 +296,6 @@
 
 ;; Explore
 
-(defn beehive
-  ([name results-map] (beehive name results-map nil))
-  ([name
-    {:keys [result-key->enum result-metrics latency-metrics]}
-    {:keys [rejected-key->enum rejected-metrics back-pressure]}]
-   (let [rejected-metrics1 (or rejected-metrics (metrics/no-op-metrics))
-         builder (-> (GuardRailBuilder.)
-                     (.name name)
-                     (.addResultMetrics (:precipice-metrics (meta result-metrics)))
-                     (.addRejectedMetrics (:precipice-metrics (meta rejected-metrics1)))
-                     (cond->
-                       latency-metrics
-                       (.addResultLatency (:precipice-metrics (meta latency-metrics)))
-                       back-pressure
-                       (add-bp back-pressure)))]
-     (cond-> {:name name
-              :result-metrics result-metrics
-              :result-key->enum result-key->enum
-              :guard-rail (.build ^GuardRailBuilder builder)}
-             rejected-metrics1
-             (assoc :rejected-metrics rejected-metrics1)
-             rejected-key->enum
-             (assoc :rejected-key->enum rejected-key->enum)
-             latency-metrics
-             (assoc :latency-metrics latency-metrics)
-             back-pressure
-             (assoc :back-pressure back-pressure)))))
-
 ;{:name ""
 ; :result-key->enum {}
 ; :result-metrics []
@@ -348,11 +320,11 @@
   builder)
 
 (defn map->hive
-  [{:keys [result-key->enum
+  [{:keys [result-class
            result-metrics
            result-latency
            back-pressure
-           rejected-key->enum
+           rejected-class
            rejected-metrics]}]
   (let [builder (-> (GuardRailBuilder.)
                     (.name name)
@@ -361,10 +333,10 @@
                     (add-rejected-metrics rejected-metrics)
                     (add-bp back-pressure))]
     {:name name
-     :result-key->enum result-key->enum
+     :result-key->enum (enums/enum-class-to-keyword->enum result-class)
      :result-metrics (or result-metrics [])
      :result-latency (or result-latency [])
-     :rejected-key->enum rejected-key->enum
+     :rejected-key->enum (enums/enum-class-to-keyword->enum rejected-class)
      :rejected-metrics (or rejected-metrics [])
      :back-pressure (or back-pressure [])
      :guard-rail (.build ^GuardRailBuilder builder)}))
@@ -399,8 +371,15 @@
                 :else x))
         bindings))
 
+(defn- replace-keywords [body keyword->enum]
+  (clojure.walk/postwalk-replace keyword->enum body))
+
 (defmacro lett [bindings & body]
   (run-assertions bindings)
-  (let [bindings (replace-bindings bindings)]
+  (let [bindings (replace-bindings bindings)
+        key->form (->> (rest bindings)
+                       (take-nth 2)
+                       (map enums/enum-class-to-keyword->form)
+                       (apply merge))]
     `(let ~bindings
-       ~@body)))
+       ~@(replace-keywords body key->form))))
