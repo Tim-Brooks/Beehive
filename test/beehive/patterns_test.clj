@@ -30,15 +30,16 @@
 
 (defn- create-beehive [_ name address]
   (->
-    (hive/beehive
-      name
-      (hive/results
-        {:test-success true :test-error false}
-        (metrics/rolling-count-metrics))
-      (hive/create-back-pressure
-        #{:max-concurrency}
-        (metrics/rolling-count-metrics)
-        (semaphore/semaphore 1 :max-concurrency)))
+    (hive/lett [result-class {:test-success true :test-error false}
+                rejected-class #{:max-concurrency}]
+      (-> (hive/hive name result-class rejected-class)
+          (hive/add-result-metrics
+            :total (metrics/count-metrics result-class))
+          (hive/add-rejected-metrics
+            :total (metrics/count-metrics rejected-class))
+          (hive/add-backpressure
+            :semaphore (semaphore/semaphore 1 :max-concurrency))
+          hive/map->hive))
     (assoc :context {:address address})))
 
 (defn- create-hives [f]
