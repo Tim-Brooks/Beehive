@@ -30,15 +30,18 @@
   (hive/lett [result-class {:success true :error false}
               rejected-class #{:max-concurrency :circuit-open}]
     (-> (hive/hive "Beehive Name" result-class rejected-class)
-        (hive/add-result-metrics (metrics/rolling-count-metrics result-class))
-        (hive/add-rejected-metrics (metrics/count-metrics rejected-class))
-        (hive/add-result-latency (metrics/latency-metrics
-                                   result-class (.toNanos TimeUnit/MINUTES 1) 3))
-        (hive/add-backpressure (semaphore/semaphore 5 :max-concurrency))
-        (hive/add-backpressure (breaker/default-breaker
-                                 {:failure-percentage-threshold 20
-                                  :backoff-time-millis 3000}
-                                 :max-concurrency))
+        (hive/add-result-metrics
+          :rolling (metrics/rolling-count-metrics result-class))
+        (hive/add-rejected-metrics :total (metrics/count-metrics rejected-class))
+        (hive/add-result-latency
+          :histogram
+          (metrics/latency-metrics
+            result-class (.toNanos TimeUnit/MINUTES 1) 3))
+        (hive/add-backpressure :semaphore (semaphore/semaphore 5 :max-concurrency))
+        (hive/add-backpressure :breaker (breaker/default-breaker
+                                          {:failure-percentage-threshold 20
+                                           :backoff-time-millis 3000}
+                                          :max-concurrency))
         hive/map->hive)))
 
 (defn- perform-http [completable]
@@ -80,7 +83,7 @@
 ;(metrics/get-count (hive/result-metrics example-beehive) :success)
 
 ;; Returns the number rejected by the semaphore due to max-concurrency being violated
-(metrics/get-count (first (hive/rejected-metrics example-beehive)) :max-concurrency)
+(metrics/get-count (:total (hive/rejected-metrics example-beehive)) :max-concurrency)
 
 ;; Returns a latency percentile map for errors
-(metrics/latency (first (hive/latency-metrics example-beehive)) :error)
+(metrics/latency (:histogram (hive/result-latency example-beehive)) :error)

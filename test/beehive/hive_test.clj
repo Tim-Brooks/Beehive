@@ -9,15 +9,16 @@
 (def beehive nil)
 
 (defn- create-hive [f]
-  (let [hive (hive/beehive
-               "Test"
-               (hive/results
-                 {:test-success true :test-error false}
-                 (metrics/count-metrics))
-               (hive/create-back-pressure
-                 #{:max-concurrency}
-                 (metrics/count-metrics)
-                 (semaphore/semaphore 5 :max-concurrency)))]
+  (let [hive (hive/lett [result-class {:test-success true :test-error false}
+                         rejected-class #{:max-concurrency}]
+               (-> (hive/hive "Test" result-class rejected-class)
+                   (hive/add-result-metrics
+                     :total (metrics/count-metrics result-class))
+                   (hive/add-rejected-metrics
+                     :total (metrics/count-metrics rejected-class))
+                   (hive/add-backpressure
+                     :semaphore (semaphore/semaphore 5 :max-concurrency))
+                   hive/map->hive))]
     (alter-var-root
       #'beehive
       (fn [_] hive)))
@@ -60,7 +61,7 @@
 
 (deftest acquire-and-release-test
   (testing "Rejections and releases work as expected."
-    (let [semaphore (first (hive/back-pressure beehive))]
+    (let [semaphore (:semaphore (hive/back-pressure beehive))]
       (is (= {:permit-count 1
               :start-nanos 100} (hive/acquire beehive 1 100)))
       (is (= {:permit-count 4
@@ -75,7 +76,7 @@
       (hive/release-raw-permits beehive 5)))
 
   (testing "Completables are wired up to release permits on completion."
-    (let [semaphore (first (hive/back-pressure beehive))
+    (let [semaphore (:semaphore (hive/back-pressure beehive))
           completable (hive/acquire-completable beehive 5)]
       (is (false? (:rejected? completable)))
       (is (= {:rejected-reason :max-concurrency
@@ -87,7 +88,7 @@
       (is (= 0 (semaphore/concurrency-level semaphore)))))
 
   (testing "Promises are wired up to release permits on completion."
-    (let [semaphore (first (hive/back-pressure beehive))
+    (let [semaphore (:semaphore (hive/back-pressure beehive))
           promise (hive/acquire-promise beehive 5)]
       (is (false? (:rejected? promise)))
       (is (= {:rejected-reason :max-concurrency
@@ -99,7 +100,7 @@
       (is (= 0 (semaphore/concurrency-level semaphore))))))
 
 (deftest metrics-test
-  (let [result-metrics (hive/result-metrics beehive)]
+  (let [result-metrics (:total (hive/result-metrics beehive))]
     (testing "Metrics are updated on release with result."
       (is (= 0 (metrics/get-count result-metrics :test-error)))
       (hive/release beehive (hive/acquire beehive 1) :test-error)

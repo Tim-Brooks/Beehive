@@ -34,7 +34,7 @@
   (name [this])
   (result-metrics [this])
   (rejected-metrics [this])
-  (latency-metrics [this])
+  (result-latency [this])
   (back-pressure [this]))
 
 (extend-protocol Hive
@@ -42,7 +42,7 @@
   (beehive-name [this] (:name this))
   (result-metrics [this] (:result-metrics this))
   (rejected-metrics [this] (:rejected-metrics this))
-  (latency-metrics [this] (:latency-metrics this))
+  (result-latency [this] (:result-latency this))
   (back-pressure [this] (:back-pressure this)))
 
 (deftype BeehiveCompletable [^Completable completable result-key->enum]
@@ -85,32 +85,31 @@
                                        ~@latency-metrics-args)))))
 
 (defn beehive
-  ([name results-map] (beehive name results-map nil))
-  ([name
-    {:keys [result-key->enum result-metrics latency-metrics]}
-    {:keys [rejected-key->enum rejected-metrics back-pressure]}]
-   (let [rejected-metrics1 (or rejected-metrics (metrics/no-op-counts))
-         builder (-> (GuardRailBuilder.)
-                     (.name name)
-                     (.addResultMetrics (:precipice-metrics (meta result-metrics)))
-                     (.addRejectedMetrics (:precipice-metrics (meta rejected-metrics1)))
-                     (cond->
-                       latency-metrics
-                       (.addResultLatency (:precipice-metrics (meta latency-metrics)))
-                       back-pressure
-                       (add-bp back-pressure)))]
-     (cond-> {:name name
-              :result-metrics result-metrics
-              :result-key->enum result-key->enum
-              :guard-rail (.build ^GuardRailBuilder builder)}
-             rejected-metrics1
-             (assoc :rejected-metrics rejected-metrics1)
-             rejected-key->enum
-             (assoc :rejected-key->enum rejected-key->enum)
-             latency-metrics
-             (assoc :latency-metrics latency-metrics)
-             back-pressure
-             (assoc :back-pressure back-pressure)))))
+  [name
+   {:keys [result-key->enum result-metrics latency-metrics]}
+   {:keys [rejected-key->enum rejected-metrics back-pressure]}]
+  (let [rejected-metrics1 (or rejected-metrics (metrics/no-op-counts))
+        builder (-> (GuardRailBuilder.)
+                    (.name name)
+                    (.addResultMetrics (:precipice-metrics (meta result-metrics)))
+                    (.addRejectedMetrics (:precipice-metrics (meta rejected-metrics1)))
+                    (cond->
+                      latency-metrics
+                      (.addResultLatency (:precipice-metrics (meta latency-metrics)))
+                      back-pressure
+                      (add-bp back-pressure)))]
+    (cond-> {:name name
+             :result-metrics result-metrics
+             :result-key->enum result-key->enum
+             :guard-rail (.build ^GuardRailBuilder builder)}
+            rejected-metrics1
+            (assoc :rejected-metrics rejected-metrics1)
+            rejected-key->enum
+            (assoc :rejected-key->enum rejected-key->enum)
+            latency-metrics
+            (assoc :result-latency latency-metrics)
+            back-pressure
+            (assoc :back-pressure back-pressure))))
 
 (defn completable
   "Takes a context that was recieved when permits were acquired. And returns
@@ -304,37 +303,47 @@
 ; :rejected-key->enum {}
 ; :rejected-metrics []}
 
+(defn- to-name [k]
+  (if (keyword? k)
+    (clojure.core/name k)
+    (str k)))
+
 (defn- add-result-metrics1 [^GuardRailBuilder builder result-metrics]
-  (doseq [rm result-metrics]
-    (.addResultMetrics builder (:precipice-metrics (meta rm))))
+  (doseq [[k rm] result-metrics]
+    (.addResultMetrics builder (to-name k) (:precipice-metrics (meta rm))))
   builder)
 
 (defn- add-result-latency1 [^GuardRailBuilder builder result-latency]
-  (doseq [rm result-latency]
-    (.addResultLatency builder (:precipice-metrics (meta rm))))
+  (doseq [[k rl] result-latency]
+    (.addResultLatency builder (to-name k) (:precipice-metrics (meta rl))))
   builder)
 
 (defn- add-rejected-metrics1 [^GuardRailBuilder builder rejected-metrics]
-  (doseq [rm rejected-metrics]
-    (.addRejectedMetrics builder (:precipice-metrics (meta rm))))
+  (doseq [[k rm] rejected-metrics]
+    (.addRejectedMetrics builder (to-name k) (:precipice-metrics (meta rm))))
+  builder)
+
+(defn add-bp1 [^GuardRailBuilder builder mechanisms]
+  (doseq [[k back-pressure] mechanisms]
+    (.addBackPressure builder (to-name k) back-pressure))
   builder)
 
 (defn map->hive
   [{:keys [name
            result-metrics
-           latency-metrics
+           result-latency
            back-pressure
            rejected-metrics]
     :as hive-map}]
   (let [builder (-> (GuardRailBuilder.)
                     (.name name)
                     (add-result-metrics1 result-metrics)
-                    (add-result-latency1 latency-metrics)
+                    (add-result-latency1 result-latency)
                     (add-rejected-metrics1 rejected-metrics)
-                    (add-bp back-pressure))]
+                    (add-bp1 back-pressure))]
     (assoc hive-map
       :result-metrics (or result-metrics [])
-      :latency-metrics (or latency-metrics [])
+      :result-latency (or result-latency [])
       :rejected-metrics (or rejected-metrics [])
       :back-pressure (or back-pressure [])
       :guard-rail (.build ^GuardRailBuilder builder))))
@@ -382,17 +391,17 @@
     `(let ~bindings
        ~@(replace-keywords body key->form))))
 
-(defn add-result-metrics [hive result-metrics]
-  (update-in hive [:result-metrics] conj result-metrics))
+(defn add-result-metrics [hive k result-metrics]
+  (assoc-in hive [:result-metrics k] result-metrics))
 
-(defn add-rejected-metrics [hive rejected-metrics]
-  (update-in hive [:rejected-metrics] conj rejected-metrics))
+(defn add-rejected-metrics [hive k rejected-metrics]
+  (assoc-in hive [:rejected-metrics k] rejected-metrics))
 
-(defn add-result-latency [hive result-latency]
-  (update-in hive [:latency-metrics] conj result-latency))
+(defn add-result-latency [hive k result-latency]
+  (assoc-in hive [:result-latency k] result-latency))
 
-(defn add-backpressure [hive back-pressure]
-  (update-in hive [:back-pressure] conj back-pressure))
+(defn add-backpressure [hive k back-pressure]
+  (assoc-in hive [:back-pressure k] back-pressure))
 
 (defn hive [name result-class rejected-class]
   {:name name
