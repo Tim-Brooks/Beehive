@@ -89,7 +89,7 @@
   ([name
     {:keys [result-key->enum result-metrics latency-metrics]}
     {:keys [rejected-key->enum rejected-metrics back-pressure]}]
-   (let [rejected-metrics1 (or rejected-metrics (metrics/no-op-metrics))
+   (let [rejected-metrics1 (or rejected-metrics (metrics/no-op-counts))
          builder (-> (GuardRailBuilder.)
                      (.name name)
                      (.addResultMetrics (:precipice-metrics (meta result-metrics)))
@@ -304,42 +304,40 @@
 ; :rejected-key->enum {}
 ; :rejected-metrics []}
 
-(defn- add-result-metrics [^GuardRailBuilder builder result-metrics]
+(defn- add-result-metrics1 [^GuardRailBuilder builder result-metrics]
   (doseq [rm result-metrics]
     (.addResultMetrics builder (:precipice-metrics (meta rm))))
   builder)
 
-(defn- add-result-latency [^GuardRailBuilder builder result-latency]
-  (doseq [rm result-metrics]
+(defn- add-result-latency1 [^GuardRailBuilder builder result-latency]
+  (doseq [rm result-latency]
     (.addResultLatency builder (:precipice-metrics (meta rm))))
   builder)
 
-(defn- add-rejected-metrics [^GuardRailBuilder builder rejected-metrics]
+(defn- add-rejected-metrics1 [^GuardRailBuilder builder rejected-metrics]
   (doseq [rm rejected-metrics]
     (.addRejectedMetrics builder (:precipice-metrics (meta rm))))
   builder)
 
 (defn map->hive
-  [{:keys [result-class
+  [{:keys [name
            result-metrics
-           result-latency
+           latency-metrics
            back-pressure
-           rejected-class
-           rejected-metrics]}]
+           rejected-metrics]
+    :as hive-map}]
   (let [builder (-> (GuardRailBuilder.)
                     (.name name)
-                    (add-result-metrics result-metrics)
-                    (add-result-latency result-latency)
-                    (add-rejected-metrics rejected-metrics)
+                    (add-result-metrics1 result-metrics)
+                    (add-result-latency1 latency-metrics)
+                    (add-rejected-metrics1 rejected-metrics)
                     (add-bp back-pressure))]
-    {:name name
-     :result-key->enum (enums/enum-class-to-keyword->enum result-class)
-     :result-metrics (or result-metrics [])
-     :result-latency (or result-latency [])
-     :rejected-key->enum (enums/enum-class-to-keyword->enum rejected-class)
-     :rejected-metrics (or rejected-metrics [])
-     :back-pressure (or back-pressure [])
-     :guard-rail (.build ^GuardRailBuilder builder)}))
+    (assoc hive-map
+      :result-metrics (or result-metrics [])
+      :latency-metrics (or latency-metrics [])
+      :rejected-metrics (or rejected-metrics [])
+      :back-pressure (or back-pressure [])
+      :guard-rail (.build ^GuardRailBuilder builder))))
 
 (defn- ^String compile-msg [msg]
   (str msg " in " '*ns* ":" (:line (meta '&form))))
@@ -383,3 +381,20 @@
                        (apply merge))]
     `(let ~bindings
        ~@(replace-keywords body key->form))))
+
+(defn add-result-metrics [hive result-metrics]
+  (update-in hive [:result-metrics] conj result-metrics))
+
+(defn add-rejected-metrics [hive rejected-metrics]
+  (update-in hive [:rejected-metrics] conj rejected-metrics))
+
+(defn add-result-latency [hive result-latency]
+  (update-in hive [:latency-metrics] conj result-latency))
+
+(defn add-backpressure [hive back-pressure]
+  (update-in hive [:back-pressure] conj back-pressure))
+
+(defn hive [name result-class rejected-class]
+  {:name name
+   :result-key->enum (enums/enum-class-to-keyword->enum result-class)
+   :rejected-key->enum (enums/enum-class-to-keyword->enum rejected-class)})

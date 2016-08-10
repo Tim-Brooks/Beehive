@@ -34,8 +34,8 @@
   (when-let [metric (get key->enum metric)]
     (.getCount counter metric)))
 
-(defn no-op-metrics
-  ([] (no-op-metrics EmptyEnum))
+(defn no-op-counts
+  ([] (no-op-counts EmptyEnum))
   ([^Class enum-class]
    (let [key->enum (into {} (map (fn [^ToCLJ e] [(.keyword e) e])
                                  (.getEnumConstants enum-class)))
@@ -56,7 +56,7 @@
           (get-count [this metric]
             (get-metric-count precipice-metrics metric key->enum)))
         {:precipice-metrics precipice-metrics}))
-    (no-op-metrics)))
+    (no-op-counts)))
 
 (defn rolling-count-metrics
   ([enum-class] (rolling-count-metrics enum-class (* 60 15) 1 :seconds))
@@ -74,7 +74,7 @@
            (get-count [this metric]
              (get-metric-count precipice-metrics metric key->enum)))
          {:precipice-metrics precipice-metrics}))
-     (no-op-metrics))))
+     (no-op-counts))))
 
 (defprotocol LatencyView
   (latency [this metric]))

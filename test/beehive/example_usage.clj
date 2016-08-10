@@ -27,20 +27,19 @@
   )
 
 (def example-beehive
-  (hive/beehive
-    "Beehive Name"
-    (hive/results
-      {:success true :error false}
-      (metrics/rolling-count-metrics)
-      (metrics/latency-metrics (.toNanos TimeUnit/MINUTES 1) 3))
-    (hive/create-back-pressure
-      #{:max-concurrency :circuit-open}
-      (metrics/count-metrics)
-      (semaphore/semaphore 5 :max-concurrency)
-      (breaker/default-breaker
-        {:failure-percentage-threshold 20
-         :backoff-time-millis 3000}
-        :max-concurrency))))
+  (hive/lett [result-class {:success true :error false}
+              rejected-class #{:max-concurrency :circuit-open}]
+    (-> (hive/hive "Beehive Name" result-class rejected-class)
+        (hive/add-result-metrics (metrics/rolling-count-metrics result-class))
+        (hive/add-rejected-metrics (metrics/count-metrics rejected-class))
+        (hive/add-result-latency (metrics/latency-metrics
+                                   result-class (.toNanos TimeUnit/MINUTES 1) 3))
+        (hive/add-backpressure (semaphore/semaphore 5 :max-concurrency))
+        (hive/add-backpressure (breaker/default-breaker
+                                 {:failure-percentage-threshold 20
+                                  :backoff-time-millis 3000}
+                                 :max-concurrency))
+        hive/map->hive)))
 
 (defn- perform-http [completable]
   (try
@@ -81,18 +80,7 @@
 ;(metrics/get-count (hive/result-metrics example-beehive) :success)
 
 ;; Returns the number rejected by the semaphore due to max-concurrency being violated
-(metrics/get-count (hive/rejected-metrics example-beehive) :max-concurrency)
+(metrics/get-count (first (hive/rejected-metrics example-beehive)) :max-concurrency)
 
 ;; Returns a latency percentile map for errors
-(metrics/latency (hive/latency-metrics example-beehive) :error)
-
-(comment
-  ;; Replace keywords with enum impl
-  (lett [result-class {:success true :error false}
-         rejected-class #{:max-concurrency :breaker}]
-        (-> (hive result-class rejected-class)
-            (add-result-counts (count-metrics result-class))
-            (add-rejected-counts (count-metrics rejected-class))
-            (add-result-latency (latency-metrics result-class))
-            (add-backpressure (semaphore :max-concurrency))
-            build)))
+(metrics/latency (first (hive/latency-metrics example-beehive)) :error)
