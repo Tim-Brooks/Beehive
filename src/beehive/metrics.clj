@@ -15,8 +15,7 @@
 (ns beehive.metrics
   (:require [beehive.utils :as utils]
             [beehive.enums :as enums])
-  (:import (beehive.java EmptyEnum ToCLJ)
-           (net.uncontended.precipice.metrics Rolling)
+  (:import (beehive.java EmptyEnum)
            (net.uncontended.precipice.metrics.counts PartitionedCount
                                                      NoOpCounter
                                                      TotalCounts
@@ -39,8 +38,7 @@
 (defn no-op-counts
   ([] (no-op-counts EmptyEnum))
   ([^Class enum-class]
-   (let [key->enum (into {} (map (fn [^ToCLJ e] [(.keyword e) e])
-                                 (.getEnumConstants enum-class)))
+   (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
          metrics (TotalCounts. (NoOpCounter. enum-class))]
      (with-meta
        (reify

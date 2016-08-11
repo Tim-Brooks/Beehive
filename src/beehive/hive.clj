@@ -285,9 +285,9 @@
                     (add-rejected-metrics1 rejected-metrics)
                     (add-bp1 back-pressure))]
     (assoc hive-map
-      :result-metrics (or result-metrics [])
-      :result-latency (or result-latency [])
-      :rejected-metrics (or rejected-metrics [])
+      :result-metrics result-metrics
+      :result-latency result-latency
+      :rejected-metrics rejected-metrics
       :back-pressure (or back-pressure [])
       :guard-rail (.build ^GuardRailBuilder builder))))
 
