@@ -33,10 +33,8 @@
     (hive/lett [result-class {:test-success true :test-error false}
                 rejected-class #{:max-concurrency}]
       (-> (hive/hive name result-class rejected-class)
-          (hive/add-result-metrics
-            :total (metrics/count-metrics result-class))
-          (hive/add-rejected-metrics
-            :total (metrics/count-metrics rejected-class))
+          (hive/set-result-metrics (metrics/count-metrics result-class))
+          (hive/set-rejected-metrics (metrics/count-metrics rejected-class))
           (hive/add-backpressure
             :semaphore (semaphore/semaphore 1 :max-concurrency))
           hive/map->hive))

@@ -30,11 +30,9 @@
   (hive/lett [result-class {:success true :error false}
               rejected-class #{:max-concurrency :circuit-open}]
     (-> (hive/hive "Beehive Name" result-class rejected-class)
-        (hive/add-result-metrics
-          :rolling (metrics/rolling-count-metrics result-class))
-        (hive/add-rejected-metrics :total (metrics/count-metrics rejected-class))
-        (hive/add-result-latency
-          :histogram
+        (hive/set-result-metrics (metrics/rolling-count-metrics result-class))
+        (hive/set-rejected-metrics (metrics/count-metrics rejected-class))
+        (hive/set-result-latency
           (metrics/latency-metrics
             result-class (.toNanos TimeUnit/MINUTES 1) 3))
         (hive/add-backpressure :semaphore (semaphore/semaphore 5 :max-concurrency))
@@ -83,7 +81,7 @@
 ;(metrics/get-count (hive/result-metrics example-beehive) :success)
 
 ;; Returns the number rejected by the semaphore due to max-concurrency being violated
-(metrics/get-count (:total (hive/rejected-metrics example-beehive)) :max-concurrency)
+(metrics/get-count (hive/rejected-metrics example-beehive) :max-concurrency)
 
 ;; Returns a latency percentile map for errors
-(metrics/latency (:histogram (hive/result-latency example-beehive)) :error)
+(metrics/latency (hive/result-latency example-beehive) :error)

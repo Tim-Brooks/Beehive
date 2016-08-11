@@ -31,10 +31,8 @@
 (defn- start-and-stop [f]
   (let [threadpool (beehive/lett [rejected-class #{:max-concurrency}]
                      (-> (beehive/hive "" threadpool/result-class rejected-class)
-                         (beehive/add-result-metrics
-                           :total (metrics/count-metrics threadpool/result-class))
-                         (beehive/add-rejected-metrics
-                           :total (metrics/count-metrics rejected-class))
+                         (beehive/set-result-metrics (metrics/count-metrics threadpool/result-class))
+                         (beehive/set-rejected-metrics (metrics/count-metrics rejected-class))
                          (beehive/add-backpressure
                            :semaphore (semaphore/semaphore 1 :max-concurrency))
                          beehive/map->hive
@@ -140,14 +138,12 @@
   (testing "Testing that metrics are updated with result of action"
     (let [threadpool (beehive/lett [rejected-class #{}]
                        (-> (beehive/hive "" threadpool/result-class rejected-class)
-                           (beehive/add-result-metrics
-                             :total (metrics/count-metrics threadpool/result-class))
-                           (beehive/add-rejected-metrics
-                             :total (metrics/count-metrics rejected-class))
+                           (beehive/set-result-metrics (metrics/count-metrics threadpool/result-class))
+                           (beehive/set-rejected-metrics (metrics/count-metrics rejected-class))
                            beehive/map->hive
                            (threadpool/threadpool 1)))
           latch (CountDownLatch. 1)
-          result-metrics (:total (beehive/result-metrics threadpool))]
+          result-metrics (beehive/result-metrics threadpool)]
       (f/await! (threadpool/submit threadpool (success-fn 1)))
       (f/await! (threadpool/submit threadpool (error-fn (IOException.))))
       (f/await! (threadpool/submit threadpool (block-fn 1 latch) 10))
@@ -159,16 +155,14 @@
   (testing "Testing that rejection reasons are updated"
     (let [threadpool (beehive/lett [rejected-class #{:max-concurrency}]
                        (-> (beehive/hive "" threadpool/result-class rejected-class)
-                           (beehive/add-result-metrics
-                             :total (metrics/count-metrics threadpool/result-class))
-                           (beehive/add-rejected-metrics
-                             :total (metrics/count-metrics rejected-class))
+                           (beehive/set-result-metrics (metrics/count-metrics threadpool/result-class))
+                           (beehive/set-rejected-metrics (metrics/count-metrics rejected-class))
                            (beehive/add-backpressure
                              :semaphore (semaphore/semaphore 1 :max-concurrency))
                            beehive/map->hive
                            (threadpool/threadpool 1)))
           latch (CountDownLatch. 1)
-          rejected-metrics (:total (hive/rejected-metrics threadpool))]
+          rejected-metrics (hive/rejected-metrics threadpool)]
       (threadpool/submit threadpool (block-fn 1 latch))
       (threadpool/submit threadpool (success-fn 1))
       (.countDown latch)

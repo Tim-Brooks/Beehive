@@ -255,18 +255,15 @@
     (str k)))
 
 (defn- add-result-metrics1 [^GuardRailBuilder builder result-metrics]
-  (doseq [[k rm] result-metrics]
-    (.addResultMetrics builder (to-name k) (:precipice-metrics (meta rm))))
+  (.resultMetrics builder (:precipice-metrics (meta result-metrics)))
   builder)
 
 (defn- add-result-latency1 [^GuardRailBuilder builder result-latency]
-  (doseq [[k rl] result-latency]
-    (.addResultLatency builder (to-name k) (:precipice-metrics (meta rl))))
+  (.resultLatency builder (:precipice-metrics (meta result-latency)))
   builder)
 
 (defn- add-rejected-metrics1 [^GuardRailBuilder builder rejected-metrics]
-  (doseq [[k rm] rejected-metrics]
-    (.addRejectedMetrics builder (to-name k) (:precipice-metrics (meta rm))))
+  (.rejectedMetrics builder (:precipice-metrics (meta rejected-metrics)))
   builder)
 
 (defn add-bp1 [^GuardRailBuilder builder mechanisms]
@@ -340,14 +337,14 @@
     `(let ~bindings
        ~@(replace-keywords body key->form))))
 
-(defn add-result-metrics [hive k result-metrics]
-  (assoc-in hive [:result-metrics k] result-metrics))
+(defn set-result-metrics [hive result-metrics]
+  (assoc hive :result-metrics result-metrics))
 
-(defn add-rejected-metrics [hive k rejected-metrics]
-  (assoc-in hive [:rejected-metrics k] rejected-metrics))
+(defn set-rejected-metrics [hive rejected-metrics]
+  (assoc hive :rejected-metrics rejected-metrics))
 
-(defn add-result-latency [hive k result-latency]
-  (assoc-in hive [:result-latency k] result-latency))
+(defn set-result-latency [hive result-latency]
+  (assoc hive :result-latency result-latency))
 
 (defn add-backpressure [hive k back-pressure]
   (assoc-in hive [:back-pressure k] back-pressure))

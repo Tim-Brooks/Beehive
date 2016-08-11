@@ -12,10 +12,8 @@
   (let [hive (hive/lett [result-class {:test-success true :test-error false}
                          rejected-class #{:max-concurrency}]
                (-> (hive/hive "Test" result-class rejected-class)
-                   (hive/add-result-metrics
-                     :total (metrics/count-metrics result-class))
-                   (hive/add-rejected-metrics
-                     :total (metrics/count-metrics rejected-class))
+                   (hive/set-result-metrics (metrics/count-metrics result-class))
+                   (hive/set-rejected-metrics (metrics/count-metrics rejected-class))
                    (hive/add-backpressure
                      :semaphore (semaphore/semaphore 5 :max-concurrency))
                    hive/map->hive))]
@@ -100,7 +98,7 @@
       (is (= 0 (semaphore/concurrency-level semaphore))))))
 
 (deftest metrics-test
-  (let [result-metrics (:total (hive/result-metrics beehive))]
+  (let [result-metrics (hive/result-metrics beehive)]
     (testing "Metrics are updated on release with result."
       (is (= 0 (metrics/get-count result-metrics :test-error)))
       (hive/release beehive (hive/acquire beehive 1) :test-error)
