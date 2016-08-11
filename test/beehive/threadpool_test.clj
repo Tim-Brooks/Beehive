@@ -29,7 +29,7 @@
 (def service nil)
 
 (defn- start-and-stop [f]
-  (let [hive (beehive/lett [result-class {:success true :error false :timeout false}
+  (let [hive (beehive/lett [result-class threadpool/result-map
                             rejected-class #{:max-concurrency}]
                (-> (beehive/hive "" result-class rejected-class)
                    (beehive/add-result-metrics
