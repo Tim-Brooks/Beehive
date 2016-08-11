@@ -19,7 +19,6 @@
             [beehive.future :as f]
             [beehive.metrics :as metrics]
             [beehive.semaphore :as semaphore]
-            [beehive.threadpool :as service]
             [beehive.hive :as hive])
   (:import (java.io IOException)
            (java.util.concurrent CountDownLatch ExecutionException)
@@ -30,9 +29,7 @@
 (def service nil)
 
 (defn- start-and-stop [f]
-  (let [hive (beehive/lett [result-class {:success true
-                                          :error false
-                                          :timeout false}
+  (let [hive (beehive/lett [result-class {:success true :error false :timeout false}
                             rejected-class #{:max-concurrency}]
                (-> (beehive/hive "" result-class rejected-class)
                    (beehive/add-result-metrics
@@ -141,9 +138,7 @@
 
 (deftest metrics-test
   (testing "Testing that metrics are updated with result of action"
-    (let [hive (beehive/lett [result-class {:success true
-                                            :error false
-                                            :timeout false}
+    (let [hive (beehive/lett [result-class {:success true :error false :timeout false}
                               rejected-class #{}]
                  (-> (beehive/hive "" result-class rejected-class)
                      (beehive/add-result-metrics
@@ -163,9 +158,7 @@
       (is (= 1 (metrics/get-count result-metrics :error)))
       (threadpool/shutdown threadpool)))
   (testing "Testing that rejection reasons are updated"
-    (let [hive (beehive/lett [result-class {:success true
-                                            :error false
-                                            :timeout false}
+    (let [hive (beehive/lett [result-class {:success true :error false :timeout false}
                               rejected-class #{:max-concurrency}]
                  (-> (beehive/hive "" result-class rejected-class)
                      (beehive/add-result-metrics

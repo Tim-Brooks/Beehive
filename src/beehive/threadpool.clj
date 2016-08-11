@@ -30,9 +30,9 @@
 
 (set! *warn-on-reflection* true)
 
-(def enum-class (enums/generate-result-class {:success true
-                                              :error false
-                                              :timeout false}))
+(def result-map {:success true :error false :timeout false})
+
+(def enum-class (enums/generate-result-class result-map))
 
 (def key->enum (enums/enum-class-to-keyword->enum enum-class))
 
@@ -84,18 +84,3 @@
 
 (defn threadpool [pool-size beehive]
   (assoc beehive :thread-pool (Executors/newFixedThreadPool pool-size)))
-
-(defmacro threadpool-results [metrics-seq & latency-metrics-seq]
-  (let [metrics-fn (first metrics-seq)
-        metric-fn-args (rest metrics-seq)
-        latency-metrics-seq (first latency-metrics-seq)
-        latency? (not (empty? latency-metrics-seq))
-        latency-metrics-fn (or (first latency-metrics-seq) identity)
-        latency-metrics-args (rest latency-metrics-seq)]
-    `(let []
-       (cond-> {:result-key->enum (enums/enum-class-to-keyword->enum ~enum-class)
-                :result-metrics (~metrics-fn ~enum-class ~@metric-fn-args)}
-               ~latency?
-               (assoc :latency-metrics (~latency-metrics-fn
-                                         ~enum-class
-                                         ~@latency-metrics-args))))))
