@@ -303,20 +303,21 @@
              (compile-msg msg)))))
 
 (defn- run-assertions [bindings]
-  ;; TODO: Don't need two evals.
   (h-assert (vector? bindings) "lett requires a vector for its binding")
-  (h-assert (= 4 (count bindings)) "lett requires four forms in binding vector")
+  (h-assert (even? (count bindings)) "lett requires an even number of forms in binding vector")
+  (h-assert (>= 4 (count bindings)) "lett allows a maximum of four forms in binding vector")
   (let [symbols (take-nth 2 bindings)]
     (doseq [sym symbols]
       (h-assert (symbol? sym)
                 (str "Non-symbol binding form: " sym))))
   (let [map&set (take-nth 2 (rest bindings))]
-    ;(assert (= 1 (->> map&set
-    ;                  (filter map?)
-    ;                  count)))
-    (assert (= 1 (->> map&set
-                      (filter set?)
-                      count)))))
+    (assert (every? (fn [x] (or (map? x) (set? x))) map&set))
+    (assert (>= 1 (->> map&set
+                       (filter map?)
+                       count)))
+    (assert (>= 1 (->> map&set
+                       (filter set?)
+                       count)))))
 
 (defn- replace-bindings [bindings]
   (mapv (fn [x]
@@ -330,7 +331,7 @@
 
 (defmacro lett [bindings & body]
   (run-assertions bindings)
-  (let [                                                    ; bindings (map-indexed (fn [n x] (if (odd? n) (eval x) x)) bindings)
+  (let [; bindings (map-indexed (fn [n x] (if (odd? n) (eval x) x)) bindings)
         bindings (replace-bindings bindings)
         key->form (->> (rest bindings)
                        (take-nth 2)

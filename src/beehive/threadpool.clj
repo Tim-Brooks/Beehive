@@ -30,11 +30,10 @@
 
 (set! *warn-on-reflection* true)
 
-(def result-map {:success true :error false :timeout false})
+(def result-class (enums/generate-result-class
+                    {:success true :error false :timeout false}))
 
-(def enum-class (enums/generate-result-class result-map))
-
-(def key->enum (enums/enum-class-to-keyword->enum enum-class))
+(def key->enum (enums/enum-class-to-keyword->enum result-class))
 
 (def success-converter
   (let [success (:success key->enum)]
@@ -81,5 +80,8 @@
 (defn shutdown [{:keys [thread-pool guard-rail]}]
   (.shutdown ^ExecutorService thread-pool))
 
-(defn threadpool [pool-size beehive]
+(defn threadpool [beehive pool-size]
+  (when-not (= (:result-key->enum beehive) key->enum)
+    (throw (IllegalArgumentException.
+             (str "Threadpool beehive must use result class: " result-class))))
   (assoc beehive :thread-pool (Executors/newFixedThreadPool pool-size)))
