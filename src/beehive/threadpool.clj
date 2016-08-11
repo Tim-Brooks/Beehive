@@ -36,21 +36,20 @@
 
 (def key->enum (enums/enum-class-to-keyword->enum enum-class))
 
-(defmacro success-converter []
-  (let [success (:success (enums/enum-class-to-keyword->form enum-class))]
-    `(reify CancellableTask$ResultToStatus
-       (resultToStatus [this result]
-         ~success))))
+(def success-converter
+  (let [success (:success key->enum)]
+    (reify CancellableTask$ResultToStatus
+      (resultToStatus [this result]
+        success))))
 
-(defmacro error-converter []
-  (let [t-map (enums/enum-class-to-keyword->form enum-class)
-        error (:error t-map)
-        timeout (:timeout t-map)]
-    `(reify CancellableTask$ThrowableToStatus
-       (throwableToStatus [this throwable#]
-         (if (instance? TimeoutException throwable#)
-           ~timeout
-           ~error)))))
+(def error-converter
+  (let [error (:error key->enum)
+        timeout (:timeout key->enum)]
+    (reify CancellableTask$ThrowableToStatus
+      (throwableToStatus [this throwable#]
+        (if (instance? TimeoutException throwable#)
+          timeout
+          error)))))
 
 (def ^TimeoutService timeout-service DelayQueueTimeoutService/DEFAULT_TIMEOUT_SERVICE)
 
@@ -62,7 +61,7 @@
 (defn submit1 [{:keys [thread-pool]} fn timeout-millis promise]
   (let [^PrecipicePromise precipice-promise (.completable ^BeehiveCompletable promise)
         ^ExecutionContext context precipice-promise
-        task (CancellableTask. (success-converter) (error-converter) fn precipice-promise)]
+        task (CancellableTask. success-converter error-converter fn precipice-promise)]
     (.execute ^ExecutorService thread-pool task)
     (when timeout-millis
       (.scheduleTimeout

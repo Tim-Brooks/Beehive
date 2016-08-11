@@ -17,6 +17,7 @@
 package beehive.java;
 
 import clojure.lang.Compiler;
+import clojure.lang.DynamicClassLoader;
 import clojure.lang.Keyword;
 import net.bytebuddy.ByteBuddy;
 import net.bytebuddy.description.modifier.FieldManifestation;
@@ -27,6 +28,7 @@ import net.bytebuddy.implementation.MethodDelegation;
 import net.bytebuddy.implementation.SuperMethodCall;
 import net.bytebuddy.implementation.bind.annotation.This;
 import net.uncontended.precipice.Failable;
+import net.uncontended.precipice.rejected.Unrejectable;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -40,14 +42,14 @@ public final class EnumBuilder {
     private static final Object lock = new Object();
     private static long rejectedCount = 0;
     private static long resultCount = 0;
-    private static final Map<Set<String>, String> rejectedCache = new HashMap<>();
-    private static final Map<Set<String>, String> resultCache = new HashMap<>();
+    private static final Map<Set<String>, Class> rejectedCache = new HashMap<>();
+    private static final Map<Set<String>, Class> resultCache = new HashMap<>();
 
     static {
-        rejectedCache.put(new HashSet<String>(), "net.uncontended.precipice.rejected.Unrejectable");
+        rejectedCache.put(new HashSet<String>(), Unrejectable.class);
     }
 
-    public static String buildRejectedEnum(List<String> enums) throws IOException {
+    public static Class buildRejectedEnum(List<String> enums) throws IOException {
         Set<String> setOfEnums = new HashSet<>(enums);
         if (!rejectedCache.containsKey(setOfEnums)) {
             synchronized (lock) {
@@ -61,16 +63,17 @@ public final class EnumBuilder {
                         .method(named("keyword")).intercept(FieldAccessor.ofField("keyword"))
                         .name(cpath)
                         .make();
-                rejectedCache.put(setOfEnums, cpath);
-                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
-                return cpath;
+                Class clazz = loadClass(cpath, enumType);
+                rejectedCache.put(setOfEnums, clazz);
+                return clazz;
+//                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
             }
         } else {
             return rejectedCache.get(setOfEnums);
         }
     }
 
-    public static String buildResultEnum(List<String> enums) throws IOException {
+    public static Class buildResultEnum(List<String> enums) throws IOException {
         Set<String> setOfEnums = new HashSet<>(enums);
         if (!resultCache.containsKey(setOfEnums)) {
             synchronized (lock) {
@@ -89,13 +92,18 @@ public final class EnumBuilder {
                         .method(named("keyword")).intercept(FieldAccessor.ofField("keyword"))
                         .name(cpath)
                         .make();
-                resultCache.put(setOfEnums, cpath);
-                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
-                return cpath;
+                Class clazz = loadClass(cpath, enumType);
+                resultCache.put(setOfEnums, clazz);
+//                Compiler.writeClassFile(cpath.replace('.', '/'), enumType.getBytes());
+                return clazz;
             }
         } else {
             return resultCache.get(setOfEnums);
         }
+    }
+
+    private static Class loadClass(String cpath, DynamicType.Unloaded<? extends Enum<?>> enumType) {
+        return ((DynamicClassLoader) Compiler.LOADER.deref()).defineClass(cpath, enumType.getBytes(), null);
     }
 
     public static class RejectedBuilder {
@@ -122,7 +130,7 @@ public final class EnumBuilder {
             keywordField.setAccessible(true);
             String keyword = name.replace("$DASH$", "-");
             if (isFailure) {
-                keyword= keyword.substring(0, keyword.length() - "$FAILURE$".length());
+                keyword = keyword.substring(0, keyword.length() - "$FAILURE$".length());
             }
             keywordField.set(o, Keyword.intern(keyword));
         }

@@ -24,8 +24,8 @@
   (let [key->enum-string (into {} (map (fn [k]
                                          [k (enum-string k)])
                                        rejected-keys))
-        cpath (EnumBuilder/buildRejectedEnum (or (vals key->enum-string) []))]
-    (resolve (symbol cpath))))
+        clazz (EnumBuilder/buildRejectedEnum (or (vals key->enum-string) []))]
+    clazz))
 
 (defn generate-result-class [result->success?]
   (if (empty? result->success?)
@@ -36,8 +36,8 @@
         (enum-assertions ks))
       (let [key->enum-string (map (fn [[k s?]] (result-enum-string k s?))
                                   result->success?)
-            cpath (EnumBuilder/buildResultEnum (or key->enum-string []))]
-        (resolve (symbol cpath))))))
+            clazz (EnumBuilder/buildResultEnum (or key->enum-string []))]
+        clazz))))
 
 (defn enum-form [cpath string]
   `(. ~cpath ~(symbol string)))

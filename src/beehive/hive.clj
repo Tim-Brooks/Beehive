@@ -310,10 +310,10 @@
     (doseq [sym symbols]
       (h-assert (symbol? sym)
                 (str "Non-symbol binding form: " sym))))
-  (let [map&set (map eval (take-nth 2 (rest bindings)))]
-    (assert (= 1 (->> map&set
-                      (filter map?)
-                      count)))
+  (let [map&set (take-nth 2 (rest bindings))]
+    ;(assert (= 1 (->> map&set
+    ;                  (filter map?)
+    ;                  count)))
     (assert (= 1 (->> map&set
                       (filter set?)
                       count)))))
@@ -330,7 +330,7 @@
 
 (defmacro lett [bindings & body]
   (run-assertions bindings)
-  (let [bindings (map-indexed (fn [n x] (if (odd? n) (eval x) x)) bindings)
+  (let [                                                    ; bindings (map-indexed (fn [n x] (if (odd? n) (eval x) x)) bindings)
         bindings (replace-bindings bindings)
         key->form (->> (rest bindings)
                        (take-nth 2)
