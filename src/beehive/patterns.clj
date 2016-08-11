@@ -39,8 +39,7 @@
        (mapv #(wire-up context (.-beehive ^BeehivePrecipice %))
              (.getPrecipices pattern permit-count start-nanos))))))
 
-(defn pattern
-  [beehive-vec strategy-fn acquire-count]
+(defn pattern [beehive-vec strategy-fn acquire-count]
   (Pattern. (mapv ->BeehivePrecipice beehive-vec)
             (reify PatternStrategy
               (nextIndices [this] (strategy-fn))

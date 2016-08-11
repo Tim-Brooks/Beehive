@@ -22,7 +22,9 @@
                                                      TotalCounts
                                                      RollingCounts)
            (net.uncontended.precipice.metrics.latency TotalLatency
-                                                      AtomicHistogram NoOpLatency)
+                                                      NoOpLatency
+                                                      ConcurrentHistogram
+                                                      PartitionedLatency)
            (java.util.concurrent TimeUnit)))
 
 (set! *warn-on-reflection* true)
@@ -77,39 +79,34 @@
      (no-op-counts))))
 
 (defprotocol LatencyView
-  (latency [this metric]))
+  (get-latency [this metric percentile]))
 
-(defn- latency-snapshot
-  [latency-metrics metric key->enum]
+(defn- latency-at-percentile
+  [^PartitionedLatency latency-metrics metric percentile key->enum]
   (when-let [enum (get key->enum metric)]
-    nil))
+    (.getValueAtPercentile latency-metrics enum percentile)))
 
-(defn- precipice-metrics [enum-class highest-trackable-value significant-digits]
-  (TotalLatency.
-    (AtomicHistogram.
-      enum-class highest-trackable-value significant-digits)))
+(defn- precipice-metrics [enum-class]
+  (TotalLatency. (ConcurrentHistogram. enum-class)))
+
+(defn- decorate-latency [key->enum precipice-metrics]
+  (with-meta
+    (reify
+      LatencyView
+      (get-latency [this metric percentile]
+        (latency-at-percentile precipice-metrics metric percentile key->enum)))
+    {:precipice-metrics precipice-metrics}))
 
 (defn no-op-latency-metrics
   ([] (no-op-latency-metrics EmptyEnum))
   ([^Class enum-class]
    (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
          precipice-metrics (TotalLatency. (NoOpLatency. enum-class))]
-     (with-meta
-       (reify
-         LatencyView
-         (latency [this metric]
-           (latency-snapshot precipice-metrics metric key->enum)))
-       {:precipice-metrics precipice-metrics}))))
+     (decorate-latency key->enum precipice-metrics))))
 
-(defn latency-metrics [enum-class highest-trackable-value significant-digits]
+(defn latency-metrics [enum-class]
   (if-not (identical? enum-class EmptyEnum)
     (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
-          precipice-metrics (precipice-metrics
-                              enum-class highest-trackable-value significant-digits)]
-      (with-meta
-        (reify
-          LatencyView
-          (latency [this metric]
-            (latency-snapshot precipice-metrics metric key->enum)))
-        {:precipice-metrics precipice-metrics}))
+          precipice-metrics (precipice-metrics enum-class)]
+      (decorate-latency key->enum precipice-metrics))
     (no-op-latency-metrics)))

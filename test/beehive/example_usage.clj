@@ -32,9 +32,7 @@
     (-> (hive/hive "Beehive Name" result-class rejected-class)
         (hive/set-result-metrics (metrics/rolling-count-metrics result-class))
         (hive/set-rejected-metrics (metrics/count-metrics rejected-class))
-        (hive/set-result-latency
-          (metrics/latency-metrics
-            result-class (.toNanos TimeUnit/MINUTES 1) 3))
+        (hive/set-result-latency (metrics/latency-metrics result-class))
         (hive/add-backpressure :semaphore (semaphore/semaphore 5 :max-concurrency))
         (hive/add-backpressure :breaker (breaker/default-breaker
                                           {:failure-percentage-threshold 20
@@ -83,5 +81,5 @@
 ;; Returns the number rejected by the semaphore due to max-concurrency being violated
 (metrics/get-count (hive/rejected-metrics example-beehive) :max-concurrency)
 
-;; Returns a latency percentile map for errors
-(metrics/latency (hive/result-latency example-beehive) :error)
+;; Returns a latency percentile for errors
+(metrics/get-latency (hive/result-latency example-beehive) :error 0.9)
