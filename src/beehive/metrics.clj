@@ -16,7 +16,7 @@
   (:require [beehive.utils :as utils]
             [beehive.enums :as enums])
   (:import (beehive.java EmptyEnum)
-           (net.uncontended.precipice.metrics Metrics)
+           (net.uncontended.precipice.metrics Metrics Rolling)
            (net.uncontended.precipice.metrics.counts PartitionedCount
                                                      NoOpCounter
                                                      TotalCounts
@@ -25,9 +25,26 @@
                                                       NoOpLatency
                                                       ConcurrentHistogram
                                                       PartitionedLatency)
-           (java.util.concurrent TimeUnit)))
+           (java.util.concurrent TimeUnit)
+           (java.util Iterator)))
 
 (set! *warn-on-reflection* true)
+
+(deftype MetricIterator []
+  Iterator
+  (next [this]
+    )
+  (hasNext [this]
+    )
+  (remove [_]
+    (throw (UnsupportedOperationException. "remove"))))
+
+
+(defn decorate1 [^Metrics precipice-metrics]
+  (if (instance? Rolling precipice-metrics)
+    nil
+    nil))
+
 
 (defprotocol CountsView
   (get-count [this metric]))
@@ -55,6 +72,9 @@
   (if-not (identical? enum-class EmptyEnum)
     (decorate-counts (TotalCounts. enum-class))
     (no-op-counts)))
+
+(defn count-recorder [^Class enum-class]
+  )
 
 (defn rolling-count-metrics
   ([enum-class] (rolling-count-metrics enum-class (* 60 15) 1 :seconds))

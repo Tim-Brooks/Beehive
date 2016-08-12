@@ -18,8 +18,7 @@
             [beehive.metrics :as metrics]
             [beehive.semaphore :as semaphore]
             [beehive.hive :as beehive])
-  (:import (java.util.concurrent TimeUnit)
-           (java.io IOException)
+  (:import (java.io IOException)
            (java.net SocketTimeoutException)))
 
 (defn make-http-request []
@@ -30,14 +29,14 @@
   (hive/lett [result-class {:success true :error false}
               rejected-class #{:max-concurrency :circuit-open}]
     (-> (hive/hive "Beehive Name" result-class rejected-class)
-        (hive/set-result-metrics (metrics/rolling-count-metrics result-class))
+        (hive/set-result-metrics (metrics/count-metrics result-class))
         (hive/set-rejected-metrics (metrics/count-metrics rejected-class))
         (hive/set-result-latency (metrics/latency-metrics result-class))
         (hive/add-backpressure :semaphore (semaphore/semaphore 5 :max-concurrency))
-        (hive/add-backpressure :breaker (breaker/default-breaker
-                                          {:failure-percentage-threshold 20
-                                           :backoff-time-millis 3000}
-                                          :max-concurrency))
+        ;(hive/add-backpressure :breaker (breaker/default-breaker
+        ;                                  {:failure-percentage-threshold 20
+        ;                                   :backoff-time-millis 3000}
+        ;                                  :max-concurrency))
         hive/map->hive)))
 
 (defn- perform-http [completable]
@@ -83,3 +82,29 @@
 
 ;; Returns a latency percentile for errors
 (metrics/get-latency (hive/result-latency example-beehive) :error 0.9)
+
+;; Metrics API
+
+(comment
+  (def met nil)
+  (get-counts met)
+  (get-counts met 1 :seconds)
+
+  [{:start-millis 0
+    :end-millis 10
+    :counts {:success 10
+             :error 2}}
+   {:start-millis 11
+    :end-millis 20
+    :counts {:success 0
+             :error 4}}]
+
+  (get-count met :success)
+  (get-count met 1 :seconds)
+
+  [{:start-millis 0
+    :end-millis 10
+    :count 10}
+   {:start-millis 11
+    :end-millis 20
+    :count 0}])
