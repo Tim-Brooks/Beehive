@@ -16,6 +16,7 @@
   (:require [beehive.utils :as utils]
             [beehive.enums :as enums])
   (:import (beehive.java EmptyEnum)
+           (net.uncontended.precipice.metrics Metrics)
            (net.uncontended.precipice.metrics.counts PartitionedCount
                                                      NoOpCounter
                                                      TotalCounts
@@ -35,45 +36,34 @@
   (when-let [metric (get key->enum metric)]
     (.getCount counter metric)))
 
+(defn decorate-counts [^Metrics precipice-metrics]
+  (let [key->enum (enums/enum-class-to-keyword->enum
+                    (.getMetricClazz precipice-metrics))]
+    (with-meta
+      (reify
+        CountsView
+        (get-count [this metric]
+          (get-metric-count precipice-metrics metric key->enum)))
+      {:precipice-metrics precipice-metrics})))
+
 (defn no-op-counts
   ([] (no-op-counts EmptyEnum))
   ([^Class enum-class]
-   (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
-         metrics (TotalCounts. (NoOpCounter. enum-class))]
-     (with-meta
-       (reify
-         CountsView
-         (get-count [this metric]
-           (get-metric-count metrics metric key->enum)))
-       {:precipice-metrics metrics}))))
+   (decorate-counts (TotalCounts. (NoOpCounter. enum-class)))))
 
 (defn count-metrics [^Class enum-class]
   (if-not (identical? enum-class EmptyEnum)
-    (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
-          precipice-metrics (TotalCounts. enum-class)]
-      (with-meta
-        (reify CountsView
-          (get-count [this metric]
-            (get-metric-count precipice-metrics metric key->enum)))
-        {:precipice-metrics precipice-metrics}))
+    (decorate-counts (TotalCounts. enum-class))
     (no-op-counts)))
 
 (defn rolling-count-metrics
   ([enum-class] (rolling-count-metrics enum-class (* 60 15) 1 :seconds))
   ([^Class enum-class slots-to-track resolution time-unit]
    (if-not (identical? enum-class EmptyEnum)
-     (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
-           precipice-metrics
-           (RollingCounts.
-             enum-class
-             (int slots-to-track)
-             (.toNanos ^TimeUnit (utils/->time-unit time-unit) (long resolution)))]
-       (with-meta
-         (reify
-           CountsView
-           (get-count [this metric]
-             (get-metric-count precipice-metrics metric key->enum)))
-         {:precipice-metrics precipice-metrics}))
+     (let [^TimeUnit time-unit (utils/->time-unit time-unit)
+           nanos-per (.toNanos time-unit (long resolution))]
+       (decorate-counts
+         (RollingCounts. enum-class (int slots-to-track) nanos-per)))
      (no-op-counts))))
 
 (defprotocol LatencyView
@@ -87,24 +77,24 @@
 (defn- precipice-metrics [enum-class]
   (TotalLatency. (ConcurrentHistogram. enum-class)))
 
-(defn- decorate-latency [key->enum precipice-metrics]
-  (with-meta
-    (reify
-      LatencyView
-      (get-latency [this metric percentile]
-        (latency-at-percentile precipice-metrics metric percentile key->enum)))
-    {:precipice-metrics precipice-metrics}))
+(defn- decorate-latency [^Metrics precipice-metrics]
+  (let [key->enum (enums/enum-class-to-keyword->enum
+                    (.getMetricClazz precipice-metrics))]
+    (with-meta
+      (reify
+        LatencyView
+        (get-latency [this metric percentile]
+          (latency-at-percentile precipice-metrics metric percentile key->enum)))
+      {:precipice-metrics precipice-metrics})))
 
 (defn no-op-latency-metrics
   ([] (no-op-latency-metrics EmptyEnum))
   ([^Class enum-class]
-   (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
-         precipice-metrics (TotalLatency. (NoOpLatency. enum-class))]
-     (decorate-latency key->enum precipice-metrics))))
+   (let [precipice-metrics (TotalLatency. (NoOpLatency. enum-class))]
+     (decorate-latency precipice-metrics))))
 
 (defn latency-metrics [enum-class]
   (if-not (identical? enum-class EmptyEnum)
-    (let [key->enum (enums/enum-class-to-keyword->enum enum-class)
-          precipice-metrics (precipice-metrics enum-class)]
-      (decorate-latency key->enum precipice-metrics))
+    (let [precipice-metrics (precipice-metrics enum-class)]
+      (decorate-latency precipice-metrics))
     (no-op-latency-metrics)))
