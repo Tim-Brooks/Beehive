@@ -15,8 +15,8 @@
 (ns beehive.metrics
   (:require [beehive.utils :as utils]
             [beehive.enums :as enums])
-  (:import (beehive.java EmptyEnum)
-           (net.uncontended.precipice.metrics Metrics Rolling)
+  (:import (beehive.java EmptyEnum ToCLJ)
+           (net.uncontended.precipice.metrics Metrics Rolling IntervalIterator)
            (net.uncontended.precipice.metrics.counts PartitionedCount
                                                      NoOpCounter
                                                      TotalCounts
@@ -26,24 +26,62 @@
                                                       ConcurrentHistogram
                                                       PartitionedLatency)
            (java.util.concurrent TimeUnit)
-           (java.util Iterator)))
+           (java.util Iterator NoSuchElementException)
+           (net.uncontended.precipice.metrics.tools Capturer)))
 
 (set! *warn-on-reflection* true)
 
-(deftype MetricIterator []
+(defn- counter-to-map [^PartitionedCount counts]
+  (persistent!
+    (reduce (fn [acc ^ToCLJ e]
+              (assoc! acc (.keyword e) (.getCount counts e)))
+            (transient {})
+            (.getEnumConstants (.getMetricClazz counts)))))
+
+(defn- switcher [^Metrics m]
+  ;; TODO: Clarify Precipice Interface
+  (if (instance? Capturer m)
+    nil
+    (counter-to-map m)))
+
+(deftype SingleIterator
+  [start-millis iterator-start-millis func ^:unsynchronized-mutable is-realized?]
   Iterator
   (next [this]
-    )
+    (if is-realized?
+      (throw (NoSuchElementException.))
+      (do (set! is-realized? true)
+          {:start-millis start-millis
+           :end-millis iterator-start-millis
+           :counts (func)})))
   (hasNext [this]
-    )
+    (not is-realized?))
+  (remove [_]
+    (throw (UnsupportedOperationException. "remove"))))
+
+(deftype MetricIterator [iterator-start-millis func ^IntervalIterator iterator]
+  Iterator
+  (next [this]
+    {:start-millis (+ iterator-start-millis
+                      (.toMillis TimeUnit/NANOSECONDS (.intervalStart iterator)))
+     :end-millis (+ iterator-start-millis
+                    (.toMillis TimeUnit/NANOSECONDS (.intervalEnd iterator)))
+     :counts (func this)})
+  (hasNext [this]
+    (.hasNext iterator))
   (remove [_]
     (throw (UnsupportedOperationException. "remove"))))
 
 
 (defn decorate1 [^Metrics precipice-metrics]
-  (if (instance? Rolling precipice-metrics)
-    nil
-    nil))
+  (let [current-millis (System/currentTimeMillis)]
+    (if (instance? Rolling precipice-metrics)
+      (->MetricIterator
+        current-millis
+        counter-to-map
+        (.intervals ^Rolling precipice-metrics))
+      ;; TODO: Figure out start millis
+      (->SingleIterator 0 current-millis switcher false))))
 
 
 (defprotocol CountsView
