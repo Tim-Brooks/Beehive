@@ -45,7 +45,7 @@
     (counter-to-map m)))
 
 (deftype SingleIterator
-  [start-millis iterator-start-millis func ^:unsynchronized-mutable is-realized?]
+  [start-millis iterator-start-millis metrics func ^:unsynchronized-mutable is-realized?]
   Iterator
   (next [this]
     (if is-realized?
@@ -53,7 +53,7 @@
       (do (set! is-realized? true)
           {:start-millis start-millis
            :end-millis iterator-start-millis
-           :counts (func)})))
+           :counts (func metrics)})))
   (hasNext [this]
     (not is-realized?))
   (remove [_]
@@ -73,15 +73,14 @@
     (throw (UnsupportedOperationException. "remove"))))
 
 
-(defn decorate1 [^Metrics precipice-metrics]
+(defn decorate1 [{:keys [start-millis precipice-metrics]}]
   (let [current-millis (System/currentTimeMillis)]
     (if (instance? Rolling precipice-metrics)
       (->MetricIterator
         current-millis
         counter-to-map
         (.intervals ^Rolling precipice-metrics))
-      ;; TODO: Figure out start millis
-      (->SingleIterator 0 current-millis switcher false))))
+      (->SingleIterator start-millis current-millis precipice-metrics switcher false))))
 
 
 (defprotocol CountsView
