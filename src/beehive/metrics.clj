@@ -38,6 +38,9 @@
             (transient {})
             (.getEnumConstants (.getMetricClazz counts)))))
 
+(defn- counter-to-count [^PartitionedCount counts metric]
+  (.getCount counts metric))
+
 (defn- switcher [^Metrics m]
   ;; TODO: Clarify Precipice Interface
   (if (instance? Capturer m)
@@ -73,14 +76,27 @@
     (throw (UnsupportedOperationException. "remove"))))
 
 
-(defn decorate1 [{:keys [start-millis precipice-metrics]}]
+(defn get-count1 [{:keys [start-millis precipice-metrics]} metric]
   (let [current-millis (System/currentTimeMillis)]
-    (if (instance? Rolling precipice-metrics)
-      (->MetricIterator
-        current-millis
-        counter-to-map
-        (.intervals ^Rolling precipice-metrics))
-      (->SingleIterator start-millis current-millis precipice-metrics switcher false))))
+    (iterator-seq
+      (if (instance? Rolling precipice-metrics)
+        (->MetricIterator
+          current-millis
+          counter-to-map
+          (.intervals ^Rolling precipice-metrics))
+        (->SingleIterator
+          start-millis current-millis precipice-metrics switcher false)))))
+
+(defn get-counts1 [{:keys [start-millis precipice-metrics]}]
+  (let [current-millis (System/currentTimeMillis)]
+    (iterator-seq
+      (if (instance? Rolling precipice-metrics)
+        (->MetricIterator
+          current-millis
+          counter-to-map
+          (.intervals ^Rolling precipice-metrics))
+        (->SingleIterator
+          start-millis current-millis precipice-metrics switcher false)))))
 
 
 (defprotocol CountsView
