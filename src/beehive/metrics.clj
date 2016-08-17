@@ -172,6 +172,36 @@
    :start-millis start-millis
    :end-millis end-millis})
 
+(defn- latency-to-latency-fn [metric]
+  (fn [^PartitionedLatency latency start-millis end-millis]
+    {:start-millis start-millis
+     :end-millis end-millis
+     :count (when metric
+              {:10 (.getValueAtPercentile latency metric 1.0)
+               :50 (.getValueAtPercentile latency metric 5.0)
+               :90 (.getValueAtPercentile latency metric 90.0)
+               :99 (.getValueAtPercentile latency metric 99.0)
+               :99.9 (.getValueAtPercentile latency metric 99.9)
+               :99.99 (.getValueAtPercentile latency metric 99.99)
+               :99.999 (.getValueAtPercentile latency metric 99.999)})}))
+
+(defn get-latency [{:keys [precipice-metrics key->enum] :as metrics} metric]
+  (let [^Metrics precipice-metrics precipice-metrics
+        current-millis (current-millis)]
+    (iterator-seq
+      (if (instance? Rolling precipice-metrics)
+        (->RollingIterator
+          current-millis
+          (latency-to-latency-fn (get key->enum metric))
+          (.intervals ^Rolling precipice-metrics))
+        (let [{:keys [interval-start metrics]} (prep-metrics current-millis metrics)]
+          (->SingleIterator
+            current-millis
+            interval-start
+            (latency-to-latency-fn (get key->enum metric))
+            metrics
+            false))))))
+
 (defn get-latencies [metrics]
   (let [{:keys [precipice-metrics]} metrics
         current-millis (current-millis)]
