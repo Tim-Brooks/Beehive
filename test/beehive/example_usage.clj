@@ -69,7 +69,8 @@
           (hive/to-future p)))))
 
 ;; Will block until the completion (or error) of the http request
-(execute-synchronous-risky-task)
+(dotimes [n 10]
+  (execute-synchronous-risky-task))
 
 ;; Will return a future representing the execution of the http request
 (execute-asynchronous-risky-task)
@@ -78,10 +79,10 @@
 ;(metrics/get-count (hive/result-metrics example-beehive) :success)
 
 ;; Returns the number rejected by the semaphore due to max-concurrency being violated
-(metrics/get-count (hive/rejected-metrics example-beehive) :max-concurrency)
+(:count (first (metrics/get-count (hive/rejected-metrics example-beehive) :max-concurrency)))
 
 ;; Returns a latency percentile for errors
-(metrics/get-latency (hive/result-latency example-beehive) :error 0.9)
+;(metrics/get-latency (hive/result-latency example-beehive) :error 0.9)
 
 ;; Metrics API
 

@@ -24,7 +24,7 @@
            (net.uncontended.precipice.metrics.latency TotalLatency
                                                       NoOpLatency
                                                       ConcurrentHistogram
-                                                      PartitionedLatency)
+                                                      PartitionedLatency LatencyRecorder)
            (net.uncontended.precipice.metrics.tools Recorder)
            (java.util.concurrent TimeUnit)
            (java.util Iterator NoSuchElementException)))
@@ -122,7 +122,7 @@
             metrics
             false))))))
 
-(defn decorate-counts [^Metrics precipice-metrics]
+(defn decorate-metrics [^Metrics precipice-metrics]
   (let [key->enum (enums/enum-class-to-keyword->enum
                     (.getMetricClazz precipice-metrics))]
     {:key->enum key->enum
@@ -132,51 +132,75 @@
 (defn no-op-counts
   ([] (no-op-counts EmptyEnum))
   ([^Class enum-class]
-   (decorate-counts (TotalCounts. (NoOpCounter. enum-class)))))
+   (decorate-metrics (TotalCounts. (NoOpCounter. enum-class)))))
 
 (defn total-counts [^Class enum-class]
-  (decorate-counts (TotalCounts. enum-class)))
+  (decorate-metrics (TotalCounts. enum-class)))
 
 (defn count-recorder [^Class enum-class]
-  (decorate-counts (.build (CountRecorder/builder enum-class))))
+  (decorate-metrics (.build (CountRecorder/builder enum-class))))
 
 (defn rolling-counts
   ([enum-class] (rolling-counts enum-class (* 60 15) 1 :seconds))
   ([^Class enum-class slots-to-track resolution time-unit]
    (let [^TimeUnit time-unit (utils/->time-unit time-unit)
          nanos-per (.toNanos time-unit (long resolution))]
-     (decorate-counts
+     (decorate-metrics
        (RollingCounts. enum-class (int slots-to-track) nanos-per)))))
-
-(defprotocol LatencyView
-  (get-latency [this metric percentile]))
 
 (defn- latency-at-percentile
   [^PartitionedLatency latency-metrics metric percentile key->enum]
   (when-let [enum (get key->enum metric)]
     (.getValueAtPercentile latency-metrics enum percentile)))
 
-(defn- precipice-metrics [enum-class]
-  (TotalLatency. (ConcurrentHistogram. enum-class)))
+(defn- latency-to-map [^PartitionedLatency latency start-millis end-millis]
+  {:latencies
+   (persistent!
+     (reduce (fn [acc ^ToCLJ e]
+               (assoc!
+                 acc
+                 (.keyword e)
+                 {:10 (.getValueAtPercentile latency e 1.0)
+                  :50 (.getValueAtPercentile latency e 5.0)
+                  :90 (.getValueAtPercentile latency e 90.0)
+                  :99 (.getValueAtPercentile latency e 99.0)
+                  :99.9 (.getValueAtPercentile latency e 99.9)
+                  :99.99 (.getValueAtPercentile latency e 99.99)
+                  :99.999 (.getValueAtPercentile latency e 99.999)}))
+             (transient {})
+             (.getEnumConstants (.getMetricClazz latency))))
+   :start-millis start-millis
+   :end-millis end-millis})
 
-(defn- decorate-latency [^Metrics precipice-metrics]
-  (let [key->enum (enums/enum-class-to-keyword->enum
-                    (.getMetricClazz precipice-metrics))]
-    (with-meta
-      (reify
-        LatencyView
-        (get-latency [this metric percentile]
-          (latency-at-percentile precipice-metrics metric percentile key->enum)))
-      {:precipice-metrics precipice-metrics})))
+(defn get-latencies [metrics]
+  (let [{:keys [precipice-metrics]} metrics
+        current-millis (current-millis)]
+    (iterator-seq
+      (if (instance? Rolling precipice-metrics)
+        (->RollingIterator
+          current-millis
+          latency-to-map
+          (.intervals ^Rolling precipice-metrics))
+        (let [{:keys [interval-start metrics]} (prep-metrics current-millis metrics)]
+          (->SingleIterator
+            current-millis
+            interval-start
+            latency-to-map
+            metrics
+            false))))))
 
 (defn no-op-latency-metrics
   ([] (no-op-latency-metrics EmptyEnum))
   ([^Class enum-class]
    (let [precipice-metrics (TotalLatency. (NoOpLatency. enum-class))]
-     (decorate-latency precipice-metrics))))
+     (decorate-metrics precipice-metrics))))
 
 (defn latency-metrics [enum-class]
-  (if-not (identical? enum-class EmptyEnum)
-    (let [precipice-metrics (precipice-metrics enum-class)]
-      (decorate-latency precipice-metrics))
-    (no-op-latency-metrics)))
+  (decorate-metrics (TotalLatency. (ConcurrentHistogram. enum-class))))
+
+(defn latency-recorder [^Class enum-class]
+  (decorate-metrics (.build (LatencyRecorder/builder enum-class))))
+
+(defn recorder-swap!
+  ([^Recorder recorder] (.captureInterval recorder))
+  ([^Recorder recorder value] (.captureInterval recorder value)))
