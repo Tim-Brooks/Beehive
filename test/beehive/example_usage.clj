@@ -29,14 +29,14 @@
   (hive/lett [result-class {:success true :error false}
               rejected-class #{:max-concurrency :circuit-open}]
     (-> (hive/hive "Beehive Name" result-class rejected-class)
-        (hive/set-result-metrics (metrics/count-metrics result-class))
-        (hive/set-rejected-metrics (metrics/count-metrics rejected-class))
+        (hive/set-result-metrics (metrics/rolling-counts result-class))
+        (hive/set-rejected-metrics (metrics/total-counts rejected-class))
         (hive/set-result-latency (metrics/latency-metrics result-class))
         (hive/add-backpressure :semaphore (semaphore/semaphore 5 :max-concurrency))
-        ;(hive/add-backpressure :breaker (breaker/default-breaker
-        ;                                  {:failure-percentage-threshold 20
-        ;                                   :backoff-time-millis 3000}
-        ;                                  :max-concurrency))
+        (hive/add-backpressure :breaker (breaker/default-breaker
+                                          {:failure-percentage-threshold 20
+                                           :backoff-time-millis 3000}
+                                          :max-concurrency))
         hive/map->hive)))
 
 (defn- perform-http [completable]

@@ -31,6 +31,9 @@
 
 (set! *warn-on-reflection* true)
 
+(defn- current-millis []
+  (System/currentTimeMillis))
+
 (defn- to-millis [nanos]
   (.toMillis TimeUnit/NANOSECONDS nanos))
 
@@ -50,14 +53,13 @@
      :end-millis end-millis
      :count (when metric (.getCount counts metric))}))
 
-(defn- switcher [current-millis {:keys [start-millis precipice-metrics]}]
+(defn- prep-metrics [current-millis {:keys [start-millis precipice-metrics]}]
   (let [^Metrics m precipice-metrics]
     (if-not (instance? Recorder m)
       {:metrics m
        :interval-start start-millis}
       {:metrics (.activeInterval ^Recorder m)
-       :interval-start (- (.toMillis TimeUnit/NANOSECONDS
-                                     (- (.activeIntervalStart ^Recorder m)
+       :interval-start (- (to-millis (- (.activeIntervalStart ^Recorder m)
                                         (System/nanoTime)))
                           current-millis)})))
 
@@ -74,14 +76,12 @@
   (remove [_]
     (throw (UnsupportedOperationException. "remove"))))
 
-(deftype RollingIterator [iterator-start-millis func ^IntervalIterator iterator]
+(deftype RollingIterator [current-millis func ^IntervalIterator iterator]
   Iterator
   (next [this]
-    (let [start-millis (+ iterator-start-millis
-                          (to-millis (.intervalStart iterator)))
-          end-millis (+ iterator-start-millis
-                        (to-millis (.intervalEnd iterator)))]
-      (func (.next iterator) start-millis end-millis)))
+    (let [start (+ current-millis (to-millis (.intervalStart iterator)))
+          end (+ current-millis (to-millis (.intervalEnd iterator)))]
+      (func (.next iterator) start end)))
   (hasNext [this]
     (.hasNext iterator))
   (remove [_]
@@ -90,14 +90,14 @@
 
 (defn get-count [{:keys [precipice-metrics key->enum] :as metrics} metric]
   (let [^Metrics precipice-metrics precipice-metrics
-        current-millis (System/currentTimeMillis)]
+        current-millis (current-millis)]
     (iterator-seq
       (if (instance? Rolling precipice-metrics)
         (->RollingIterator
           current-millis
           (counter-to-count-fn (get key->enum metric))
           (.intervals ^Rolling precipice-metrics))
-        (let [{:keys [interval-start metrics]} (switcher current-millis metrics)]
+        (let [{:keys [interval-start metrics]} (prep-metrics current-millis metrics)]
           (->SingleIterator
             current-millis
             interval-start
@@ -107,14 +107,14 @@
 
 (defn get-counts [metrics]
   (let [{:keys [precipice-metrics]} metrics
-        current-millis (System/currentTimeMillis)]
+        current-millis (current-millis)]
     (iterator-seq
       (if (instance? Rolling precipice-metrics)
         (->RollingIterator
           current-millis
           counter-to-map
           (.intervals ^Rolling precipice-metrics))
-        (let [{:keys [interval-start metrics]} (switcher current-millis metrics)]
+        (let [{:keys [interval-start metrics]} (prep-metrics current-millis metrics)]
           (->SingleIterator
             current-millis
             interval-start
@@ -127,17 +127,15 @@
                     (.getMetricClazz precipice-metrics))]
     {:key->enum key->enum
      :precipice-metrics precipice-metrics
-     :start-millis (System/currentTimeMillis)}))
+     :start-millis (current-millis)}))
 
 (defn no-op-counts
   ([] (no-op-counts EmptyEnum))
   ([^Class enum-class]
    (decorate-counts (TotalCounts. (NoOpCounter. enum-class)))))
 
-(defn count-metrics [^Class enum-class]
-  (if-not (identical? enum-class EmptyEnum)
-    (decorate-counts (TotalCounts. enum-class))
-    (no-op-counts)))
+(defn total-counts [^Class enum-class]
+  (decorate-counts (TotalCounts. enum-class)))
 
 (defn count-recorder [^Class enum-class]
   (decorate-counts (.build (CountRecorder/builder enum-class))))
@@ -145,12 +143,10 @@
 (defn rolling-counts
   ([enum-class] (rolling-counts enum-class (* 60 15) 1 :seconds))
   ([^Class enum-class slots-to-track resolution time-unit]
-   (if-not (identical? enum-class EmptyEnum)
-     (let [^TimeUnit time-unit (utils/->time-unit time-unit)
-           nanos-per (.toNanos time-unit (long resolution))]
-       (decorate-counts
-         (RollingCounts. enum-class (int slots-to-track) nanos-per)))
-     (no-op-counts))))
+   (let [^TimeUnit time-unit (utils/->time-unit time-unit)
+         nanos-per (.toNanos time-unit (long resolution))]
+     (decorate-counts
+       (RollingCounts. enum-class (int slots-to-track) nanos-per)))))
 
 (defprotocol LatencyView
   (get-latency [this metric percentile]))
