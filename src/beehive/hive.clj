@@ -239,31 +239,21 @@
    (completable (acquire beehive permits))))
 
 
-;; Explore
-
-;{:name ""
-; :result-key->enum {}
-; :result-metrics []
-; :latency-metrics []
-; :back-pressure []
-; :rejected-key->enum {}
-; :rejected-metrics []}
-
 (defn- to-name [k]
   (if (keyword? k)
     (clojure.core/name k)
     (str k)))
 
 (defn- add-result-metrics1 [^GuardRailBuilder builder result-metrics]
-  (.resultMetrics builder (:precipice-metrics (meta result-metrics)))
+  (.resultMetrics builder (:precipice-metrics result-metrics))
   builder)
 
 (defn- add-result-latency1 [^GuardRailBuilder builder result-latency]
-  (.resultLatency builder (:precipice-metrics (meta result-latency)))
+  (.resultLatency builder (:precipice-metrics result-latency))
   builder)
 
 (defn- add-rejected-metrics1 [^GuardRailBuilder builder rejected-metrics]
-  (.rejectedMetrics builder (:precipice-metrics (meta rejected-metrics)))
+  (.rejectedMetrics builder (:precipice-metrics rejected-metrics))
   builder)
 
 (defn add-bp1 [^GuardRailBuilder builder mechanisms]

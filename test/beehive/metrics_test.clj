@@ -27,13 +27,16 @@
 (deftest metrics-test
   (testing "Testing metrics return the results of the underlying java class"
     (let [metrics (metrics/count-metrics (class (val (first key->enum))))
-          ^TotalCounts java-metrics (:precipice-metrics (meta metrics))]
+          ^TotalCounts java-metrics (:precipice-metrics metrics)]
       (.add java-metrics (:test-success key->enum) 1)
       (.add java-metrics (:test-error key->enum) 1)
       (.add java-metrics (:test-timeout key->enum) 1)
-      (is (= 1 (metrics/get-count metrics :test-success)))
-      (is (= 1 (metrics/get-count metrics :test-error)))
-      (is (= 1 (metrics/get-count metrics :test-timeout)))
+      (is (= 1 (:count (first (metrics/get-count metrics :test-success)))))
+      (is (= 1 (:count (first (metrics/get-count metrics :test-error)))))
+      (is (= 1 (:count (first (metrics/get-count metrics :test-timeout)))))
+      (is (= {:test-error 1
+              :test-success 1
+              :test-timeout 1} (:counts (first (metrics/get-counts metrics)))))
 
       ;(is (= 1 (metrics/count-for-period metrics :test-success 1 :minutes)))
       ;(is (= 1 (metrics/count-for-period metrics :test-error 1 :minutes)))
