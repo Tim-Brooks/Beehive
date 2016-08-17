@@ -143,15 +143,12 @@
 (defn rolling-counts
   ([enum-class] (rolling-counts enum-class (* 60 15) 1 :seconds))
   ([^Class enum-class slots-to-track resolution time-unit]
-   (let [^TimeUnit time-unit (utils/->time-unit time-unit)
-         nanos-per (.toNanos time-unit (long resolution))]
+   (let [^TimeUnit time-unit (utils/->time-unit time-unit)]
      (decorate-metrics
-       (RollingCounts. enum-class (int slots-to-track) nanos-per)))))
-
-(defn- latency-at-percentile
-  [^PartitionedLatency latency-metrics metric percentile key->enum]
-  (when-let [enum (get key->enum metric)]
-    (.getValueAtPercentile latency-metrics enum percentile)))
+       (.build
+         (doto (RollingCounts/builder enum-class)
+           (.bucketCount (int slots-to-track))
+           (.bucketResolution (long resolution) time-unit)))))))
 
 (defn- latency-to-map [^PartitionedLatency latency start-millis end-millis]
   {:latencies
