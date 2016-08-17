@@ -30,7 +30,7 @@
 
 (defn- start-and-stop [f]
   (let [threadpool (beehive/lett [rejected-class #{:max-concurrency}]
-                     (-> (beehive/hive "" threadpool/result-class rejected-class)
+                     (-> (beehive/beehive "" threadpool/result-class rejected-class)
                          (beehive/set-result-metrics (metrics/total-counts threadpool/result-class))
                          (beehive/set-rejected-metrics (metrics/total-counts rejected-class))
                          (beehive/add-backpressure
@@ -137,7 +137,7 @@
 (deftest metrics-test
   (testing "Testing that metrics are updated with result of action"
     (let [threadpool (beehive/lett [rejected-class #{}]
-                       (-> (beehive/hive "" threadpool/result-class rejected-class)
+                       (-> (beehive/beehive "" threadpool/result-class rejected-class)
                            (beehive/set-result-metrics (metrics/total-counts threadpool/result-class))
                            (beehive/set-rejected-metrics (metrics/total-counts rejected-class))
                            beehive/map->hive
@@ -148,13 +148,13 @@
       (f/await! (threadpool/submit threadpool (error-fn (IOException.))))
       (f/await! (threadpool/submit threadpool (block-fn 1 latch) 10))
       (.countDown latch)
-      ;(is (= 1 (metrics/get-count1 result-metrics :success)))
-      ;(is (= 1 (metrics/get-count1 result-metrics :timeout)))
-      ;(is (= 1 (metrics/get-count1 result-metrics :error)))
+      (is (= 1 (:count (first (metrics/get-count result-metrics :success)))))
+      (is (= 1 (:count (first (metrics/get-count result-metrics :timeout)))))
+      (is (= 1 (:count (first (metrics/get-count result-metrics :error)))))
       (threadpool/shutdown threadpool)))
   (testing "Testing that rejection reasons are updated"
     (let [threadpool (beehive/lett [rejected-class #{:max-concurrency}]
-                       (-> (beehive/hive "" threadpool/result-class rejected-class)
+                       (-> (beehive/beehive "" threadpool/result-class rejected-class)
                            (beehive/set-result-metrics (metrics/total-counts threadpool/result-class))
                            (beehive/set-rejected-metrics (metrics/total-counts rejected-class))
                            (beehive/add-backpressure

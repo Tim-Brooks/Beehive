@@ -28,7 +28,7 @@
 (def example-beehive
   (hive/lett [result-class {:success true :error false}
               rejected-class #{:max-concurrency :circuit-open}]
-    (-> (hive/hive "Beehive Name" result-class rejected-class)
+    (-> (hive/beehive "Beehive Name" result-class rejected-class)
         (hive/set-result-metrics (metrics/rolling-counts result-class))
         (hive/set-rejected-metrics (metrics/total-counts rejected-class))
         (hive/set-result-latency (metrics/latency-metrics result-class))

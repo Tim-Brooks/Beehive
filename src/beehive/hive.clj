@@ -52,9 +52,61 @@
       :rejected? false
       default)))
 
-(defn add-bp [^GuardRailBuilder builder mechanisms]
-  (doseq [back-pressure mechanisms]
-    (.addBackPressure builder back-pressure))
+(defn- to-name [k]
+  (if (keyword? k)
+    (clojure.core/name k)
+    (str k)))
+
+(defn- ^String compile-msg [msg]
+  (str msg " in " '*ns* ":" (:line (meta '&form))))
+
+(defn- h-assert [assertion msg]
+  (when-not assertion
+    (throw (IllegalArgumentException.
+             (compile-msg msg)))))
+
+(defn- run-assertions [bindings]
+  (h-assert (vector? bindings) "lett requires a vector for its binding")
+  (h-assert (even? (count bindings)) "lett requires an even number of forms in binding vector")
+  (h-assert (>= 4 (count bindings)) "lett allows a maximum of four forms in binding vector")
+  (let [symbols (take-nth 2 bindings)]
+    (doseq [sym symbols]
+      (h-assert (symbol? sym)
+                (str "Non-symbol binding form: " sym))))
+  (let [map&set (take-nth 2 (rest bindings))]
+    (assert (every? (fn [x] (or (map? x) (set? x))) map&set))
+    (assert (>= 1 (->> map&set
+                       (filter map?)
+                       count)))
+    (assert (>= 1 (->> map&set
+                       (filter set?)
+                       count)))))
+
+(defn- replace-bindings [bindings]
+  (mapv (fn [x]
+          (cond (map? x) (enums/generate-result-class x)
+                (set? x) (enums/generate-rejected-class x)
+                :else x))
+        bindings))
+
+(defn- replace-keywords [body keyword->enum]
+  (clojure.walk/postwalk-replace keyword->enum body))
+
+(defn- result-metrics1 [^GuardRailBuilder builder result-metrics]
+  (.resultMetrics builder (:precipice-metrics result-metrics))
+  builder)
+
+(defn- result-latency1 [^GuardRailBuilder builder result-latency]
+  (.resultLatency builder (:precipice-metrics result-latency))
+  builder)
+
+(defn- rejected-metrics1 [^GuardRailBuilder builder rejected-metrics]
+  (.rejectedMetrics builder (:precipice-metrics rejected-metrics))
+  builder)
+
+(defn- add-bp1 [^GuardRailBuilder builder mechanisms]
+  (doseq [[k back-pressure] mechanisms]
+    (.addBackPressure builder (to-name k) back-pressure))
   builder)
 
 (defn completable
@@ -238,30 +290,8 @@
   ([beehive permits]
    (completable (acquire beehive permits))))
 
-
-(defn- to-name [k]
-  (if (keyword? k)
-    (clojure.core/name k)
-    (str k)))
-
-(defn- add-result-metrics1 [^GuardRailBuilder builder result-metrics]
-  (.resultMetrics builder (:precipice-metrics result-metrics))
-  builder)
-
-(defn- add-result-latency1 [^GuardRailBuilder builder result-latency]
-  (.resultLatency builder (:precipice-metrics result-latency))
-  builder)
-
-(defn- add-rejected-metrics1 [^GuardRailBuilder builder rejected-metrics]
-  (.rejectedMetrics builder (:precipice-metrics rejected-metrics))
-  builder)
-
-(defn add-bp1 [^GuardRailBuilder builder mechanisms]
-  (doseq [[k back-pressure] mechanisms]
-    (.addBackPressure builder (to-name k) back-pressure))
-  builder)
-
 (defn map->hive
+  "Turns a base beehive map into an actual beehive implementation."
   [{:keys [name
            result-metrics
            result-latency
@@ -270,9 +300,9 @@
     :as hive-map}]
   (let [builder (-> (GuardRailBuilder.)
                     (.name name)
-                    (add-result-metrics1 result-metrics)
-                    (add-result-latency1 result-latency)
-                    (add-rejected-metrics1 rejected-metrics)
+                    (result-metrics1 result-metrics)
+                    (result-latency1 result-latency)
+                    (rejected-metrics1 rejected-metrics)
                     (add-bp1 back-pressure))]
     (assoc hive-map
       :result-metrics result-metrics
@@ -281,45 +311,9 @@
       :back-pressure (or back-pressure [])
       :guard-rail (.build ^GuardRailBuilder builder))))
 
-(defn- ^String compile-msg [msg]
-  (str msg " in " '*ns* ":" (:line (meta '&form))))
-
-(defn- h-assert [assertion msg]
-  (when-not assertion
-    (throw (IllegalArgumentException.
-             (compile-msg msg)))))
-
-(defn- run-assertions [bindings]
-  (h-assert (vector? bindings) "lett requires a vector for its binding")
-  (h-assert (even? (count bindings)) "lett requires an even number of forms in binding vector")
-  (h-assert (>= 4 (count bindings)) "lett allows a maximum of four forms in binding vector")
-  (let [symbols (take-nth 2 bindings)]
-    (doseq [sym symbols]
-      (h-assert (symbol? sym)
-                (str "Non-symbol binding form: " sym))))
-  (let [map&set (take-nth 2 (rest bindings))]
-    (assert (every? (fn [x] (or (map? x) (set? x))) map&set))
-    (assert (>= 1 (->> map&set
-                       (filter map?)
-                       count)))
-    (assert (>= 1 (->> map&set
-                       (filter set?)
-                       count)))))
-
-(defn- replace-bindings [bindings]
-  (mapv (fn [x]
-          (cond (map? x) (enums/generate-result-class x)
-                (set? x) (enums/generate-rejected-class x)
-                :else x))
-        bindings))
-
-(defn- replace-keywords [body keyword->enum]
-  (clojure.walk/postwalk-replace keyword->enum body))
-
 (defmacro lett [bindings & body]
   (run-assertions bindings)
-  (let [; bindings (map-indexed (fn [n x] (if (odd? n) (eval x) x)) bindings)
-        bindings (replace-bindings bindings)
+  (let [bindings (replace-bindings bindings)
         key->form (->> (rest bindings)
                        (take-nth 2)
                        (map enums/enum-class-to-keyword->form)
@@ -328,18 +322,23 @@
        ~@(replace-keywords body key->form))))
 
 (defn set-result-metrics [hive result-metrics]
+  "Sets the result count metrics for this beehive."
   (assoc hive :result-metrics result-metrics))
 
 (defn set-rejected-metrics [hive rejected-metrics]
+  "Sets the rejected count metrics for this beehive."
   (assoc hive :rejected-metrics rejected-metrics))
 
 (defn set-result-latency [hive result-latency]
+  "Sets the result latency metrics for this beehive."
   (assoc hive :result-latency result-latency))
 
 (defn add-backpressure [hive k back-pressure]
+  "Adds a backpressure mechanism to this beehive."
   (assoc-in hive [:back-pressure k] back-pressure))
 
-(defn hive [name result-class rejected-class]
+(defn beehive [name result-class rejected-class]
+  "Returns a base map indicating a beehive name and result/rejected types."
   {:name name
    :result-key->enum (enums/enum-class-to-keyword->enum result-class)
    :rejected-key->enum (enums/enum-class-to-keyword->enum rejected-class)})
