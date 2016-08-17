@@ -17,21 +17,23 @@
             [beehive.enums :as enums])
   (:import (beehive.java EmptyEnum ToCLJ)
            (net.uncontended.precipice.metrics Metrics Rolling IntervalIterator)
-           (net.uncontended.precipice.metrics.counts PartitionedCount
+           (net.uncontended.precipice.metrics.counts CountRecorder
                                                      NoOpCounter
-                                                     TotalCounts
-                                                     RollingCounts CountRecorder)
-           (net.uncontended.precipice.metrics.latency TotalLatency
+                                                     PartitionedCount
+                                                     RollingCounts
+                                                     TotalCounts)
+           (net.uncontended.precipice.metrics.latency ConcurrentHistogram
+                                                      LatencyRecorder
                                                       NoOpLatency
-                                                      ConcurrentHistogram
-                                                      PartitionedLatency LatencyRecorder)
+                                                      PartitionedLatency
+                                                      TotalLatency)
            (net.uncontended.precipice.metrics.tools Recorder)
            (java.util.concurrent TimeUnit)
            (java.util Iterator NoSuchElementException)))
 
 (set! *warn-on-reflection* true)
 
-(declare counter-to-map)
+(declare counter-to-map latency-to-map)
 
 (defn- current-millis []
   (System/currentTimeMillis))
@@ -153,26 +155,12 @@
            (.bucketCount (int slots-to-track))
            (.bucketResolution (long resolution) time-unit)))))))
 
-(defn- latency-to-map [^PartitionedLatency latency start-millis end-millis]
-  {:latencies
-   (persistent!
-     (reduce (fn [acc ^ToCLJ e]
-               (assoc!
-                 acc
-                 (.keyword e)
-                 {:10 (.getValueAtPercentile latency e 1.0)
-                  :50 (.getValueAtPercentile latency e 5.0)
-                  :90 (.getValueAtPercentile latency e 90.0)
-                  :99 (.getValueAtPercentile latency e 99.0)
-                  :99.9 (.getValueAtPercentile latency e 99.9)
-                  :99.99 (.getValueAtPercentile latency e 99.99)
-                  :99.999 (.getValueAtPercentile latency e 99.999)}))
-             (transient {})
-             (.getEnumConstants (.getMetricClazz latency))))
+(defn- next-latencies-fn [^PartitionedLatency latency start-millis end-millis]
+  {:latencies (latency-to-map latency)
    :start-millis start-millis
    :end-millis end-millis})
 
-(defn- latency-to-latency-fn [metric]
+(defn- get-next-latency-fn [metric]
   (fn [^PartitionedLatency latency start-millis end-millis]
     {:start-millis start-millis
      :end-millis end-millis
@@ -185,37 +173,53 @@
                :99.99 (.getValueAtPercentile latency metric 99.99)
                :99.999 (.getValueAtPercentile latency metric 99.999)})}))
 
-(defn get-latency [{:keys [precipice-metrics key->enum] :as metrics} metric]
+(defn latency-to-map [^PartitionedLatency latency]
+  (persistent!
+    (reduce (fn [acc ^ToCLJ e]
+              (assoc!
+                acc
+                (.keyword e)
+                {:10 (.getValueAtPercentile latency e 1.0)
+                 :50 (.getValueAtPercentile latency e 5.0)
+                 :90 (.getValueAtPercentile latency e 90.0)
+                 :99 (.getValueAtPercentile latency e 99.0)
+                 :99.9 (.getValueAtPercentile latency e 99.9)
+                 :99.99 (.getValueAtPercentile latency e 99.99)
+                 :99.999 (.getValueAtPercentile latency e 99.999)}))
+            (transient {})
+            (.getEnumConstants (.getMetricClazz latency)))))
+
+(defn latency-seq [{:keys [precipice-metrics key->enum] :as metrics} metric]
   (let [^Metrics precipice-metrics precipice-metrics
         current-millis (current-millis)]
     (iterator-seq
       (if (instance? Rolling precipice-metrics)
         (->RollingIterator
           current-millis
-          (latency-to-latency-fn (get key->enum metric))
+          (get-next-latency-fn (get key->enum metric))
           (.intervals ^Rolling precipice-metrics))
         (let [{:keys [interval-start metrics]} (prep-metrics current-millis metrics)]
           (->SingleIterator
             current-millis
             interval-start
-            (latency-to-latency-fn (get key->enum metric))
+            (get-next-latency-fn (get key->enum metric))
             metrics
             false))))))
 
-(defn get-latencies [metrics]
+(defn latencies-seq [metrics]
   (let [{:keys [precipice-metrics]} metrics
         current-millis (current-millis)]
     (iterator-seq
       (if (instance? Rolling precipice-metrics)
         (->RollingIterator
           current-millis
-          latency-to-map
+          next-latencies-fn
           (.intervals ^Rolling precipice-metrics))
         (let [{:keys [interval-start metrics]} (prep-metrics current-millis metrics)]
           (->SingleIterator
             current-millis
             interval-start
-            latency-to-map
+            next-latencies-fn
             metrics
             false))))))
 
