@@ -148,9 +148,9 @@
       (f/await! (threadpool/submit threadpool (error-fn (IOException.))))
       (f/await! (threadpool/submit threadpool (block-fn 1 latch) 10))
       (.countDown latch)
-      (is (= 1 (:count (first (metrics/get-count result-metrics :success)))))
-      (is (= 1 (:count (first (metrics/get-count result-metrics :timeout)))))
-      (is (= 1 (:count (first (metrics/get-count result-metrics :error)))))
+      (is (= 1 (:count (first (metrics/count-seq result-metrics :success)))))
+      (is (= 1 (:count (first (metrics/count-seq result-metrics :timeout)))))
+      (is (= 1 (:count (first (metrics/count-seq result-metrics :error)))))
       (threadpool/shutdown threadpool)))
   (testing "Testing that rejection reasons are updated"
     (let [threadpool (beehive/lett [rejected-class #{:max-concurrency}]

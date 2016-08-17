@@ -79,7 +79,7 @@
 ;(metrics/get-count (hive/result-metrics example-beehive) :success)
 
 ;; Returns the number rejected by the semaphore due to max-concurrency being violated
-(:count (first (metrics/get-count (hive/rejected-metrics example-beehive) :max-concurrency)))
+(:count (first (metrics/count-seq (hive/rejected-metrics example-beehive) :max-concurrency)))
 
 ;; Returns a latency percentile for errors
 ;(metrics/get-latency (hive/result-latency example-beehive) :error 0.9)

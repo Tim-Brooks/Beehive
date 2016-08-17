@@ -31,23 +31,20 @@
 
 (set! *warn-on-reflection* true)
 
+(declare counter-to-map)
+
 (defn- current-millis []
   (System/currentTimeMillis))
 
 (defn- to-millis [nanos]
   (.toMillis TimeUnit/NANOSECONDS nanos))
 
-(defn- counter-to-map [^PartitionedCount counts start-millis end-millis]
-  {:counts
-   (persistent!
-     (reduce (fn [acc ^ToCLJ e]
-               (assoc! acc (.keyword e) (.getCount counts e)))
-             (transient {})
-             (.getEnumConstants (.getMetricClazz counts))))
+(defn- next-counts-fn [counts start-millis end-millis]
+  {:counts (counter-to-map counts)
    :start-millis start-millis
    :end-millis end-millis})
 
-(defn- counter-to-count-fn [metric]
+(defn- create-next-count-fn [metric]
   (fn [^PartitionedCount counts start-millis end-millis]
     {:start-millis start-millis
      :end-millis end-millis
@@ -87,38 +84,44 @@
   (remove [_]
     (throw (UnsupportedOperationException. "remove"))))
 
+(defn counter-to-map [^PartitionedCount counts]
+  (persistent!
+    (reduce (fn [acc ^ToCLJ e]
+              (assoc! acc (.keyword e) (.getCount counts e)))
+            (transient {})
+            (.getEnumConstants (.getMetricClazz counts)))))
 
-(defn get-count [{:keys [precipice-metrics key->enum] :as metrics} metric]
+(defn count-seq [{:keys [precipice-metrics key->enum] :as metrics} metric]
   (let [^Metrics precipice-metrics precipice-metrics
         current-millis (current-millis)]
     (iterator-seq
       (if (instance? Rolling precipice-metrics)
         (->RollingIterator
           current-millis
-          (counter-to-count-fn (get key->enum metric))
+          (create-next-count-fn (get key->enum metric))
           (.intervals ^Rolling precipice-metrics))
         (let [{:keys [interval-start metrics]} (prep-metrics current-millis metrics)]
           (->SingleIterator
             current-millis
             interval-start
-            (counter-to-count-fn (get key->enum metric))
+            (create-next-count-fn (get key->enum metric))
             metrics
             false))))))
 
-(defn get-counts [metrics]
+(defn counts-seq [metrics]
   (let [{:keys [precipice-metrics]} metrics
         current-millis (current-millis)]
     (iterator-seq
       (if (instance? Rolling precipice-metrics)
         (->RollingIterator
           current-millis
-          counter-to-map
+          next-counts-fn
           (.intervals ^Rolling precipice-metrics))
         (let [{:keys [interval-start metrics]} (prep-metrics current-millis metrics)]
           (->SingleIterator
             current-millis
             interval-start
-            counter-to-map
+            next-counts-fn
             metrics
             false))))))
 
@@ -229,5 +232,9 @@
   (decorate-metrics (.build (LatencyRecorder/builder enum-class))))
 
 (defn recorder-swap!
-  ([^Recorder recorder] (.captureInterval recorder))
-  ([^Recorder recorder value] (.captureInterval recorder value)))
+  ([metrics]
+   (let [^Recorder recorder (:precipice-metrics metrics)]
+     (.captureInterval recorder)))
+  ([metrics value]
+   (let [^Recorder recorder (:precipice-metrics metrics)]
+     (.captureInterval recorder value))))
