@@ -18,9 +18,13 @@
                                        CircuitBreakerConfigBuilder
                                        CircuitBreaker
                                        DefaultCircuitBreaker
-                                       NoOpCircuitBreaker)))
+                                       NoOpCircuitBreaker)
+    (java.util.concurrent TimeUnit)))
 
 (set! *warn-on-reflection* true)
+
+(defn- to-millis [nanos]
+  (.toMillis TimeUnit/NANOSECONDS nanos))
 
 (defn- create-breaker-config
   [{:keys [trailing-period-millis
@@ -70,11 +74,11 @@
 
 (defn get-config [breaker]
   (let [^CircuitBreakerConfig config (.getBreakerConfig ^CircuitBreaker breaker)]
-    {:trailing-period-millis (.trailingPeriodMillis config)
+    {:trailing-period-millis (to-millis (.trailingPeriodNanos config))
      :failure-threshold (.failureThreshold config)
-     :back-off-time-millis (.backOffTimeMillis config)
+     :back-off-time-millis (to-millis (.backOffTimeNanos config))
      :failure-percentage-threshold (.failurePercentageThreshold config)
-     :health-refresh-millis (.healthRefreshMillis config)}))
+     :health-refresh-millis (to-millis (.healthRefreshNanos config))}))
 
 (defn open? [breaker]
   (.isOpen ^CircuitBreaker breaker))

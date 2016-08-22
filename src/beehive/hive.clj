@@ -31,16 +31,16 @@
 
 (defprotocol Hive
   (name [this])
-  (result-metrics [this])
-  (rejected-metrics [this])
+  (result-counts [this])
+  (rejected-counts [this])
   (result-latency [this])
   (back-pressure [this]))
 
 (extend-protocol Hive
   APersistentMap
   (beehive-name [this] (:name this))
-  (result-metrics [this] (:result-metrics this))
-  (rejected-metrics [this] (:rejected-metrics this))
+  (result-counts [this] (:result-counts this))
+  (rejected-counts [this] (:rejected-counts this))
   (result-latency [this] (:result-latency this))
   (back-pressure [this] (:back-pressure this)))
 
@@ -92,16 +92,16 @@
 (defn- replace-keywords [body keyword->enum]
   (clojure.walk/postwalk-replace keyword->enum body))
 
-(defn- result-metrics1 [^GuardRailBuilder builder result-metrics]
-  (.resultMetrics builder (:precipice-metrics result-metrics))
+(defn- result-counts1 [^GuardRailBuilder builder result-metrics]
+  (.resultCounts builder (:precipice-metrics result-metrics))
   builder)
 
 (defn- result-latency1 [^GuardRailBuilder builder result-latency]
   (.resultLatency builder (:precipice-metrics result-latency))
   builder)
 
-(defn- rejected-metrics1 [^GuardRailBuilder builder rejected-metrics]
-  (.rejectedMetrics builder (:precipice-metrics rejected-metrics))
+(defn- rejected-counts1 [^GuardRailBuilder builder rejected-metrics]
+  (.rejectedCounts builder (:precipice-metrics rejected-metrics))
   builder)
 
 (defn- add-bp1 [^GuardRailBuilder builder mechanisms]
@@ -293,21 +293,21 @@
 (defn map->hive
   "Turns a base beehive map into an actual beehive implementation."
   [{:keys [name
-           result-metrics
+           result-counts
            result-latency
            back-pressure
-           rejected-metrics]
+           rejected-counts]
     :as hive-map}]
   (let [builder (-> (GuardRailBuilder.)
                     (.name name)
-                    (result-metrics1 result-metrics)
+                    (result-counts1 result-counts)
                     (result-latency1 result-latency)
-                    (rejected-metrics1 rejected-metrics)
+                    (rejected-counts1 rejected-counts)
                     (add-bp1 back-pressure))]
     (assoc hive-map
-      :result-metrics result-metrics
+      :result-counts result-counts
       :result-latency result-latency
-      :rejected-metrics rejected-metrics
+      :rejected-counts rejected-counts
       :back-pressure (or back-pressure [])
       :guard-rail (.build ^GuardRailBuilder builder))))
 
@@ -321,13 +321,13 @@
     `(let ~bindings
        ~@(replace-keywords body key->form))))
 
-(defn set-result-metrics [hive result-metrics]
-  "Sets the result count metrics for this beehive."
-  (assoc hive :result-metrics result-metrics))
+(defn set-result-counts [hive result-counts]
+  "Sets the result counts for this beehive."
+  (assoc hive :result-counts result-counts))
 
-(defn set-rejected-metrics [hive rejected-metrics]
-  "Sets the rejected count metrics for this beehive."
-  (assoc hive :rejected-metrics rejected-metrics))
+(defn set-rejected-metrics [hive rejected-counts]
+  "Sets the rejected counts for this beehive."
+  (assoc hive :rejected-counts rejected-counts))
 
 (defn set-result-latency [hive result-latency]
   "Sets the result latency metrics for this beehive."

@@ -31,7 +31,7 @@
 (defn- start-and-stop [f]
   (let [threadpool (beehive/lett [rejected-class #{:max-concurrency}]
                      (-> (beehive/beehive "" threadpool/result-class rejected-class)
-                         (beehive/set-result-metrics (metrics/total-counts threadpool/result-class))
+                         (beehive/set-result-counts (metrics/total-counts threadpool/result-class))
                          (beehive/set-rejected-metrics (metrics/total-counts rejected-class))
                          (beehive/add-backpressure
                            :semaphore (semaphore/semaphore 1 :max-concurrency))
@@ -138,12 +138,12 @@
   (testing "Testing that metrics are updated with result of action"
     (let [threadpool (beehive/lett [rejected-class #{}]
                        (-> (beehive/beehive "" threadpool/result-class rejected-class)
-                           (beehive/set-result-metrics (metrics/total-counts threadpool/result-class))
+                           (beehive/set-result-counts (metrics/total-counts threadpool/result-class))
                            (beehive/set-rejected-metrics (metrics/total-counts rejected-class))
                            beehive/map->hive
                            (threadpool/threadpool 1)))
           latch (CountDownLatch. 1)
-          result-metrics (beehive/result-metrics threadpool)]
+          result-metrics (beehive/result-counts threadpool)]
       (f/await! (threadpool/submit threadpool (success-fn 1)))
       (f/await! (threadpool/submit threadpool (error-fn (IOException.))))
       (f/await! (threadpool/submit threadpool (block-fn 1 latch) 10))
@@ -155,14 +155,14 @@
   (testing "Testing that rejection reasons are updated"
     (let [threadpool (beehive/lett [rejected-class #{:max-concurrency}]
                        (-> (beehive/beehive "" threadpool/result-class rejected-class)
-                           (beehive/set-result-metrics (metrics/total-counts threadpool/result-class))
+                           (beehive/set-result-counts (metrics/total-counts threadpool/result-class))
                            (beehive/set-rejected-metrics (metrics/total-counts rejected-class))
                            (beehive/add-backpressure
                              :semaphore (semaphore/semaphore 1 :max-concurrency))
                            beehive/map->hive
                            (threadpool/threadpool 1)))
           latch (CountDownLatch. 1)
-          rejected-metrics (hive/rejected-metrics threadpool)]
+          rejected-metrics (hive/rejected-counts threadpool)]
       (threadpool/submit threadpool (block-fn 1 latch))
       (threadpool/submit threadpool (success-fn 1))
       (.countDown latch)

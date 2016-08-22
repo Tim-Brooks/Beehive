@@ -10,7 +10,7 @@
                                   [criterium "0.4.3"]]}}
   :dependencies [[org.clojure/clojure "1.6.0"]
                  [net.bytebuddy/byte-buddy "1.4.18"]
-                 [net.uncontended/precipice-core "0.7.0-SNAPSHOT"]
-                 [net.uncontended/precipice-threadpool "0.7.0-SNAPSHOT"]])
+                 [net.uncontended/precipice-core "0.7.0"]
+                 [net.uncontended/precipice-threadpool "0.7.0"]])
 
 
