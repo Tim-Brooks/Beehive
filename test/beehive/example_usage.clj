@@ -16,8 +16,7 @@
   (:require [beehive.hive :as hive]
             [beehive.circuit-breaker :as breaker]
             [beehive.metrics :as metrics]
-            [beehive.semaphore :as semaphore]
-            [beehive.hive :as beehive])
+            [beehive.semaphore :as semaphore])
   (:import (java.io IOException)
            (java.net SocketTimeoutException)))
 
@@ -46,9 +45,9 @@
       (hive/complete! completable :success http-response)
       http-response)
     (catch SocketTimeoutException e
-      (beehive/complete! completable :timeout e))
+      (hive/complete! completable :timeout e))
     (catch IOException e
-      (beehive/complete! completable :error e))))
+      (hive/complete! completable :error e))))
 
 (defn execute-synchronous-risky-task []
   (let [c (hive/acquire-completable example-beehive 1)]
@@ -69,14 +68,13 @@
           (hive/to-future p)))))
 
 ;; Will block until the completion (or error) of the http request
-(dotimes [n 10]
-  (execute-synchronous-risky-task))
+(execute-synchronous-risky-task)
 
 ;; Will return a future representing the execution of the http request
 (execute-asynchronous-risky-task)
 
 ;; Returns the number of successes
-;(metrics/get-count (hive/result-metrics example-beehive) :success)
+(:count (first (metrics/count-seq (hive/rejected-counts example-beehive) :success)))
 
 ;; Returns the number rejected by the semaphore due to max-concurrency being violated
 (:count (first (metrics/count-seq (hive/rejected-counts example-beehive) :max-concurrency)))

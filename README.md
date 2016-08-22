@@ -22,20 +22,18 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
             (java.net SocketTimeoutException)))
 
 (def example-beehive
-  (hive/beehive
-    "Beehive Name"
-    (hive/results
-      {:success true :error false :timeout false}
-      (metrics/rolling-count-metrics)
-      (metrics/latency-metrics (.toNanos TimeUnit/MINUTES 1) 3))
-    (hive/create-back-pressure
-      #{:max-concurrency :circuit-open}
-      (metrics/rolling-count-metrics)
-      (semaphore/semaphore 5 :max-concurrency)
-      (breaker/default-breaker
-        {:failure-percentage-threshold 20
-         :backoff-time-millis 3000}
-        :max-concurrency))))
+  (hive/lett [result-class {:success true :error false}
+                rejected-class #{:max-concurrency :circuit-open}]
+      (-> (hive/beehive "Beehive Name" result-class rejected-class)
+          (hive/set-result-counts (metrics/rolling-counts result-class))
+          (hive/set-rejected-metrics (metrics/total-counts rejected-class))
+          (hive/set-result-latency (metrics/latency-metrics result-class))
+          (hive/add-backpressure :semaphore (semaphore/semaphore 5 :max-concurrency))
+          (hive/add-backpressure :breaker (breaker/default-breaker
+                                            {:failure-percentage-threshold 20
+                                             :backoff-time-millis 3000}
+                                            :max-concurrency))
+          hive/map->hive)))
 
 (defn- perform-http [completable]
   (try
@@ -44,12 +42,12 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
       (hive/complete! completable :success http-response)
       http-response)
     (catch SocketTimeoutException e
-      (beehive/complete! completable :timeout e))
+      (hive/complete! completable :timeout e))
     (catch IOException e
-      (beehive/complete! completable :error e))))
+      (hive/complete! completable :error e))))
 
 (defn execute-synchronous-risky-task []
-  (let [c (hive/completable example-beehive 1)]
+  (let [c (hive/acquire-completable example-beehive 1)]
     (if (:rejected? c)
       (do
         (println "The beehive has told us not do execute this task right now")
@@ -58,7 +56,7 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
           (hive/to-result-view c)))))
 
 (defn execute-asynchronous-risky-task []
-  (let [p (hive/promise example-beehive 1)]
+  (let [p (hive/acquire-promise example-beehive 1)]
     (if (:rejected? p)
       (do
         (println "The beehive has told us not do execute this task right now")
@@ -73,13 +71,10 @@ This library has not yet hit alpha. It is used in production at Staples SparX. H
 (execute-asynchronous-risky-task)
 
 ;; Returns the number of successes
-(metrics/total-count (hive/result-metrics example-beehive) :success)
+(:count (first (metrics/count-seq (hive/rejected-counts example-beehive) :success)))
 
 ;; Returns the number rejected by the semaphore due to max-concurrency being violated
-(metrics/total-count (hive/rejected-metrics example-beehive) :max-concurrency)
-
-;; Returns a latency percentile map for errors
-(metrics/latency (hive/latency-metrics example-beehive) :error)
+(:count (first (metrics/count-seq (hive/rejected-counts example-beehive) :max-concurrency)))
 ```
 
 ## License
