@@ -32,7 +32,7 @@
   (let [threadpool (beehive/lett [rejected-class #{:max-concurrency}]
                      (-> (beehive/beehive "" threadpool/result-class rejected-class)
                          (beehive/set-result-counts (metrics/total-counts threadpool/result-class))
-                         (beehive/set-rejected-metrics (metrics/total-counts rejected-class))
+                         (beehive/set-rejected-counts (metrics/total-counts rejected-class))
                          (beehive/add-backpressure
                            :semaphore (semaphore/semaphore 1 :max-concurrency))
                          beehive/map->hive
@@ -139,7 +139,7 @@
     (let [threadpool (beehive/lett [rejected-class #{}]
                        (-> (beehive/beehive "" threadpool/result-class rejected-class)
                            (beehive/set-result-counts (metrics/total-counts threadpool/result-class))
-                           (beehive/set-rejected-metrics (metrics/total-counts rejected-class))
+                           (beehive/set-rejected-counts (metrics/total-counts rejected-class))
                            beehive/map->hive
                            (threadpool/threadpool 1)))
           latch (CountDownLatch. 1)
@@ -156,7 +156,7 @@
     (let [threadpool (beehive/lett [rejected-class #{:max-concurrency}]
                        (-> (beehive/beehive "" threadpool/result-class rejected-class)
                            (beehive/set-result-counts (metrics/total-counts threadpool/result-class))
-                           (beehive/set-rejected-metrics (metrics/total-counts rejected-class))
+                           (beehive/set-rejected-counts (metrics/total-counts rejected-class))
                            (beehive/add-backpressure
                              :semaphore (semaphore/semaphore 1 :max-concurrency))
                            beehive/map->hive

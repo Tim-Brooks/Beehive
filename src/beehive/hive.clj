@@ -325,7 +325,7 @@
   "Sets the result counts for this beehive."
   (assoc hive :result-counts result-counts))
 
-(defn set-rejected-metrics [hive rejected-counts]
+(defn set-rejected-counts [hive rejected-counts]
   "Sets the rejected counts for this beehive."
   (assoc hive :rejected-counts rejected-counts))
 

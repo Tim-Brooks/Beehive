@@ -34,7 +34,7 @@
                 rejected-class #{:max-concurrency}]
       (-> (hive/beehive name result-class rejected-class)
           (hive/set-result-counts (metrics/total-counts result-class))
-          (hive/set-rejected-metrics (metrics/total-counts rejected-class))
+          (hive/set-rejected-counts (metrics/total-counts rejected-class))
           (hive/add-backpressure
             :semaphore (semaphore/semaphore 1 :max-concurrency))
           hive/map->hive))
