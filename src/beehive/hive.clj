@@ -16,7 +16,7 @@
   (:refer-clojure :exclude [promise future name])
   (:require [beehive.enums :as enums]
             [beehive.future :as f])
-  (:import (clojure.lang APersistentMap ILookup IPending IDeref IBlockingDeref)
+  (:import (clojure.lang APersistentMap ILookup IPending IDeref)
            (beehive.java ToCLJ)
            (net.uncontended.precipice Completable
                                       Failable
@@ -38,7 +38,7 @@
 
 (extend-protocol Hive
   APersistentMap
-  (beehive-name [this] (:name this))
+  (name [this] (:name this))
   (result-counts [this] (:result-counts this))
   (rejected-counts [this] (:rejected-counts this))
   (result-latency [this] (:result-latency this))
