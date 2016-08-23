@@ -31,5 +31,5 @@
 (defn semaphore [max-concurrency reason]
   (LongSemaphore. reason (long max-concurrency)))
 
-(defn unlimited-semaphore [max-concurrency]
+(defn unlimited-semaphore []
   (UnlimitedSemaphore.))
