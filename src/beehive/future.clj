@@ -23,7 +23,7 @@
 
 (set! *warn-on-reflection* true)
 
-(defn success? [^ResultView result-view]
+(defn- success? [^ResultView result-view]
   (if-let [status (.getResult result-view)]
     (.isSuccess status)
     false))
