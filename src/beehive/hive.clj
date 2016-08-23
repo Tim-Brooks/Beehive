@@ -16,7 +16,7 @@
   (:refer-clojure :exclude [promise future name])
   (:require [beehive.enums :as enums]
             [beehive.future :as f])
-  (:import (clojure.lang APersistentMap ILookup)
+  (:import (clojure.lang APersistentMap ILookup IPending IDeref IBlockingDeref)
            (beehive.java ToCLJ)
            (net.uncontended.precipice Completable
                                       Failable
@@ -45,11 +45,24 @@
   (back-pressure [this] (:back-pressure this)))
 
 (deftype BeehiveCompletable [^Completable completable result-key->enum]
+  IDeref
+  (deref [this]
+    (.getResult (.resultView completable)))
+  IPending
+  (isRealized [_]
+    (not (nil? (.getResult (.resultView completable)))))
   ILookup
   (valAt [this key] (.valAt this key nil))
   (valAt [this key default]
     (case key
+      :result (enums/enum->keyword (.getResult (.resultView completable)))
+      :pending? (not (.isRealized this))
+      :cancelled? false
       :rejected? false
+      :success? (f/success? (.resultView completable))
+      :failure? (not (f/success? (.resultView completable)))
+      :value (or (.getValue (.resultView completable))
+                 (.getError (.resultView completable)))
       default)))
 
 (defn- to-name [k]

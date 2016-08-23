@@ -18,13 +18,13 @@
   (:import (clojure.lang IDeref IBlockingDeref IPending ILookup)
            (java.util.concurrent TimeUnit)
            (beehive.java BeehiveRejected)
-           (net.uncontended.precipice PrecipiceFunction)
+           (net.uncontended.precipice PrecipiceFunction ResultView)
            (net.uncontended.precipice.concurrent Eventual)))
 
 (set! *warn-on-reflection* true)
 
-(defn- success? [^Eventual eventual]
-  (if-let [status (.getResult eventual)]
+(defn success? [^ResultView result-view]
+  (if-let [status (.getResult result-view)]
     (.isSuccess status)
     false))
 
