@@ -167,14 +167,14 @@
   (fn [^PartitionedLatency latency start-millis end-millis]
     {:start-millis start-millis
      :end-millis end-millis
-     :count (when metric
-              {:10 (.getValueAtPercentile latency metric 1.0)
-               :50 (.getValueAtPercentile latency metric 5.0)
-               :90 (.getValueAtPercentile latency metric 90.0)
-               :99 (.getValueAtPercentile latency metric 99.0)
-               :99.9 (.getValueAtPercentile latency metric 99.9)
-               :99.99 (.getValueAtPercentile latency metric 99.99)
-               :99.999 (.getValueAtPercentile latency metric 99.999)})}))
+     :latency (when metric
+                {:10 (.getValueAtPercentile latency metric 1.0)
+                 :50 (.getValueAtPercentile latency metric 5.0)
+                 :90 (.getValueAtPercentile latency metric 90.0)
+                 :99 (.getValueAtPercentile latency metric 99.0)
+                 :99.9 (.getValueAtPercentile latency metric 99.9)
+                 :99.99 (.getValueAtPercentile latency metric 99.99)
+                 :99.999 (.getValueAtPercentile latency metric 99.999)})}))
 
 (defn latency-to-map [^PartitionedLatency latency]
   (persistent!
@@ -266,7 +266,7 @@
 
 (defn latency-swap!
   ([metrics]
-   (counter-swap! metrics nil))
+   (latency-swap! metrics nil))
   ([metrics value]
    (let [old-latency (:precipice-latency (meta value))
          {:keys [value] :as m} (swap* metrics value old-latency)]
