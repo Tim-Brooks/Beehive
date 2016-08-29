@@ -44,21 +44,38 @@
       (.write java-metrics (:test-success key->enum) 1 (System/nanoTime))
       (.write java-metrics (:test-error key->enum) 1 (System/nanoTime))
       (.write java-metrics (:test-timeout key->enum) 1 (System/nanoTime))
-      (is (= 1 (:count (first (metrics/count-seq metrics :test-success)))))
-      (is (= 1 (:count (first (metrics/count-seq metrics :test-error)))))
-      (is (= 1 (:count (first (metrics/count-seq metrics :test-timeout)))))
-      (is (= {:test-error 1
-              :test-success 1
-              :test-timeout 1} (:counts (first (metrics/counts-seq metrics)))))
-      (is (= {:test-error 1
-              :test-success 1
-              :test-timeout 1} (metrics/counter-to-map (metrics/recorder-swap! metrics))))
-      (is (= 0 (:count (first (metrics/count-seq metrics :test-success)))))
-      (is (= 0 (:count (first (metrics/count-seq metrics :test-error)))))
-      (is (= 0 (:count (first (metrics/count-seq metrics :test-timeout)))))
-      (is (= {:test-error 0
-              :test-success 0
-              :test-timeout 0} (:counts (first (metrics/counts-seq metrics)))))))
+      (let [{:keys [counts start-millis end-millis]} (first (metrics/counts-seq metrics))]
+        (is (= {:test-error 1
+                :test-success 1
+                :test-timeout 1} counts))
+        (is (>= end-millis start-millis)))
+      (doseq [k [:test-success :test-error :test-timeout]]
+        (let [{:keys [count start-millis end-millis]} (first (metrics/count-seq metrics k))]
+          (is (= 1 count))
+          (is (>= end-millis start-millis))))
+      (let [{:keys [counts start-millis end-millis]} (first (metrics/counts-seq metrics))]
+        (is (= {:test-error 1
+                :test-success 1
+                :test-timeout 1} counts))
+        (is (>= end-millis start-millis)))
+      (let [{:keys [counts start-millis end-millis] :as swapped} (metrics/counter-swap! metrics)]
+        (is (= {:test-error 1
+                :test-success 1
+                :test-timeout 1} counts))
+        (is (>= end-millis start-millis))
+        (doseq [k [:test-success :test-error :test-timeout]]
+          (let [{:keys [count start-millis end-millis]} (first (metrics/count-seq metrics k))]
+            (is (= 0 count))
+            (is (>= end-millis start-millis))))
+        (let [{:keys [counts start-millis end-millis]} (first (metrics/counts-seq metrics))]
+          (is (= {:test-error 0
+                  :test-success 0
+                  :test-timeout 0} counts))
+          (is (>= end-millis start-millis)))
+        (metrics/counter-swap! metrics swapped)
+        (is (= {:test-error 0
+                :test-success 0
+                :test-timeout 0} (:counts (metrics/counter-swap! metrics)))))))
 
   (testing "Testing rolling counts return the results of the underlying java class"
     (let [metrics (with-redefs [metrics/current-millis (fn [] 0)]

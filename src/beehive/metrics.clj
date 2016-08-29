@@ -16,7 +16,7 @@
   (:require [beehive.utils :as utils]
             [beehive.enums :as enums])
   (:import (beehive.java EmptyEnum ToCLJ)
-           (net.uncontended.precipice.metrics Metrics Rolling IntervalIterator)
+           (net.uncontended.precipice.metrics Metrics Rolling IntervalIterator Resettable)
            (net.uncontended.precipice.metrics.counts CountRecorder
                                                      NoOpCounter
                                                      PartitionedCount
@@ -38,6 +38,9 @@
 (defn- current-millis []
   (System/currentTimeMillis))
 
+(defn- nano-time []
+  (System/nanoTime))
+
 (defn- to-millis [nanos]
   (.toMillis TimeUnit/NANOSECONDS nanos))
 
@@ -58,9 +61,9 @@
       {:metrics m
        :interval-start start-millis}
       {:metrics (.activeInterval ^Recorder m)
-       :interval-start (- (to-millis (- (.activeIntervalStart ^Recorder m)
-                                        (System/nanoTime)))
-                          current-millis)})))
+       :interval-start (- current-millis
+                          (to-millis (- (nano-time)
+                                        (.activeIntervalStart ^Recorder m))))})))
 
 (deftype SingleIterator
   [iterator-start-millis start-millis func metrics ^:unsynchronized-mutable is-realized?]
@@ -229,16 +232,46 @@
    (let [precipice-metrics (TotalLatency. (NoOpLatency. enum-class))]
      (decorate-metrics precipice-metrics))))
 
-(defn latency-metrics [enum-class]
+(defn total-latency [enum-class]
   (decorate-metrics (TotalLatency. (ConcurrentHistogram. enum-class))))
 
 (defn latency-recorder [^Class enum-class]
   (decorate-metrics (.build (LatencyRecorder/builder enum-class))))
 
-(defn recorder-swap!
+
+(defn- swap* [metrics value old-value]
+  (let [^Recorder recorder (:precipice-metrics metrics)
+        nano-time (long (nano-time))
+        end-millis (current-millis)
+        start-millis (- end-millis
+                        (to-millis (- nano-time (.activeIntervalStart recorder))))
+        _ (when old-value (.reset ^Resettable old-value))
+        counter (if value
+                  (.captureInterval recorder old-value nano-time)
+                  (.captureInterval recorder nano-time))]
+    {:start-millis start-millis
+     :end-millis end-millis
+     :value counter}))
+
+(defn counter-swap!
   ([metrics]
-   (let [^Recorder recorder (:precipice-metrics metrics)]
-     (.captureInterval recorder)))
+   (counter-swap! metrics nil))
   ([metrics value]
-   (let [^Recorder recorder (:precipice-metrics metrics)]
-     (.captureInterval recorder value))))
+   (let [old-counter (:precipice-counter (meta value))
+         {:keys [value] :as m} (swap* metrics value old-counter)]
+     (-> m
+         (dissoc :value)
+         (assoc :counts (counter-to-map value))
+         (with-meta {:precipice-counter value})))))
+
+(defn latency-swap!
+  ([metrics]
+   (counter-swap! metrics nil))
+  ([metrics value]
+   (let [old-latency (:precipice-latency (meta value))
+         {:keys [value] :as m} (swap* metrics value old-latency)]
+     (-> m
+         (dissoc :value)
+         (assoc :latencies (latency-to-map value))
+         (with-meta {:precipice-latency value})))
+    ))

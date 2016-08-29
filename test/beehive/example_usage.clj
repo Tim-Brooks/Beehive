@@ -30,7 +30,7 @@
     (-> (hive/beehive "Beehive Name" result-class rejected-class)
         (hive/set-result-counts (metrics/rolling-counts result-class))
         (hive/set-rejected-counts (metrics/total-counts rejected-class))
-        (hive/set-result-latency (metrics/latency-metrics result-class))
+        (hive/set-result-latency (metrics/total-latency result-class))
         (hive/add-backpressure :semaphore (semaphore/semaphore 5 :max-concurrency))
         (hive/add-backpressure :breaker (breaker/default-breaker
                                           {:failure-percentage-threshold 20

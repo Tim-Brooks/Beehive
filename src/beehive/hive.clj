@@ -16,7 +16,7 @@
   (:refer-clojure :exclude [promise future name])
   (:require [beehive.enums :as enums]
             [beehive.future :as f])
-  (:import (clojure.lang APersistentMap ILookup IPending IDeref)
+  (:import (clojure.lang APersistentMap ILookup)
            (beehive.java ToCLJ)
            (net.uncontended.precipice Completable
                                       Failable
