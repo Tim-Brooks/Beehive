@@ -301,7 +301,9 @@
   (let [builder (-> (GuardRailBuilder.)
                     (.name name)
                     (result-counts1 result-counts)
-                    (result-latency1 result-latency)
+                    (cond->
+                      result-latency
+                      (result-latency1 result-latency))
                     (rejected-counts1 rejected-counts)
                     (add-bp1 back-pressure))]
     (assoc hive-map
