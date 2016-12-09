@@ -278,7 +278,7 @@
 (defn add
   ([counts key delta]
    (add counts key delta (System/nanoTime)))
-  ([{:keys [key->enum precipice-metrics]} key delta nano-time]
+  ([{:keys [key->enum precipice-metrics] :as counts} key delta nano-time]
    (when-let [c (get key->enum key)]
      (.write ^WritableCounts precipice-metrics c (long delta) (long nano-time)))))
 
