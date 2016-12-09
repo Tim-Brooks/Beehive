@@ -21,7 +21,7 @@
                                                      NoOpCounter
                                                      PartitionedCount
                                                      RollingCounts
-                                                     TotalCounts)
+                                                     TotalCounts WritableCounts)
            (net.uncontended.precipice.metrics.latency ConcurrentHistogram
                                                       LatencyRecorder
                                                       NoOpLatency
@@ -273,5 +273,17 @@
      (-> m
          (dissoc :value)
          (assoc :latencies (latency-to-map value))
-         (with-meta {:precipice-latency value})))
-    ))
+         (with-meta {:precipice-latency value})))))
+
+(defn add
+  ([counts key delta]
+   (add counts key delta (System/nanoTime)))
+  ([{:keys [key->enum precipice-metrics]} key delta nano-time]
+   (when-let [c (get key->enum key)]
+     (.write ^WritableCounts precipice-metrics c (long delta) (long nano-time)))))
+
+(defn increment
+  ([counts key]
+   (increment counts key (System/nanoTime)))
+  ([counts key nano-time]
+   (add counts key 1 nano-time)))

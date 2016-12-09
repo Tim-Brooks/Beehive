@@ -15,7 +15,7 @@
 (ns beehive.metrics-test
   (:require [clojure.test :refer :all]
             [beehive.metrics :as metrics])
-  (:import (net.uncontended.precipice.metrics.counts TotalCounts RollingCounts CountRecorder)
+  (:import (net.uncontended.precipice.metrics.counts RollingCounts)
            (net.uncontended.precipice.metrics.latency LatencyRecorder TotalLatency)))
 
 (def clazz (beehive.enums/generate-result-class
@@ -51,27 +51,27 @@
 
 (deftest counts-test
   (testing "Testing total counts return the results of the underlying java class"
-    (let [metrics (metrics/total-counts clazz)
-          ^TotalCounts java-metrics (:precipice-metrics metrics)]
-      (.add java-metrics (:test-success key->enum) 1)
-      (.add java-metrics (:test-error key->enum) 1)
-      (.add java-metrics (:test-timeout key->enum) 1)
+    (let [metrics (metrics/total-counts clazz)]
+      (metrics/increment metrics :test-success)
+      (metrics/increment metrics :test-error)
+      (metrics/increment metrics :test-timeout)
       (assert-single-count-seq metrics 1)
       (assert-single-counts-seq metrics 1)))
 
   (testing "Testing count recorder returns the results of the underlying java class"
-    (let [metrics (metrics/count-recorder clazz)
-          ^CountRecorder java-metrics (:precipice-metrics metrics)]
-      (.write java-metrics (:test-success key->enum) 1 (System/nanoTime))
-      (.write java-metrics (:test-error key->enum) 1 (System/nanoTime))
-      (.write java-metrics (:test-timeout key->enum) 1 (System/nanoTime))
+    (let [metrics (metrics/count-recorder clazz)]
+      (metrics/increment metrics :test-success)
+      (metrics/increment metrics :test-success)
+      (metrics/increment metrics :test-success)
+      (metrics/add metrics :test-error 3)
+      (metrics/add metrics :test-timeout 3)
       (let [{:keys [counts start-millis end-millis]} (first (metrics/counts-seq metrics))]
-        (is (= {:test-error 1 :test-success 1 :test-timeout 1} counts))
+        (is (= {:test-error 3 :test-success 3 :test-timeout 3} counts))
         (is (>= end-millis start-millis)))
-      (assert-single-count-seq metrics 1)
-      (assert-single-counts-seq metrics 1)
+      (assert-single-count-seq metrics 3)
+      (assert-single-counts-seq metrics 3)
       (let [{:keys [counts start-millis end-millis] :as swapped} (metrics/counter-swap! metrics)]
-        (is (= {:test-error 1 :test-success 1 :test-timeout 1} counts))
+        (is (= {:test-error 3 :test-success 3 :test-timeout 3} counts))
         (is (>= end-millis start-millis))
         (assert-single-count-seq metrics 0)
         (assert-single-counts-seq metrics 0)
@@ -83,9 +83,9 @@
                     (metrics/rolling-counts clazz 4 1 :seconds))
           ^RollingCounts java-metrics (:precipice-metrics metrics)
           start-millis (:start-millis metrics)]
-      (.write java-metrics (:test-success key->enum) 1 (System/nanoTime))
-      (.write java-metrics (:test-error key->enum) 1 (System/nanoTime))
-      (.write java-metrics (:test-timeout key->enum) 1 (System/nanoTime))
+      (metrics/increment metrics :test-success)
+      (metrics/increment metrics :test-error)
+      (metrics/increment metrics :test-timeout)
       (with-redefs [metrics/current-millis (fn [] 3000)]
         ; (is (= 1 (vec (drop-last (metrics/get-count metrics :test-success)))))
         )
